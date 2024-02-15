@@ -9,12 +9,12 @@ export default function MainLayout() {
             <Grid container spacing={3}>
                 <Grid item xs={6}>
                     <h2>Video preview</h2>
-                    <VideoPreview vurl='https://www.youtube.com/watch?v=umiOuVA7PEc'/>
+                    <VideoPreview vurl='https://www.youtube.com/watch?v=umiOuVA7PEc' />
                 </Grid>
-                <Grid item xs={6}>
-            <h2>Reality preview</h2>
-            <RealityPreview />
-        </Grid>
+                <Grid item xs={6} style={{height:'90vh', overflow:'scroll'}}>
+                    <h2>Reality preview</h2>
+                    <RealityPreview />
+                </Grid>
             </Grid>
         </div>
     )

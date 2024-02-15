@@ -4,9 +4,12 @@ import {
     STOP_VIDEO_PLAY
 } from './types';
 
+
 interface VideoControlStates {
     isPlaying: boolean;
 }
+
+
 
 export const initialState: VideoControlStates = {
     isPlaying: false,
