@@ -3,7 +3,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../reducers';
 import {
     userStartVideoPlay,
-    userClickEvaluate
+    userClickEvaluate,
+    userClickReasoning,
 } from '../reducers/actions';
 import { useState, useEffect } from "react";
 
@@ -15,8 +16,6 @@ export default function RealityPreview() {
 
     const [base64Reality, setBase64ForReality] = useState('');
     const [base64Video, setBase64ForVideo] = useState('');
-
-const gptResponse = useSelector(async (state: RootState) => (await state.userBehaviorReducer).gptResponse);
 
     const convertImageToBase64Reality = () => {
         // Fetch the image from the public folder
@@ -72,8 +71,6 @@ const gptResponse = useSelector(async (state: RootState) => (await state.userBeh
                 </Grid>
             </Grid>
 
-            <p>{`${gptResponse}`}</p>
-
             {/* <Stack spacing={2} justifyContent={'center'}> */}
             <div>
                 <Button variant="contained" color="primary" onClick={() => { dispatch(userStartVideoPlay(true)) }}>
@@ -87,7 +84,7 @@ const gptResponse = useSelector(async (state: RootState) => (await state.userBeh
                     Evaluate
                 </Button>
                 <p></p>
-                <Button variant="contained" color="success">
+                <Button variant="contained" color="success" onClick={()=>{dispatch(userClickReasoning('Making a steak that is not overcooked". '))}}>
                     Reasoning
                 </Button>
                 <Button variant="outlined" color="success">

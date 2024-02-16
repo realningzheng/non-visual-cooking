@@ -1,6 +1,12 @@
 import { UserClickEvaluateActionTypes } from './types';
-import { USER_CLICK_EVALUATE } from './types';
-import { callGpt4V } from '../utils';
+import {
+    USER_CLICK_EVALUATE,
+    USER_CLICK_REASONING
+} from './types';
+import {
+    callGpt4V,
+    findSentenceFromTranscript
+} from '../utils';
 
 interface UserClickEvaluateStates {
     gptCalling: boolean;
@@ -24,6 +30,15 @@ export default async function userBehaviorReducer(
                 ...state,
                 gptResponse: response
             };
+
+        case USER_CLICK_REASONING:
+            console.log(action)
+            let sentenceIndexResponse = await findSentenceFromTranscript(action.prompt);
+            return {
+                ...state,
+                gptResponse: sentenceIndexResponse
+            };
+
         default:
             return state;
     }
