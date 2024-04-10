@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactPlayer from 'react-player'
 import transriptSentenceList from '../data/cooking_steak_sentence.json';
-import { Stack } from '@mui/material';
+import { Stack, Button, Box } from '@mui/material';
 
 interface TransriptSentenceItemProps {
     sentenceIndex: number;
@@ -15,6 +15,7 @@ interface TransriptSentenceItemProps {
 interface VideoPreviewProps {
     vurl: string;
     isPlaying: boolean;
+    setIsPlaying: (isPlaying: boolean) => void;
 }
 
 export default function VideoPreview(props: VideoPreviewProps) {
@@ -30,7 +31,7 @@ export default function VideoPreview(props: VideoPreviewProps) {
     }, []);
 
     return (
-        <Stack spacing={2} justifyContent={'center'}>
+        <Stack spacing={2} justifyContent={'center'} width={'100%'}>
             <div
                 style={{
                     position: "relative",
@@ -57,6 +58,24 @@ export default function VideoPreview(props: VideoPreviewProps) {
                     />
                 }
             </div>
+            <Box display={'flex'} justifyContent={'center'} width={'100%'}>
+                <Button
+                    variant="outlined"
+                    color="primary"
+                    onClick={() => { props.setIsPlaying(true) }}
+                    sx={{ marginRight: 2 }}
+                >
+                    Video Play
+                </Button>
+                <Button
+                    variant="outlined"
+                    color="primary"
+                    onClick={() => { props.setIsPlaying(false) }}
+                    sx={{ marginRight: 2 }}
+                >
+                    Video Pause
+                </Button>
+            </Box>
             <div style={{ height: '40vh', overflowY: 'scroll' }}>
                 {transriptSentenceList.map((item: TransriptSentenceItemProps) => {
                     return (

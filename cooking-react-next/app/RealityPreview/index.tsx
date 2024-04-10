@@ -1,9 +1,10 @@
 "use client";
 
-import { Button, Grid, Stack } from "@mui/material";
+import { Button, Grid, Stack, Box } from "@mui/material";
 import { useState, useEffect, useRef } from "react";
 import { findSentenceFromTranscript, callGpt4V } from '../utils';
 import ReactPlayer from 'react-player'
+import { orange } from '@mui/material/colors';
 
 const imagePathReality = 'images/overcookedsteak.png';
 const imagePathVideo = 'images/normalcookedsteak.png';
@@ -121,15 +122,6 @@ export default function RealityPreview(props: RealityPreviewProps) {
             .catch(error => console.error('Error:', error));
     };
 
-
-    const playVideo = () => {
-        videoRef.current?.play();
-    };
-
-    const pauseVideo = () => {
-        videoRef.current?.pause();
-    };
-
     const captureFrame = () => {
         const canvas = canvasRef.current;
         const video = videoRef.current;
@@ -139,7 +131,6 @@ export default function RealityPreview(props: RealityPreviewProps) {
             canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
             // save the image to base64 string
             const base64data = canvas.toDataURL('image/png');
-            console.log(base64data);
             setRealityImageBase64(base64data);
         }
     };
@@ -149,47 +140,62 @@ export default function RealityPreview(props: RealityPreviewProps) {
             {isClient && <video ref={videoRef} style={{ width: '100%', height: 'auto' }} />}
             <canvas
                 ref={canvasRef}
-                style={{ display: 'block' }}
+                style={{ display: 'none' }}
             />
-            <Button variant="contained" color="primary" onClick={playVideo}>
-                Reality Play
-            </Button>
-            <Button variant="contained" color="primary" onClick={pauseVideo}>
-                Reality Pause
-            </Button>
-            <Button variant="contained" color="primary" onClick={captureFrame}>
-                Capture Reality Frame
-            </Button>
-
-            <Grid container spacing={3}>
+            <Box display={'flex'} justifyContent={'center'} width={'100%'}>
+                <Button
+                    variant="outlined"
+                    color="primary"
+                    onClick={() => { videoRef.current?.play() }}
+                    sx={{ mr: 1 }}
+                >
+                    Reality Play
+                </Button>
+                <Button
+                    variant="outlined"
+                    color="primary"
+                    onClick={() => { videoRef.current?.pause() }}
+                    sx={{ mr: 1, ml: 1 }}
+                >
+                    Reality Pause
+                </Button>
+                <Button
+                    variant="contained"
+                    color="success"
+                    onClick={captureFrame}
+                    sx={{ ml: 1 }}
+                >
+                    Capture Reality
+                </Button>
+            </Box>
+            <Grid container spacing={1}>
                 <Grid item xs={6}>
+                    <p>from reality</p>
                     <img
-                        src="images/overcookedsteak.png"
+                        // src="images/overcookedsteak.png"
+                        src={realityImageBase64}
                         alt="Reality"
                         onClick={convertImageToBase64Reality}
-                        style={{ width: '70%', height: 'auto', margin: 'auto', border: '5px solid orange', cursor: 'pointer' }}
+                        style={{ width: '18vw', height: 'auto', margin: 'auto', border: '5px solid orange', cursor: 'pointer' }}
                     />
                 </Grid>
                 <Grid item xs={6}>
+                    <p>from video</p>
                     <img
                         src="images/normalcookedsteak.png"
-                        alt="Reality"
+                        alt="Video"
                         onClick={convertImageToBase64Video}
-                        style={{ width: '70%', height: 'auto', margin: 'auto', border: '5px solid red', cursor: 'pointer' }}
+                        style={{ width: '18vw', height: 'auto', margin: 'auto', border: '5px solid orange', cursor: 'pointer' }}
                     />
                 </Grid>
             </Grid>
 
             {/* <Stack spacing={2} justifyContent={'center'}> */}
             <div>
-                <Button variant="contained" color="primary" onClick={() => { props.setIsPlaying(true) }}>
-                    Play
-                </Button>
-                <Button variant="contained" color="primary" onClick={() => { props.setIsPlaying(false) }}>
-                    Pause
-                </Button>
-                <p></p>
-                <Button variant="contained" color="secondary" onClick={() => { setUserClickEvaluate(!userClickEvaluate) }}>
+                <Button 
+                variant="contained" 
+                color="secondary" 
+                onClick={() => { setUserClickEvaluate(!userClickEvaluate) }}>
                     Evaluate
                 </Button>
                 <p></p>

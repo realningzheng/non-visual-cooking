@@ -14,6 +14,7 @@ export default function MainLayout() {
                 <VideoPreview
                     vurl='https://www.youtube.com/watch?v=umiOuVA7PEc'
                     isPlaying={isPlaying}
+                    setIsPlaying={setIsPlaying}
                 />
             </Grid>
             <Grid item xs={6} style={{ height: '90vh', overflow: 'scroll' }}>
