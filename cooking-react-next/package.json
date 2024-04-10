@@ -1,0 +1,48 @@
+{
+  "name": "cooking-react-next",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@fal-ai/serverless-client": "^0.9.1",
+    "@fal-ai/serverless-proxy": "^0.7.4",
+    "next": "14.1.4",
+    "react": "^18",
+    "react-dom": "^18",
+    "@emotion/react": "^11.11.3",
+    "@emotion/styled": "^11.11.0",
+    "@mui/material": "^5.15.10",
+    "@reduxjs/toolkit": "^2.2.0",
+    "@testing-library/jest-dom": "^5.17.0",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^13.5.0",
+    "@types/jest": "^27.5.2",
+    "@types/node": "^16.18.80",
+    "@types/react": "^18.2.55",
+    "@types/react-dom": "^18.2.19",
+    "axios": "^1.6.7",
+    "openai": "^4.28.0",
+    "react-player": "^2.14.1",
+    "react-redux": "^9.1.0",
+    "react-scripts": "5.0.1",
+    "redux": "^5.0.1",
+    "typescript": "^4.9.5",
+    "web-vitals": "^2.1.4"
+  },
+  "devDependencies": {
+    "@types/node": "^16.18.79",
+    "@types/react": "^18.2.55",
+    "@types/react-dom": "^18.2.18",
+    "autoprefixer": "^10.0.1",
+    "eslint": "^8",
+    "eslint-config-next": "14.0.4",
+    "postcss": "^8",
+    "tailwindcss": "^3.3.0",
+    "typescript": "^4.9.5"
+  }
+}

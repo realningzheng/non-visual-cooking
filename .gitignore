@@ -1,0 +1,6 @@
+cooking-react-next/app/data/**
+.DS_Store
+cooking-react-next/public/images/
+cooking-react-next/public/next.svg
+cooking-react-next/public/vercel.svg
+cooking-react-next/secret.json
