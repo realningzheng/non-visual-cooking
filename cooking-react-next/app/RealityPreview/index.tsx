@@ -18,8 +18,10 @@ export default function RealityPreview(props: RealityPreviewProps) {
     const [base64Video, setBase64ForVideo] = useState('');
     const [userClickEvaluate, setUserClickEvaluate] = useState(false);
     const [userClickReasoning, setUserClickReasoning] = useState(false);
+    const [realityImageBase64, setRealityImageBase64] = useState('');
 
     const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
 
     // set up client state
     useEffect(() => {
@@ -71,6 +73,7 @@ export default function RealityPreview(props: RealityPreviewProps) {
 
     }, [userClickEvaluate, base64Reality, base64Video]);
 
+
     useEffect(() => {
         const fetchSentence = async () => {
             let response = await findSentenceFromTranscript('Making a steak that is not overcooked.');
@@ -83,6 +86,7 @@ export default function RealityPreview(props: RealityPreviewProps) {
         fetchSentence();
 
     }, [userClickReasoning]);
+
 
     const convertImageToBase64Reality = () => {
         // Fetch the image from the public folder
@@ -100,6 +104,7 @@ export default function RealityPreview(props: RealityPreviewProps) {
             .catch(error => console.error('Error:', error));
     };
 
+
     const convertImageToBase64Video = () => {
         // Fetch the image from the public folder
         fetch(imagePathVideo)
@@ -116,15 +121,46 @@ export default function RealityPreview(props: RealityPreviewProps) {
             .catch(error => console.error('Error:', error));
     };
 
+
+    const playVideo = () => {
+        videoRef.current?.play();
+    };
+
+    const pauseVideo = () => {
+        videoRef.current?.pause();
+    };
+
+    const captureFrame = () => {
+        const canvas = canvasRef.current;
+        const video = videoRef.current;
+        if (canvas && video) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
+            // save the image to base64 string
+            const base64data = canvas.toDataURL('image/png');
+            console.log(base64data);
+            setRealityImageBase64(base64data);
+        }
+    };
+
     return (
         <Stack spacing={2} justifyContent={'center'}>
-            {/* Image captured from reality */}
-            {isClient &&
-                <video
-                    ref={videoRef}
-                    style={{ width: '100%', height: 'auto' }}
-                />
-            }
+            {isClient && <video ref={videoRef} style={{ width: '100%', height: 'auto' }} />}
+            <canvas
+                ref={canvasRef}
+                style={{ display: 'block' }}
+            />
+            <Button variant="contained" color="primary" onClick={playVideo}>
+                Reality Play
+            </Button>
+            <Button variant="contained" color="primary" onClick={pauseVideo}>
+                Reality Pause
+            </Button>
+            <Button variant="contained" color="primary" onClick={captureFrame}>
+                Capture Reality Frame
+            </Button>
+
             <Grid container spacing={3}>
                 <Grid item xs={6}>
                     <img
