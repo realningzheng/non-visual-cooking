@@ -4,7 +4,8 @@ import { Button, Grid, Stack, Box } from "@mui/material";
 import { useState, useEffect, useRef } from "react";
 import LinearProgress from '@mui/material/LinearProgress';
 import * as utils from '../utils';
-
+// Hardcoded data for now
+import transriptSentenceList from '../data/cooking_steak_sentence.json';
 
 const imagePathReality = 'images/overcookedsteak.png';
 const imagePathVideo = 'images/normalcookedsteak.png';
@@ -16,11 +17,13 @@ interface RealityPreviewProps {
 export default function RealityPreview(props: RealityPreviewProps) {
     const [isClient, setIsClient] = useState(false);
     const [base64Video, setBase64ForVideo] = useState('');
-    const [userClickReasoning, setUserClickReasoning] = useState(false);
-    const [realityImageBase64, setRealityImageBase64] = useState('');
 
+    const [realityImageBase64, setRealityImageBase64] = useState('');
     const [realityEvaluateResponse, setRealityEvaluateResponse] = useState({ "gptResponse": "", "formattedResponse": null });
     const [isEvaluating, setIsEvaluating] = useState(false);
+
+    const [fetchedSentences, setFetchedSentences] = useState<number[]>([]);
+    const [isFetchingSentences, setIsFetchingSentences] = useState(false);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -54,20 +57,6 @@ export default function RealityPreview(props: RealityPreviewProps) {
     useEffect(() => {
         getVideo();
     }, [videoRef]);
-
-
-    useEffect(() => {
-        const fetchSentence = async () => {
-            let response = await utils.findSentenceFromTranscript('Making a steak that is not overcooked.');
-
-            // Do something with the response here
-            console.log(response);
-        };
-
-        // Call the async function
-        fetchSentence();
-
-    }, [userClickReasoning]);
 
 
     const convertImageToBase64Reality = () => {
@@ -125,6 +114,15 @@ export default function RealityPreview(props: RealityPreviewProps) {
         let response = await utils.callGpt4V(prompt, [base64Reality]);
         setIsEvaluating(false);
         setRealityEvaluateResponse(response);
+    };
+
+
+    const fetchSentenceFromVideo = async (sentence: string) => {
+        setIsFetchingSentences(true);
+        let response = await utils.findSentenceFromTranscript(sentence);
+        setIsFetchingSentences(false);
+        console.log(response);
+        setFetchedSentences(response.sentence_IDs);
     };
 
 
@@ -212,15 +210,20 @@ export default function RealityPreview(props: RealityPreviewProps) {
                         </div>
                 }
 
-                <Button variant="contained" color="success" onClick={() => { setUserClickReasoning(!userClickReasoning) }}>
-                    Reasoning
+                <Button
+                    variant="contained"
+                    color="secondary"
+                    onClick={() => { fetchSentenceFromVideo('Making a steak that is not overcooked.') }}
+                >
+                    Fetch related sentences
                 </Button>
-                <Button variant="outlined" color="success">
-                    Forward
-                </Button>
-                <Button variant="outlined" color="success">
-                    Backward
-                </Button>
+                {
+                    isFetchingSentences
+                        ? <LinearProgress sx={{ mt: 2, mb: 4 }} />
+                        : fetchedSentences.map((sentenceID) => (
+                            <p key={sentenceID}>{sentenceID}:{transriptSentenceList[sentenceID]['text']}</p>
+                        ))
+                }
             </div>
         </Stack >
     );

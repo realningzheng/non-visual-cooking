@@ -8,22 +8,22 @@ const apiKey = credential.OPENAI_KEY;
 const openai = new OpenAI({ apiKey: apiKey, dangerouslyAllowBrowser: true });
 
 
-export async function findSentenceFromTranscript(prompt: string): Promise<string> {
+export async function findSentenceFromTranscript(prompt: string) {
 
 	const importantSentencesPrompt = "This is the transcript of video that teaches blind people how to cook. \n" +
 		`Given the transcript, please tell me which sentences are relevant to ${prompt}, elusive for non-expert audiences to understand and are better with a visual explanation. \n` +
 		"You are required to pick up sentences evenly from the beginning, middle and end of the transcript. \n" +
 		"The transcript is given as a list of sentences with ID. Only return the sentence IDs to form the great version. \n" +
 		"Do not include full sentences in your reply. Only return a list of IDs. Do not return more than 5 sentences. \n" +
-		"Use the following format: ```[1, 4, 45, 100]```. \n" +
+		"Use the following format: `{'sentence_IDs': [1, 4, 45, 100]}`. \n" +
 		"Make sure the returned format is a list that can be parsed by Json. \n" +
 		transriptSentenceList.map((s) => `${s["sentenceIndex"]}: ${s["text"]}`).join("\n\n");
-	let gptResponse = "";
+	let gptResponse: { "sentence_IDs": number[] } = { "sentence_IDs": [] };
 
 	try {
-		console.log(importantSentencesPrompt);
 		const response = await openai.chat.completions.create({
-			model: "gpt-4-0125-preview",
+			model: "gpt-4-turbo",
+			response_format: { "type": "json_object" },
 			messages: [
 				{
 					role: "user",
@@ -34,12 +34,10 @@ export async function findSentenceFromTranscript(prompt: string): Promise<string
 			],
 			max_tokens: 1500,
 		});
-		console.log(response);
+		
 		if (response.choices[0]['message']['content']) {
-			gptResponse = response.choices[0]['message']['content'];
+			gptResponse = JSON.parse(response.choices[0]['message']['content']);
 		}
-
-		console.log(gptResponse);
 
 	} catch (error) {
 		if (axios.isAxiosError(error)) {
