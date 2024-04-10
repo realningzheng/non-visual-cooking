@@ -1,8 +1,9 @@
 "use client";
 
 import { Button, Grid, Stack } from "@mui/material";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { findSentenceFromTranscript, callGpt4V } from '../utils';
+import ReactPlayer from 'react-player'
 
 const imagePathReality = 'images/overcookedsteak.png';
 const imagePathVideo = 'images/normalcookedsteak.png';
@@ -12,10 +13,44 @@ interface RealityPreviewProps {
 }
 
 export default function RealityPreview(props: RealityPreviewProps) {
+    const [isClient, setIsClient] = useState(false);
     const [base64Reality, setBase64ForReality] = useState('');
     const [base64Video, setBase64ForVideo] = useState('');
     const [userClickEvaluate, setUserClickEvaluate] = useState(false);
     const [userClickReasoning, setUserClickReasoning] = useState(false);
+
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    // set up client state
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setIsClient(true);
+        }
+    }, []);
+
+
+    const getVideo = () => {
+        navigator.mediaDevices
+            .getUserMedia({
+                video: { width: 1280, height: 720 }
+            })
+            .then(stream => {
+                let video = videoRef.current;
+                if (video) {
+                    video.srcObject = stream;
+                    video.play();
+                }
+            })
+            .catch(err => {
+                console.error(err);
+            })
+    }
+
+
+    useEffect(() => {
+        getVideo();
+    }, [videoRef]);
+
 
     useEffect(() => {
         // Define an asynchronous function inside useEffect
@@ -39,7 +74,7 @@ export default function RealityPreview(props: RealityPreviewProps) {
     useEffect(() => {
         const fetchSentence = async () => {
             let response = await findSentenceFromTranscript('Making a steak that is not overcooked.');
-            
+
             // Do something with the response here
             console.log(response);
         };
@@ -84,6 +119,12 @@ export default function RealityPreview(props: RealityPreviewProps) {
     return (
         <Stack spacing={2} justifyContent={'center'}>
             {/* Image captured from reality */}
+            {isClient &&
+                <video
+                    ref={videoRef}
+                    style={{ width: '100%', height: 'auto' }}
+                />
+            }
             <Grid container spacing={3}>
                 <Grid item xs={6}>
                     <img

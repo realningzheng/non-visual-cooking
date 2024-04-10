@@ -1,5 +1,5 @@
-import React from 'react';
-import {useState, useEffect} from 'react';
+import React, { useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Grid } from '@mui/material';
 import VideoPreview from '../VideoPreview';
 import RealityPreview from '../RealityPreview';
@@ -19,7 +19,7 @@ export default function MainLayout() {
             <Grid item xs={6} style={{ height: '90vh', overflow: 'scroll' }}>
                 <h2>Reality preview</h2>
                 <RealityPreview
-                setIsPlaying={setIsPlaying}
+                    setIsPlaying={setIsPlaying}
                 />
             </Grid>
         </Grid>
