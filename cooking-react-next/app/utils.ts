@@ -65,18 +65,12 @@ export async function callGpt4V(prompt: string, imageURLList: string[]): Promise
 					role: "user",
 					content: [
 						{ type: "text", text: `${prompt}` },
-						{
-							type: "image_url",
+						...imageURLList.map(url => ({
+							type: "image_url" as const, // Explicitly stating the type as a constant
 							image_url: {
-								"url": imageURLList[0],
+								"url": url
 							},
-						},
-						{
-							type: "image_url",
-							image_url: {
-								"url": imageURLList[1],
-							},
-						}
+						})),
 					],
 				},
 			],
@@ -85,9 +79,6 @@ export async function callGpt4V(prompt: string, imageURLList: string[]): Promise
 		if (response.choices[0]['message']['content']) {
 			gptResponse = response.choices[0]['message']['content'];
 		}
-
-		console.log(gptResponse);
-
 	} catch (error) {
 		if (axios.isAxiosError(error)) {
 			console.error("Error calling GPT-4 API:", error.response?.data);

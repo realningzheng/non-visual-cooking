@@ -2,6 +2,7 @@
 
 import { Button, Grid, Stack, Box } from "@mui/material";
 import { useState, useEffect, useRef } from "react";
+import LinearProgress from '@mui/material/LinearProgress';
 import { findSentenceFromTranscript, callGpt4V } from '../utils';
 import ReactPlayer from 'react-player'
 import { orange } from '@mui/material/colors';
@@ -15,11 +16,12 @@ interface RealityPreviewProps {
 
 export default function RealityPreview(props: RealityPreviewProps) {
     const [isClient, setIsClient] = useState(false);
-    const [base64Reality, setBase64ForReality] = useState('');
     const [base64Video, setBase64ForVideo] = useState('');
-    const [userClickEvaluate, setUserClickEvaluate] = useState(false);
     const [userClickReasoning, setUserClickReasoning] = useState(false);
     const [realityImageBase64, setRealityImageBase64] = useState('');
+
+    const [realityEvaluateResponse, setRealityEvaluateResponse] = useState('');
+    const [isEvaluating, setIsEvaluating] = useState(false);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -56,26 +58,6 @@ export default function RealityPreview(props: RealityPreviewProps) {
 
 
     useEffect(() => {
-        // Define an asynchronous function inside useEffect
-        const fetchData = async () => {
-            var prompt = 'Compare the two pictures. The first picture is what I cooked, '
-                + 'the second picture is what is supposed to look like. '
-                + 'Tell me what is wrong with what I cooked. ';
-
-            // Make sure callGpt4V is defined to accept the second parameter as an array
-            let response = await callGpt4V(prompt, [base64Reality, base64Video]);
-
-            // Do something with the response here
-            console.log(response);
-        };
-
-        // Call the async function
-        fetchData();
-
-    }, [userClickEvaluate, base64Reality, base64Video]);
-
-
-    useEffect(() => {
         const fetchSentence = async () => {
             let response = await findSentenceFromTranscript('Making a steak that is not overcooked.');
 
@@ -99,7 +81,7 @@ export default function RealityPreview(props: RealityPreviewProps) {
                 reader.readAsDataURL(blob); // Read the blob as a Data URL (base64)
                 reader.onloadend = function () {
                     const base64data = reader.result;
-                    setBase64ForReality(String(base64data)); // Set the base64 string
+                    setRealityImageBase64(String(base64data)); // Set the base64 string
                 }
             })
             .catch(error => console.error('Error:', error));
@@ -122,7 +104,9 @@ export default function RealityPreview(props: RealityPreviewProps) {
             .catch(error => console.error('Error:', error));
     };
 
+
     const captureFrame = () => {
+        setRealityEvaluateResponse('');
         const canvas = canvasRef.current;
         const video = videoRef.current;
         if (canvas && video) {
@@ -133,6 +117,29 @@ export default function RealityPreview(props: RealityPreviewProps) {
             const base64data = canvas.toDataURL('image/png');
             setRealityImageBase64(base64data);
         }
+    };
+
+
+    const evaluateRealityFrame = async (base64Reality:string) => {
+        var prompt = 'What is inside the picture?';
+        setIsEvaluating(true);
+        let response = await callGpt4V(prompt, [base64Reality]);
+        setIsEvaluating(false);
+        setRealityEvaluateResponse(response);
+        console.log(response);
+    };
+
+
+    const CompareRealityAndVideoFrame = async () => {
+        var prompt = 'Compare the two pictures. The first picture is what I cooked, '
+            + 'the second picture is what is supposed to look like. '
+            + 'Tell me what is wrong with what I cooked. ';
+
+        // Make sure callGpt4V is defined to accept the second parameter as an array
+        let response = await callGpt4V(prompt, [realityImageBase64, base64Video]);
+
+        // Do something with the response here
+        console.log(response);
     };
 
     return (
@@ -192,13 +199,14 @@ export default function RealityPreview(props: RealityPreviewProps) {
 
             {/* <Stack spacing={2} justifyContent={'center'}> */}
             <div>
-                <Button 
-                variant="contained" 
-                color="secondary" 
-                onClick={() => { setUserClickEvaluate(!userClickEvaluate) }}>
+                <Button
+                    variant="contained"
+                    color="secondary"
+                    onClick={()=>evaluateRealityFrame(realityImageBase64)}>
                     Evaluate
                 </Button>
-                <p></p>
+                {isEvaluating ? <LinearProgress sx={{mt:2, mb:4}}/>: <p>{realityEvaluateResponse}</p>}
+
                 <Button variant="contained" color="success" onClick={() => { setUserClickReasoning(!userClickReasoning) }}>
                     Reasoning
                 </Button>
