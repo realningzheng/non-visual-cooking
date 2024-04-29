@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Grid, Stack, Box } from "@mui/material";
+import { Button, Grid, Stack, Box, TextField } from "@mui/material";
 import { useState, useEffect, useRef } from "react";
 import LinearProgress from '@mui/material/LinearProgress';
 import * as utils from '../utils';
@@ -24,6 +24,7 @@ export default function RealityPreview(props: RealityPreviewProps) {
 
     const [fetchedSentences, setFetchedSentences] = useState<number[]>([]);
     const [isFetchingSentences, setIsFetchingSentences] = useState(false);
+    const [fetchSentenceContent, setFetchSentenceContent] = useState('Making a steak that is not overcooked.');
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -34,6 +35,10 @@ export default function RealityPreview(props: RealityPreviewProps) {
             setIsClient(true);
         }
     }, []);
+
+    useEffect(() => {
+        getVideo();
+    }, [videoRef]);
 
 
     const getVideo = () => {
@@ -52,11 +57,6 @@ export default function RealityPreview(props: RealityPreviewProps) {
                 console.error(err);
             })
     }
-
-
-    useEffect(() => {
-        getVideo();
-    }, [videoRef]);
 
 
     const convertImageToBase64Reality = () => {
@@ -140,12 +140,27 @@ export default function RealityPreview(props: RealityPreviewProps) {
 
     return (
         <Stack spacing={2} justifyContent={'center'}>
-            {isClient && <video ref={videoRef} style={{ width: '100%', height: 'auto' }} />}
+            {isClient &&
+                <div style={{ width: 'auto', height: '30vh', position: 'relative' }}>
+                    <video ref={videoRef} style={{ width: '100%', height: '100%', position: 'absolute', zIndex: -1, margin:'auto' }} />
+                    <img
+                        // src="images/overcookedsteak.png"
+                        src={realityImageBase64}
+                        alt="Reality"
+                        onClick={convertImageToBase64Reality}
+                        style={{ width: '15vw', right: '10px', top: '5px', height: 'auto', position: 'absolute', border: '5px solid orange', cursor: 'pointer', zIndex: 3 }}
+                    />
+                </div>
+            }
             <canvas
                 ref={canvasRef}
                 style={{ display: 'none' }}
             />
-            <Box display={'flex'} justifyContent={'center'} width={'100%'}>
+            <Box
+                display={'flex'}
+                justifyContent={'center'}
+                width={'100%'}
+            >
                 <Button
                     variant="outlined"
                     color="primary"
@@ -171,28 +186,15 @@ export default function RealityPreview(props: RealityPreviewProps) {
                     Capture Reality
                 </Button>
             </Box>
-            <Grid container spacing={1}>
-                <Grid item xs={6}>
-                    <p>from reality</p>
-                    <img
-                        // src="images/overcookedsteak.png"
-                        src={realityImageBase64}
-                        alt="Reality"
-                        onClick={convertImageToBase64Reality}
-                        style={{ width: '18vw', height: 'auto', margin: 'auto', border: '5px solid orange', cursor: 'pointer' }}
-                    />
-                </Grid>
-                <Grid item xs={6}>
-                    <p>from video</p>
-                    <img
-                        src="images/normalcookedsteak.png"
-                        alt="Video"
-                        onClick={convertImageToBase64Video}
-                        style={{ width: '18vw', height: 'auto', margin: 'auto', border: '5px solid orange', cursor: 'pointer' }}
-                    />
-                </Grid>
-            </Grid>
 
+            {/* <p>from video</p>
+            <img
+                src="images/normalcookedsteak.png"
+                alt="Video"
+                onClick={convertImageToBase64Video}
+                style={{ width: '18vw', height: 'auto', margin: 'auto', border: '5px solid orange', cursor: 'pointer' }}
+            /> */}
+            
             <div>
                 <Button
                     variant="contained"
@@ -203,20 +205,29 @@ export default function RealityPreview(props: RealityPreviewProps) {
                 </Button>
                 {
                     isEvaluating
-                        ? <LinearProgress sx={{ mt: 2, mb: 4 }} />
+                        ? <LinearProgress sx={{ mt: 2, mb: 4, width:'70%' }} />
                         : <div>
                             <p>{realityEvaluateResponse.gptResponse}</p>
                             <p>{realityEvaluateResponse.formattedResponse}</p>
                         </div>
                 }
-
+                <Stack spacing={2} justifyContent={'center'}>
                 <Button
                     variant="contained"
                     color="secondary"
-                    onClick={() => { fetchSentenceFromVideo('Making a steak that is not overcooked.') }}
+                    onClick={() => { fetchSentenceFromVideo(fetchSentenceContent) }}
+                    style={{ width: '30%' }}
                 >
                     Fetch related sentences
                 </Button>
+                <TextField
+                    id="outlined-basic"
+                    label="Sentence"
+                    variant="outlined"
+                    value={fetchSentenceContent}
+                    onChange={(e) => setFetchSentenceContent(e.target.value)}
+                    style={{ width: '70%' }}
+                />
                 {
                     isFetchingSentences
                         ? <LinearProgress sx={{ mt: 2, mb: 4 }} />
@@ -224,6 +235,7 @@ export default function RealityPreview(props: RealityPreviewProps) {
                             <p key={sentenceID}>{sentenceID}:{transriptSentenceList[sentenceID]['text']}</p>
                         ))
                 }
+                </Stack>
             </div>
         </Stack >
     );
