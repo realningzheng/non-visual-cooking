@@ -140,7 +140,7 @@ export default function RealityPreview(props: RealityPreviewProps) {
 
     return (
         <Stack spacing={2} justifyContent={'center'}>
-            {isClient &&
+            {/* {isClient &&
                 <div style={{ width: 'auto', height: '30vh', position: 'relative' }}>
                     <video ref={videoRef} style={{ width: '100%', height: '100%', position: 'absolute', zIndex: -1, margin:'auto' }} />
                     <img
@@ -155,7 +155,7 @@ export default function RealityPreview(props: RealityPreviewProps) {
             <canvas
                 ref={canvasRef}
                 style={{ display: 'none' }}
-            />
+            /> */}
             <Box
                 display={'flex'}
                 justifyContent={'center'}

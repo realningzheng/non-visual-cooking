@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Grid } from '@mui/material';
 import VideoPreview from '../VideoPreview';
 import RealityPreview from '../RealityPreview';
+import WorkFlow from '../WorkFlow';
 
 export default function MainLayout() {
     const [isPlaying, setIsPlaying] = useState(false);
@@ -16,12 +17,13 @@ export default function MainLayout() {
                     isPlaying={isPlaying}
                     setIsPlaying={setIsPlaying}
                 />
-            </Grid>
-            <Grid item xs={6} style={{ height: '90vh', overflow: 'scroll' }}>
                 <h2>Reality preview</h2>
                 <RealityPreview
                     setIsPlaying={setIsPlaying}
                 />
+            </Grid>
+            <Grid item xs={6} style={{ height: '90vh', overflow: 'scroll' }}>
+                <WorkFlow/>
             </Grid>
         </Grid>
     )
