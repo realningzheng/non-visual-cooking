@@ -5,41 +5,66 @@ import { useState, useEffect, useRef } from "react";
 import LinearProgress from '@mui/material/LinearProgress';
 import * as utils from '../utils';
 
+import { stateTranslator, eventTranslator, stateMachine } from './stateMachine';
+
 export default function WorkFlow() {
-    const [fetchUserVoiceInput, setfetchUserVoiceInput] = useState("");
-    const [fetchUserStreamInput, setfetchUserStreamInput] = useState("");
+    const [CurrentState, setCurrentState] = useState(0);
+    const [VoiceInput, setVoiceInput] = useState("");
+    const [StreamInput, setStreamInput] = useState("");
+    const [UserEvent, setUserEvent] = useState(0);
+
+    const decodeUserInput = () => {
+        // 1. (openai_api) Get the category of the user inputs (stream and voice)
+        // TODO
+
+        // 2. Get the next state and update the current state
+        setCurrentState(stateMachine[CurrentState][UserEvent]);
+    };
 
     return (
         <div>
             <h2>Work Flow</h2>
-            <h3>User Voice Input</h3>
+            <h3>Voice Input</h3>
             <TextField
                 id="outlined-basic"
                 label="Sentence"
                 variant="outlined"
-                value={fetchUserVoiceInput}
-                onChange={(e) => setfetchUserVoiceInput(e.target.value)}
+                onChange={(e) => setVoiceInput(e.target.value)}
                 style={{ width: '50%' }}
             />
-            <h3>User Stream Input</h3>
+            <h3>Stream Input</h3>
             <TextField
                 id="outlined-basic"
-                label="Sentence"
+                label="Stream JSON"
                 variant="outlined"
-                value={fetchUserStreamInput}
-                onChange={(e) => setfetchUserStreamInput(e.target.value)}
+                onChange={(e) => setStreamInput(e.target.value)}
                 style={{ width: '50%' }}
             />
-            <h3>Send</h3>
+            <h3>Current State</h3>
+            <p>{CurrentState} : {stateTranslator[Number(CurrentState)]}</p>
+            <h3>Event</h3>
+            <p>Choose from: </p>
+            <ul style={{ display: 'flex', listStyleType: 'none', padding: 0 }}>
+                {Object.keys(stateMachine[CurrentState])
+                    .sort((a, b) => Number(a) - Number(b)) // Sort numerically
+                    .map((event) => (
+                        <li key={event} style={{ marginRight: '10px' }}>
+                            <button
+                                onClick={() => setUserEvent(Number(event))}
+                                style={{ padding: '5px 10px' }}
+                            >{event}</button>
+                        </li>
+                    ))}
+            </ul>
+            <p>{UserEvent}: {eventTranslator[UserEvent]}</p>
+            <br />
             <Button
                 variant="contained"
                 color="secondary"
-                onClick={() => { console.log('send action') }}
-                style={{ width: '30%' }}
-            >
-                send
-            </Button>
-            <h3>Current State</h3>
+                onClick={() => decodeUserInput()}
+                style={{ width: '50%' }}
+            >activate {UserEvent}</Button>
+            <br />
         </div>
     );
 }
