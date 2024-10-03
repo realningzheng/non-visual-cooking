@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import LinearProgress from '@mui/material/LinearProgress';
 import * as utils from '../utils';
 
-import { stateTranslator, eventTranslator, stateMachine } from './stateMachine';
+import { stateTranslator, eventTranslator, stateMachine, stateFunctions } from './stateMachine';
 
 export default function WorkFlow() {
     const [CurrentState, setCurrentState] = useState(0);
@@ -13,11 +13,11 @@ export default function WorkFlow() {
     const [StreamInput, setStreamInput] = useState("");
     const [UserEvent, setUserEvent] = useState(0);
 
-    const decodeUserInput = () => {
+    const gotoNextState = () => {
         // 1. (openai_api) Get the category of the user inputs (stream and voice)
         // TODO
 
-        // 2. Get the next state and update the current state
+        // 2. Proceed to next state
         setCurrentState(stateMachine[CurrentState][UserEvent]);
     };
 
@@ -61,7 +61,7 @@ export default function WorkFlow() {
             <Button
                 variant="contained"
                 color="secondary"
-                onClick={() => decodeUserInput()}
+                onClick={() => gotoNextState()}
                 style={{ width: '50%' }}
             >activate {UserEvent}</Button>
             <br />

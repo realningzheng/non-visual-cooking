@@ -63,7 +63,13 @@ State Transitions:
 | 6     | 4        | 0          |
 -----------------------------------------------------------------*/
 
-// define states and transitions
+
+// Define the state transitions using a dictionary
+type StateMachine = {
+    [key: number]: {
+      [key: number]: number;
+    };
+  };
 type StateMachineTranslator = {
     [key: number]: string;
   };
@@ -94,13 +100,6 @@ export const eventTranslator: StateMachineTranslator = {
     14  : "Problem unsolved",
     20  : "timeout"
 }
-
-// Define state machine logic
-type StateMachine = {
-    [key: number]: {
-      [key: number]: number;
-    };
-  };
 export const stateMachine: StateMachine = {
     0: {
       0: 2,  // Ask how to do a step
@@ -146,43 +145,4 @@ export const stateMachine: StateMachine = {
       5: 6,  // Repeat
       4: 0,  // Agree/Satisfy
     },
-};
-
-// State functions
-const comparingVideoRealityAlignment = () => {
-    // Function for state 0
-};
-
-const explainCurrentState = () => {
-    // Function for state 1
-};
-
-const explainCurrentStepAction = () => {
-    // Function for state 2
-};
-
-const respondWithHowToFix = () => {
-    // Function for state 3
-};
-
-const freeformResponse = () => {
-    // Function for state 4
-};
-
-const handlingUserDisagreements = () => {
-    // Function for state 5
-};
-
-const replayRelevantPartsFromVideos = () => {
-    // Function for state 6
-};
-
-export const stateFunctions: { [key: number]: () => void } = {
-    0: comparingVideoRealityAlignment,
-    1: explainCurrentState,
-    2: explainCurrentStepAction,
-    3: respondWithHowToFix,
-    4: freeformResponse,
-    5: handlingUserDisagreements,
-    6: replayRelevantPartsFromVideos,
 };
