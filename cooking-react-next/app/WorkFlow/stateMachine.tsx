@@ -63,6 +63,13 @@ State Transitions:
 | 6     | 4        | 0          |
 -----------------------------------------------------------------*/
 
+import OpenAI from 'openai';
+import axios from "axios";
+import credential from '../../secret.json';
+
+const apiKey = credential.OPENAI_KEY;
+const openai = new OpenAI({ apiKey: apiKey, dangerouslyAllowBrowser: true });
+
 // define states and transitions
 type StateMachineTranslator = {
     [key: number]: string;
@@ -186,3 +193,62 @@ export const stateFunctions: { [key: number]: () => void } = {
     5: handlingUserDisagreements,
     6: replayRelevantPartsFromVideos,
 };
+
+// Next event chooser
+export const nextEventChooser = async (
+    voiceInput: string, 
+    streamInput: string, 
+    currentState: number
+): Promise<number> => {
+    // 1. Get all possible next events based on currentState and state machine
+    const possibleNextEventsObj = stateMachine[currentState];
+
+    const possibleNextEvents: string[] = Object.keys(possibleNextEventsObj).map(event => {
+        const eventNumber = Number(event); // Convert event key to number
+        const eventExplanation = eventTranslator[eventNumber]; // Get explanation from eventTranslator
+        return `${eventNumber}: ${eventExplanation}`;
+    });
+    // 2. (openai_api) Select the category of the next event based on user inputs (stream and voice)
+    const prompt = `Given the user voice input "${voiceInput}"
+                    and user stream input "${streamInput}", 
+                    which of the following categories is most appropriate:\n 
+                    ${possibleNextEvents.join("\n")}\n
+                    -1: Not related to cooking task at all\n
+                    Please reply ONLY the index of the most appropriate category`;
+    console.log(prompt);
+    const response = await callGpt4V(prompt);
+    if (response) {
+        console.log(response);
+        return Number(response.gptResponse);
+    }
+    return -1;
+}
+
+async function callGpt4V(prompt: string): Promise<{"gptResponse":string}> {
+	let gptResponse = "";
+	try {
+		console.log(prompt);
+		const response = await openai.chat.completions.create({
+			model: "gpt-4-turbo",
+			messages: [
+				{
+					role: "user",
+					content: [
+						{ type: "text", text: `${prompt}` },
+					],
+				},
+			],
+			max_tokens: 1500,
+		});
+		if (response.choices[0]['message']['content']) {
+			gptResponse = response.choices[0]['message']['content'];
+		}
+	} catch (error) {
+		if (axios.isAxiosError(error)) {
+			console.error("Error calling GPT-4 API:", error.response?.data);
+		} else {
+			console.error("Unknown error:", error);
+		}
+	}
+	return {"gptResponse": gptResponse};
+}

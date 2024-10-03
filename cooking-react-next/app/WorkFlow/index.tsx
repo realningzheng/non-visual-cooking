@@ -2,23 +2,22 @@
 
 import { Button, Grid, Stack, Box, TextField } from "@mui/material";
 import { useState, useEffect, useRef } from "react";
-import LinearProgress from '@mui/material/LinearProgress';
-import * as utils from '../utils';
-
-import { stateTranslator, eventTranslator, stateMachine, stateFunctions } from './stateMachine';
+import { stateTranslator, eventTranslator, stateMachine, stateFunctions, nextEventChooser } from './stateMachine';
 
 export default function WorkFlow() {
     const [CurrentState, setCurrentState] = useState(0);
     const [VoiceInput, setVoiceInput] = useState("");
     const [StreamInput, setStreamInput] = useState("");
-    const [UserEvent, setUserEvent] = useState(0);
+    const [UserEvent, setUserEvent] = useState(-1);
 
-    const gotoNextState = () => {
-        // 1. (openai_api) Get the category of the user inputs (stream and voice)
-        // TODO
-
-        // 2. Proceed to next state
-        setCurrentState(stateMachine[CurrentState][UserEvent]);
+    const gotoNextState = async() => {
+        const nextEvent = await nextEventChooser(VoiceInput, StreamInput, CurrentState);
+        if (nextEvent >= 0) {
+            setUserEvent(nextEvent);
+            setCurrentState(stateMachine[CurrentState][nextEvent]);
+        } else {
+            console.log("No valid events found.");
+        }
     };
 
     return (
@@ -45,7 +44,7 @@ export default function WorkFlow() {
             <h3>Event</h3>
             <p>Choose from: </p>
             <ul style={{ display: 'flex', listStyleType: 'none', padding: 0 }}>
-                {Object.keys(stateMachine[CurrentState])
+                {CurrentState in stateMachine && Object.keys(stateMachine[CurrentState])
                     .sort((a, b) => Number(a) - Number(b)) // Sort numerically
                     .map((event) => (
                         <li key={event} style={{ marginRight: '10px' }}>
