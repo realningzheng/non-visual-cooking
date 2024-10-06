@@ -10,3 +10,4 @@ backend/data/key_frames/**.jpg
 backend/data/key_frames/**.png
 backend/data/**.mp4
 backend/data/**.srt
+backend/data/audio_output/**

@@ -3,7 +3,11 @@ import cv2
 import base64
 import os
 from openai import OpenAI
+from gradio_client import Client, handle_file
+from tqdm import tqdm
 
+
+######## Global variables ########
 # Result format
 video_knowledge_output = []
 info_piece = {
@@ -18,24 +22,39 @@ info_piece = {
     "sound_type": str,
 }
 
-# Assume we have the procedure segmented
-procedure_annotation = json.load(
-    open(
-        "/Users/zhengning/Code/non-visual-cooking/backend/data/making_burger_ground_truth_procedure.json"
-    )
-)["annotations"]
-transcript_sentence = json.load(
-    open(
-        "/Users/zhengning/Code/non-visual-cooking/backend/data/making_burger_sentence.json"
-    )
-)
-VIDEO_PATH = "/Users/zhengning/Code/non-visual-cooking/backend/data/making_burger.mp4"
-frame_output_dir = "/Users/zhengning/Code/non-visual-cooking/backend/data/key_frames"
+
+print("--> Initializing...")
+VIDEO_ID = "rwYaDqXFH88"
+DATA_DIR = "/Users/zhengning/Code/non-visual-cooking/backend/data"
+procedure_annotation = json.load(open(os.path.join(DATA_DIR, f"{VIDEO_ID}_procedure.json")))["annotations"]
+transcript_sentence = json.load(open(os.path.join(DATA_DIR, f"{VIDEO_ID}_sentence.json")))
+video_path = os.path.join(DATA_DIR, f"{VIDEO_ID}.mp4")
+frame_output_dir = os.path.join(DATA_DIR, "key_frames", VIDEO_ID)
+audio_output_dir = os.path.join(DATA_DIR, "audio_output", VIDEO_ID)
+# Create directories if they don't exist
+os.makedirs(frame_output_dir, exist_ok=True)
+os.makedirs(audio_output_dir, exist_ok=True)
+# read secret.json
+with open("/Users/zhengning/Code/non-visual-cooking/cooking-react-next/secret.json", "r") as f:
+    secret = json.load(f)
+    OPENAI_API_KEY = secret["OPENAI_KEY"]
+gamaClient = Client("sonalkum/GAMA")
+print("\t Done.")
 
 
+print("--> Preprocessing the video...")
+# extract audio track from the video
+audio_path = os.path.join(audio_output_dir, f"{VIDEO_ID}_original.wav")
+os.system(f"ffmpeg -i {video_path} -q:a 0 -map a {audio_path}")
+print("\t Done.")
+
+
+#####################################
+######## Bootstrap functions ########
+#####################################
 # Make GPT call
 def analyze_images_with_gpt4(image_base64_list, prompt):
-    client = OpenAI(api_key='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')
+    client = OpenAI(api_key=OPENAI_API_KEY)
     messages = [
         {
             "role": "user",
@@ -116,30 +135,43 @@ def extract_key_frames_and_description(video_path, startTime, endTime):
 
 # determine the sound type
 def determine_sound_type(startTime, endTime):
-    return "PALCE_HOLDER_SOUND_TYPE"
-
-
-# Fill video knowledge output
-last_end_time = 0
-for sentenceInfo in transcript_sentence:
-    startTime = sentenceInfo["startTime"]
-    endTime = sentenceInfo["endTime"]
-
-    text = sentenceInfo["text"]
-    _info_piece = info_piece.copy()
-    _info_piece["segment"] = [last_end_time, endTime]
-    _info_piece["transcript_sentence"] = text
-    _info_piece["procedure_annotation"] = locate_procedure_annotation(
-        startTime, endTime
+    audio_description = gamaClient.predict(
+        audio_path=handle_file(video_path),
+        question="Describe the audio.",
+        api_name="/predict",
     )
-    _info_piece["action_type"] = determine_action_type(startTime, endTime)
-    _info_piece["action_description"] = determine_action_description(startTime, endTime)
-    _info_piece["key_frame_base64"], _info_piece["visual_scene_description"] = (
-        extract_key_frames_and_description(VIDEO_PATH, startTime, endTime)
-    )
-    _info_piece["sound_type"] = determine_sound_type(startTime, endTime)
-    video_knowledge_output.append(_info_piece)
+    return audio_description
 
-    last_end_time = endTime
 
-print("end")
+#####################################
+######## Main function ##############
+#####################################
+if __name__ == "__main__":
+    # Fill video knowledge output
+    print("\t Parsing video...")
+    last_end_time = 0
+    total_sentences = len(transcript_sentence)
+    for sentenceInfo in tqdm(transcript_sentence, total=total_sentences, desc="Parsing video", unit="sentence"):
+        startTime = sentenceInfo["startTime"]
+        endTime = sentenceInfo["endTime"]
+
+        text = sentenceInfo["text"]
+        _info_piece = info_piece.copy()
+        _info_piece["segment"] = [last_end_time, endTime]
+        _info_piece["transcript_sentence"] = text
+        _info_piece["procedure_annotation"] = locate_procedure_annotation(
+            startTime, endTime
+        )
+        _info_piece["action_type"] = determine_action_type(startTime, endTime)
+        _info_piece["action_description"] = determine_action_description(startTime, endTime)
+        _info_piece["key_frame_base64"], _info_piece["visual_scene_description"] = (
+            extract_key_frames_and_description(video_path, startTime, endTime)
+        )
+        _info_piece["sound_type"] = determine_sound_type(startTime, endTime)
+        video_knowledge_output.append(_info_piece)
+
+        last_end_time = endTime
+        
+    with open("/Users/zhengning/Code/non-visual-cooking/backend/data/parser_output/video_knowledge.json", "w") as f:
+        json.dump(video_knowledge_output, f)
+

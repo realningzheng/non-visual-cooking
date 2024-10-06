@@ -84,9 +84,9 @@ def save_sentence_json(srt_word_input, json_sentence_output, json_word_output):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--srt_word_input", type=str, default="/Users/zhengning/Code/non-visual-cooking/backend/data/making_burger.srt")
-    parser.add_argument("--json_sentence_output", type=str, default="/Users/zhengning/Code/non-visual-cooking/backend/data/making_burger_sentence.json")
-    parser.add_argument("--json_word_output", type=str, default="/Users/zhengning/Code/non-visual-cooking/backend/data/making_burger_word.json")
+    parser.add_argument("--srt_word_input", type=str, default="/Users/zhengning/Code/non-visual-cooking/backend/data/rwYaDqXFH88.srt")
+    parser.add_argument("--json_sentence_output", type=str, default="/Users/zhengning/Code/non-visual-cooking/backend/data/rwYaDqXFH88_sentence.json")
+    parser.add_argument("--json_word_output", type=str, default="/Users/zhengning/Code/non-visual-cooking/backend/data/rwYaDqXFH88_word.json")
     args = parser.parse_args()
 
     save_sentence_json(args.srt_word_input, args.json_sentence_output, args.json_word_output)
