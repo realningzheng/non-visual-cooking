@@ -20,7 +20,6 @@ interface VideoPreviewProps {
 
 export default function VideoPreview(props: VideoPreviewProps) {
     const videoPlayerRef = useRef<ReactPlayer>(null);
-
     const [isClient, setIsClient] = useState(false);
 
     // set up client state
