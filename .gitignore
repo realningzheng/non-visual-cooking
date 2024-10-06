@@ -5,3 +5,11 @@ cooking-react-next/public/images/**
 cooking-react-next/public/next.svg
 cooking-react-next/public/vercel.svg
 cooking-react-next/secret.json
+backend/data/**.json
+backend/data/key_frames/**.jpg
+backend/data/key_frames/**.png
+backend/data/**.mp4
+backend/data/**.srt
+backend/data/audio_output/**
+backend/data/key_frames/**
+backend/data/parser_res/**
