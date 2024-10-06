@@ -11,3 +11,5 @@ backend/data/key_frames/**.png
 backend/data/**.mp4
 backend/data/**.srt
 backend/data/audio_output/**
+backend/data/key_frames/**
+backend/data/parser_res/**

@@ -1,4 +1,5 @@
 import json
+import shutil
 import cv2
 import base64
 import os
@@ -23,29 +24,39 @@ info_piece = {
 }
 
 
-print("--> Initializing...")
+print("\n\n--> Initializing...")
+print("============================")
 VIDEO_ID = "rwYaDqXFH88"
-DATA_DIR = "/Users/zhengning/Code/non-visual-cooking/backend/data"
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 procedure_annotation = json.load(open(os.path.join(DATA_DIR, f"{VIDEO_ID}_procedure.json")))["annotations"]
 transcript_sentence = json.load(open(os.path.join(DATA_DIR, f"{VIDEO_ID}_sentence.json")))
 video_path = os.path.join(DATA_DIR, f"{VIDEO_ID}.mp4")
 frame_output_dir = os.path.join(DATA_DIR, "key_frames", VIDEO_ID)
 audio_output_dir = os.path.join(DATA_DIR, "audio_output", VIDEO_ID)
-# Create directories if they don't exist
-os.makedirs(frame_output_dir, exist_ok=True)
-os.makedirs(audio_output_dir, exist_ok=True)
+# Create directories if they don't exist, and clean up existing content
+for directory in [frame_output_dir, audio_output_dir]:
+    if os.path.exists(directory):
+        for file in os.listdir(directory):
+            file_path = os.path.join(directory, file)
+            if os.path.isfile(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+    else:
+        os.makedirs(directory)
 # read secret.json
-with open("/Users/zhengning/Code/non-visual-cooking/cooking-react-next/secret.json", "r") as f:
+with open(os.path.join(os.path.dirname(__file__), "..", "cooking-react-next", "secret.json"), "r") as f:
     secret = json.load(f)
     OPENAI_API_KEY = secret["OPENAI_KEY"]
 gamaClient = Client("sonalkum/GAMA")
 print("\t Done.")
 
 
-print("--> Preprocessing the video...")
+print("\n\n--> Preprocessing the video...")
+print("============================")
 # extract audio track from the video
-audio_path = os.path.join(audio_output_dir, f"{VIDEO_ID}_original.wav")
-os.system(f"ffmpeg -i {video_path} -q:a 0 -map a {audio_path}")
+original_audio_path = os.path.join(audio_output_dir, f"{VIDEO_ID}_original.wav")
+os.system(f"ffmpeg -i {video_path} -q:a 0 -map a {original_audio_path} -loglevel quiet")
 print("\t Done.")
 
 
@@ -109,7 +120,7 @@ def determine_action_description(startTime, endTime):
 
 
 # extract the key frame from the video
-def extract_key_frames_and_description(video_path, startTime, endTime):
+def get_key_frames_and_description(video_path, startTime, endTime):
     cap = cv2.VideoCapture(video_path)
     duration = int(endTime) - int(startTime)
     interval = duration / 2
@@ -133,30 +144,40 @@ def extract_key_frames_and_description(video_path, startTime, endTime):
     return frames, scene_desp
 
 
-# determine the sound type
-def determine_sound_type(startTime, endTime):
-    audio_description = gamaClient.predict(
-        audio_path=handle_file(video_path),
-        question="Describe the audio.",
-        api_name="/predict",
-    )
-    return audio_description
-
+# @TODO: determine the sound type
+def determine_sound_type(startTime, endTime, original_audio_path):
+    audio_clip_path = os.path.join(audio_output_dir, f"{VIDEO_ID}_clip_{startTime}_{endTime}.wav")
+    start_seconds = int(startTime) / 1000
+    end_seconds = int(endTime) / 1000
+    os.system(f"ffmpeg -i {original_audio_path} -ss {start_seconds:.3f} -to {end_seconds:.3f} -c copy {audio_clip_path} -loglevel quiet")
+    
+    # audio_file_description, audio_description = gamaClient.predict(
+    #     audio_path=handle_file(audio_clip_path),
+    #     question="Describe the audio.",
+    #     api_name="/predict",
+    # )
+    # return audio_description
+    return "PALCE_HOLDER_SOUND_TYPE"
 
 #####################################
 ######## Main function ##############
 #####################################
 if __name__ == "__main__":
     # Fill video knowledge output
-    print("\t Parsing video...")
+    print("\n\n--> Parsing video...")
+    print("============================")
     last_end_time = 0
+    
+    # sample a few sentences for testing
+    transcript_sentence = transcript_sentence[10:11]
     total_sentences = len(transcript_sentence)
     for sentenceInfo in tqdm(transcript_sentence, total=total_sentences, desc="Parsing video", unit="sentence"):
         startTime = sentenceInfo["startTime"]
         endTime = sentenceInfo["endTime"]
-
+        sentenceIndex = sentenceInfo["sentenceIndex"]
         text = sentenceInfo["text"]
         _info_piece = info_piece.copy()
+        _info_piece["index"] = sentenceIndex
         _info_piece["segment"] = [last_end_time, endTime]
         _info_piece["transcript_sentence"] = text
         _info_piece["procedure_annotation"] = locate_procedure_annotation(
@@ -165,13 +186,13 @@ if __name__ == "__main__":
         _info_piece["action_type"] = determine_action_type(startTime, endTime)
         _info_piece["action_description"] = determine_action_description(startTime, endTime)
         _info_piece["key_frame_base64"], _info_piece["visual_scene_description"] = (
-            extract_key_frames_and_description(video_path, startTime, endTime)
+            get_key_frames_and_description(video_path, startTime, endTime)
         )
-        _info_piece["sound_type"] = determine_sound_type(startTime, endTime)
+        _info_piece["sound_type"] = determine_sound_type(startTime, endTime, original_audio_path)
         video_knowledge_output.append(_info_piece)
 
         last_end_time = endTime
         
-    with open("/Users/zhengning/Code/non-visual-cooking/backend/data/parser_output/video_knowledge.json", "w") as f:
-        json.dump(video_knowledge_output, f)
+    with open(os.path.join(DATA_DIR, "parser_res", "video_knowledge.json"), "w") as f:
+        json.dump(video_knowledge_output, f, indent=4)
 

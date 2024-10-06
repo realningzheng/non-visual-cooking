@@ -1,6 +1,7 @@
 import pysrt
 import json
 import argparse
+import os
 
 
 def parse_srt(srt_word_input, json_word_output):
@@ -84,9 +85,17 @@ def save_sentence_json(srt_word_input, json_sentence_output, json_word_output):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--srt_word_input", type=str, default="/Users/zhengning/Code/non-visual-cooking/backend/data/rwYaDqXFH88.srt")
-    parser.add_argument("--json_sentence_output", type=str, default="/Users/zhengning/Code/non-visual-cooking/backend/data/rwYaDqXFH88_sentence.json")
-    parser.add_argument("--json_word_output", type=str, default="/Users/zhengning/Code/non-visual-cooking/backend/data/rwYaDqXFH88_word.json")
+    parser.add_argument("--srt_word_input", type=str, default="rwYaDqXFH88.srt")
+    parser.add_argument("--json_sentence_output", type=str, default="rwYaDqXFH88_sentence.json")
+    parser.add_argument("--json_word_output", type=str, default="rwYaDqXFH88_word.json")
     args = parser.parse_args()
 
-    save_sentence_json(args.srt_word_input, args.json_sentence_output, args.json_word_output)
+    # Get the directory of the current script
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # Construct full paths using os.path.join
+    srt_word_input = os.path.join(current_dir, args.srt_word_input)
+    json_sentence_output = os.path.join(current_dir, args.json_sentence_output)
+    json_word_output = os.path.join(current_dir, args.json_word_output)
+
+    save_sentence_json(srt_word_input, json_sentence_output, json_word_output)
