@@ -20,7 +20,6 @@ interface VideoPreviewProps {
 
 export default function VideoPreview(props: VideoPreviewProps) {
     const videoPlayerRef = useRef<ReactPlayer>(null);
-
     const [isClient, setIsClient] = useState(false);
 
     // set up client state
@@ -76,7 +75,8 @@ export default function VideoPreview(props: VideoPreviewProps) {
                     Video Pause
                 </Button>
             </Box>
-            <div style={{ height: '40vh', overflowY: 'scroll' }}>
+            
+            {/* <div style={{ height: '40vh', overflowY: 'scroll' }}>
                 {transriptSentenceList.map((item: TransriptSentenceItemProps) => {
                     return (
                         <div key={item.sentenceIndex}>
@@ -84,7 +84,7 @@ export default function VideoPreview(props: VideoPreviewProps) {
                         </div>
                     );
                 })}
-            </div>
+            </div> */}
         </Stack>
     );
 }
