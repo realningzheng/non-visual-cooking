@@ -2,7 +2,7 @@
 
 import { Button, Grid, Stack, Box, TextField } from "@mui/material";
 import { useState, useEffect, useRef } from "react";
-import { stateTranslator, eventTranslator, stateMachine, stateFunctions, nextEventChooser } from './stateMachine';
+import { stateTranslator, eventTranslator, stateMachine, stateFunctions, nextEventChooser, executeStateFunction } from './stateMachine';
 
 
 interface WorkFlowProps {
@@ -11,25 +11,27 @@ interface WorkFlowProps {
     setVoiceInput: (input: string) => void;
     setVideoKnowledgeInput: (input: string) => void;
     setRealityImageBase64: (input: string) => void;
+    setAgentResponse: (input: string) => void;
     voiceInput: string;
     videoKnowledgeInput: string;
     currentState: number;
     userEvent: number;
     realityImageBase64: string;
+    agentResponse: string;
 }
 
 
 export default function WorkFlow(props: WorkFlowProps) {
-    const { setUserEvent, setCurrentState, setVoiceInput, setVideoKnowledgeInput } = props;
-
     const gotoNextState = async () => {
         const nextEvent = await nextEventChooser(props.voiceInput, props.videoKnowledgeInput, props.currentState);
         if (nextEvent >= 0) {
-            setUserEvent(nextEvent);
-            setCurrentState(stateMachine[props.currentState][nextEvent]);
+            props.setUserEvent(nextEvent);
+            props.setCurrentState(stateMachine[props.currentState][nextEvent]);
         } else {
             console.log("No valid events found.");
         }
+        let stateFunctionExeRes = executeStateFunction(props.currentState) as string;
+        props.setAgentResponse(stateFunctionExeRes);
     };
 
     return (
@@ -40,7 +42,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                 id="outlined-basic"
                 label="Stream JSON"
                 variant="outlined"
-                onChange={(e) => setVideoKnowledgeInput(e.target.value)}
+                onChange={(e) => props.setVideoKnowledgeInput(e.target.value)}
                 style={{ width: '50%' }}
             />
 
@@ -51,14 +53,13 @@ export default function WorkFlow(props: WorkFlowProps) {
                 style={{ width: '50%', height: 'auto', objectFit: 'contain' }}
             />
 
-
             <h3>Voice Command (from user)</h3>
             <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                 <TextField
                     id="outlined-basic"
                     label="Sentence"
                     variant="outlined"
-                    onChange={(e) => setVoiceInput(e.target.value)}
+                    onChange={(e) => props.setVoiceInput(e.target.value)}
                     sx={{ flexGrow: 1, marginRight: 2 }}
                 />
                 <Button
@@ -85,14 +86,20 @@ export default function WorkFlow(props: WorkFlowProps) {
                         <li key={event} style={{ marginBottom: '10px' }}>
                             <button
                                 onClick={() => {
-                                    setUserEvent(Number(event));
-                                    setCurrentState(stateMachine[props.currentState][Number(event)]);
+                                    props.setUserEvent(Number(event));
+                                    props.setCurrentState(stateMachine[props.currentState][Number(event)]);
+                                    let stateFunctionExeRes = executeStateFunction(stateMachine[props.currentState][Number(event)]) as string;
+                                    props.setAgentResponse(stateFunctionExeRes);
                                 }}
                                 style={{ padding: '5px 10px', width: '100%', textAlign: 'left' }}
                             >{event}: {eventTranslator[Number(event)]}</button>
                         </li>
                     ))}
             </ul>
+
+            <h3>Agent response</h3>
+            <p>{props.agentResponse}</p>
+
         </div>
     );
 }

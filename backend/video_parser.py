@@ -19,6 +19,7 @@ info_piece = {
     "action_type": str,
     "action_description": str,
     "key_frame_base64": [str, str, str],
+    "key_frame_path": [str, str, str],
     "visual_scene_description": str,
     "sound_type": str,
 }
@@ -33,8 +34,9 @@ transcript_sentence = json.load(open(os.path.join(DATA_DIR, f"{VIDEO_ID}_sentenc
 video_path = os.path.join(DATA_DIR, f"{VIDEO_ID}.mp4")
 frame_output_dir = os.path.join(DATA_DIR, "key_frames", VIDEO_ID)
 audio_output_dir = os.path.join(DATA_DIR, "audio_output", VIDEO_ID)
+res_output_dir = os.path.join(DATA_DIR, "parser_res", VIDEO_ID)
 # Create directories if they don't exist, and clean up existing content
-for directory in [frame_output_dir, audio_output_dir]:
+for directory in [frame_output_dir, audio_output_dir, res_output_dir]:
     if os.path.exists(directory):
         for file in os.listdir(directory):
             file_path = os.path.join(directory, file)
@@ -125,6 +127,7 @@ def get_key_frames_and_description(video_path, startTime, endTime):
     duration = int(endTime) - int(startTime)
     interval = duration / 2
     frames = []
+    frames_path = []
     for i in range(3):
         frame_time = int(startTime) + i * interval
         cap.set(cv2.CAP_PROP_POS_MSEC, frame_time)
@@ -134,6 +137,7 @@ def get_key_frames_and_description(video_path, startTime, endTime):
             frame_base64 = base64.b64encode(buffer).decode("utf-8")
             filename = f"frame_{startTime}_{endTime}_{i}.png"
             filepath = os.path.join(frame_output_dir, filename)
+            frames_path.append(filepath)
             cv2.imwrite(filepath, frame)
             frames.append(frame_base64)
     cap.release()
@@ -141,7 +145,7 @@ def get_key_frames_and_description(video_path, startTime, endTime):
     prompt = "These are three consecutive screenshots from a video, respond with a description to the current scene precisely."
     scene_desp = analyze_images_with_gpt4(frames, prompt)
 
-    return frames, scene_desp
+    return frames, frames_path, scene_desp
 
 
 # @TODO: determine the sound type
@@ -169,7 +173,7 @@ if __name__ == "__main__":
     last_end_time = 0
     
     # sample a few sentences for testing
-    transcript_sentence = transcript_sentence[10:11]
+    transcript_sentence = transcript_sentence[0:20]
     total_sentences = len(transcript_sentence)
     for sentenceInfo in tqdm(transcript_sentence, total=total_sentences, desc="Parsing video", unit="sentence"):
         startTime = sentenceInfo["startTime"]
@@ -185,7 +189,7 @@ if __name__ == "__main__":
         )
         _info_piece["action_type"] = determine_action_type(startTime, endTime)
         _info_piece["action_description"] = determine_action_description(startTime, endTime)
-        _info_piece["key_frame_base64"], _info_piece["visual_scene_description"] = (
+        _info_piece["key_frame_base64"], _info_piece["key_frame_path"], _info_piece["visual_scene_description"] = (
             get_key_frames_and_description(video_path, startTime, endTime)
         )
         _info_piece["sound_type"] = determine_sound_type(startTime, endTime, original_audio_path)
@@ -193,6 +197,6 @@ if __name__ == "__main__":
 
         last_end_time = endTime
         
-    with open(os.path.join(DATA_DIR, "parser_res", "video_knowledge.json"), "w") as f:
+    with open(os.path.join(res_output_dir, f"{VIDEO_ID}_video_knowledge.json"), "w") as f:
         json.dump(video_knowledge_output, f, indent=4)
 

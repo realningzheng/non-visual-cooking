@@ -142,7 +142,7 @@ export default function RealityPreview(props: RealityPreviewProps) {
                 style={{ width: '18vw', height: 'auto', margin: 'auto', border: '5px solid orange', cursor: 'pointer' }}
             /> */}
 
-            <div>
+            {/* <div>
                 <Button
                     variant="contained"
                     color="secondary"
@@ -184,7 +184,7 @@ export default function RealityPreview(props: RealityPreviewProps) {
                             ))
                     }
                 </Stack>
-            </div>
+            </div> */}
         </Stack >
     );
 }

@@ -9,7 +9,7 @@ States:
 6   : Agent: Replay the relevant parts from videos
 -----------------------------------------------------------------
 UserInput Categories:
-0   : User asks about how to do a step
+0   : User asks about a step
 1   : User asks about the current state (not used)
 2   : User asks how to fix something
 3   : User disagrees
@@ -74,6 +74,15 @@ const openai = new OpenAI({ apiKey: apiKey, dangerouslyAllowBrowser: true });
 type StateMachineTranslator = {
 	[key: number]: string;
 };
+
+// Define state machine logic
+type StateMachine = {
+	[key: number]: {
+		[key: number]: number;
+	};
+};
+
+
 export const stateTranslator: StateMachineTranslator = {
 	0: "Comparing video-reality alignment",
 	1: "Agent: Explain the current state*",
@@ -83,8 +92,10 @@ export const stateTranslator: StateMachineTranslator = {
 	5: "Handling user disagreements",
 	6: "Agent: Replay the relevant parts from videos"
 }
+
+
 export const eventTranslator: StateMachineTranslator = {
-	0: "User asks about how to do a step",
+	0: "User asks about a step",
 	1: "User asks about the current state (not used)",
 	2: "User asks how to fix something",
 	3: "User disagrees",
@@ -101,13 +112,6 @@ export const eventTranslator: StateMachineTranslator = {
 	14: "Problem unsolved",
 	20: "System automatically evaluates reality"
 }
-
-// Define state machine logic
-type StateMachine = {
-	[key: number]: {
-		[key: number]: number;
-	};
-};
 
 
 export const stateMachine: StateMachine = {
@@ -161,30 +165,37 @@ export const stateMachine: StateMachine = {
 // State functions
 const comparingVideoRealityAlignment = () => {
 	// Function for state 0
+	return "Comparing video-reality alignment";
 };
 
 const explainCurrentState = () => {
 	// Function for state 1
+	return "Explain the current state";
 };
 
 const explainCurrentStepAction = () => {
 	// Function for state 2
+	return "Explain the current step/action";
 };
 
 const respondWithHowToFix = () => {
 	// Function for state 3
+	return "Respond with how to fix";
 };
 
 const freeformResponse = () => {
 	// Function for state 4
+	return "Freeform response";
 };
 
 const handlingUserDisagreements = () => {
 	// Function for state 5
+	return "Handling user disagreements";
 };
 
 const replayRelevantPartsFromVideos = () => {
 	// Function for state 6
+	return "Replay relevant parts from videos";
 };
 
 export const stateFunctions: { [key: number]: () => void } = {
@@ -197,7 +208,21 @@ export const stateFunctions: { [key: number]: () => void } = {
 	6: replayRelevantPartsFromVideos,
 };
 
-// Next event chooser
+
+// Add this new function after the stateFunctions object
+export const executeStateFunction = (stateNumber: number) => {
+	const stateFunction = stateFunctions[stateNumber];
+	if (stateFunction) {
+		console.log(`Executing function for state ${stateNumber}: ${stateTranslator[stateNumber]}`);
+		return stateFunction();
+	} else {
+		console.error(`No function found for event ${stateNumber}`);
+		return "<VOID>";
+	}
+};
+
+
+// Modify the nextEventChooser function to call executeStateFunction
 export const nextEventChooser = async (
 	voiceInput: string,
 	videoKnowledgeInput: string,
@@ -219,21 +244,23 @@ export const nextEventChooser = async (
 					${possibleNextEvents.join("\n")}\n
 					-1: Not related to cooking task at all\n
 					Please reply ONLY the index of the most appropriate category`;
-	const response = await callGpt4V(prompt);
+	const response = await callChatGPT(prompt);
 	// @TODO: should either use functionCall or whatever to make sure the response is returned from a list of indices
 	if (response) {
 		console.log(response);
-		return Number(response.gptResponse);
+		const nextState = Number(response.gptResponse);
+		executeStateFunction(nextState);
+		return nextState;
 	}
 	return -1;
 }
 
-async function callGpt4V(prompt: string): Promise<{ "gptResponse": string }> {
+async function callChatGPT(prompt: string): Promise<{ "gptResponse": string }> {
 	let gptResponse = "";
 	try {
 		console.log(prompt);
 		const response = await openai.chat.completions.create({
-			model: "gpt-4-turbo",
+			model: "gpt-4o",
 			messages: [
 				{
 					role: "user",
