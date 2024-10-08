@@ -1,13 +1,14 @@
 "use client";
 
 import { Button, Grid, Stack, Box, TextField, IconButton } from "@mui/material";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { stateTranslator, eventTranslator, stateMachine, stateFunctions, nextEventChooser, executeStateFunction } from './stateMachine';
 import MicIcon from '@mui/icons-material/Mic';
 import SendIcon from '@mui/icons-material/Send';
 import MicOffIcon from '@mui/icons-material/MicOff';
 // @ts-ignore
 import { RealtimeClient } from '@openai/realtime-api-beta';
+import secret from '../../secret.json';
 
 
 interface WorkFlowProps {
@@ -28,34 +29,48 @@ interface WorkFlowProps {
 }
 
 
+// Initialize the client outside of the component
 const client = new RealtimeClient({
-    apiKey: "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",
+    apiKey: secret.OPENAI_KEY,
     dangerouslyAllowAPIKeyInBrowser: true,
 });
 
-
 export default function WorkFlow(props: WorkFlowProps) {
+    const [responseMsg, setResponseMsg] = useState("");
+
+    const handleConversationUpdate = useCallback((event: any) => {
+        console.log(event);
+        if (event.delta) {
+            console.log(event.delta.text);
+            setResponseMsg(responseMsg + event.delta.text);
+        }
+        // const items = client.conversation.getItems();
+        // console.log(items);
+    }, [responseMsg]);
+
     useEffect(() => {
-        client.updateSession({ instructions: 'You are a great, upbeat friend.' });
-        // client.updateSession({ voice: 'alloy' });
-        client.updateSession({ modalities: ['text'] });
+        // Set up the client
         client.updateSession({
-            turn_detection: { type: 'server_vad' }, // or 'server_vad'
+            instructions: 'You are a helpful assistant.',
+            modalities: ['text'],
+            turn_detection: { type: 'server_vad' },
             input_audio_transcription: { model: 'whisper-1' },
+            max_response_output_tokens: 512,
         });
 
         // Connect to Realtime API
         client.connect();
-    }, [])
 
-    useEffect(() => {
-        client.on('conversation.updated', (event: any) => {
-            console.log(event);
-            const items = client.conversation.getItems();
-            console.log(items);
+        // Add event listener
+        client.on('conversation.updated', handleConversationUpdate);
 
-        });
-    }, [])
+        // Cleanup function
+        return () => {
+            client.off('conversation.updated', handleConversationUpdate);
+            client.disconnect();
+        };
+    }, [handleConversationUpdate]);
+
 
     const gotoNextState = async () => {
         const nextEvent = await nextEventChooser(props.voiceInput, props.videoKnowledgeInput, props.currentState);
@@ -68,6 +83,7 @@ export default function WorkFlow(props: WorkFlowProps) {
         let stateFunctionExeRes = executeStateFunction(props.currentState) as string;
         props.setAgentResponse(stateFunctionExeRes);
     };
+
 
     const handleVoiceInputToggle = () => {
         props.setVoiceMuted(!props.voiceMuted);
@@ -147,15 +163,32 @@ export default function WorkFlow(props: WorkFlowProps) {
             <p>{props.agentResponse}</p>
 
 
-            <h3>OpenAI Realtime API</h3>
+            <h3>Test Realtime API</h3>
             <Button
                 onClick={() => {
-                    // Send a item and triggers a generation
                     client.sendUserMessageContent([{ type: 'input_text', text: `How are you?` }]);
+                    // client.realtime.send('conversation.item.create', {
+                    //     // "event_id": "event_345",
+                    //     "type": "conversation.item.create",
+                    //     // "previous_item_id": null,
+                    //     "item": {
+                    //         type: 'message',
+                    //         role: 'user',
+                    //         content: [
+                    //             {
+                    //                 type: 'input_text',
+                    //                 text: `Please respond with Woof!`
+                    //             }
+                    //         ]
+                    //     },
+                    // })
                 }}
             >
-                Connect
+                Send test message
             </Button>
+
+            <h3>Response Message</h3>
+            <p>{responseMsg}</p>
         </div>
     );
 }
