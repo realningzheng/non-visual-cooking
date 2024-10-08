@@ -4,8 +4,6 @@ import { Button, Grid, Stack, Box, TextField } from "@mui/material";
 import { useState, useEffect, useRef } from "react";
 import LinearProgress from '@mui/material/LinearProgress';
 import * as utils from '../utils';
-// Hardcoded data for now
-import transriptSentenceList from '../data/cooking_steak_sentence.json';
 
 
 interface RealityPreviewProps {

@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useRef } from 'react';
 import { useState, useEffect } from 'react';
 import { Grid } from '@mui/material';
@@ -26,6 +28,8 @@ export default function MainLayout() {
     const [videoKnowledgeInput, setVideoKnowledgeInput] = useState("");
     const [userEvent, setUserEvent] = useState(-1);
     const [agentResponse, setAgentResponse] = useState("");
+    const [voiceMuted, setVoiceMuted] = useState(true);
+
 
     return (
         <Grid container spacing={3}>
@@ -54,6 +58,7 @@ export default function MainLayout() {
             </Grid>
             <Grid item xs={6} style={{ height: '100vh', overflow: 'scroll' }}>
                 <WorkFlow
+                    setVoiceMuted={setVoiceMuted}
                     setUserEvent={setUserEvent}
                     setCurrentState={setCurrentState}
                     setVoiceInput={setVoiceInput}
@@ -66,6 +71,7 @@ export default function MainLayout() {
                     userEvent={userEvent}
                     realityImageBase64={realityImageBase64}
                     agentResponse={agentResponse}
+                    voiceMuted={voiceMuted}
                 />
             </Grid>
         </Grid>

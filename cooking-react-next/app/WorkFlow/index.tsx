@@ -1,8 +1,13 @@
 "use client";
 
-import { Button, Grid, Stack, Box, TextField } from "@mui/material";
+import { Button, Grid, Stack, Box, TextField, IconButton } from "@mui/material";
 import { useState, useEffect, useRef } from "react";
 import { stateTranslator, eventTranslator, stateMachine, stateFunctions, nextEventChooser, executeStateFunction } from './stateMachine';
+import MicIcon from '@mui/icons-material/Mic';
+import SendIcon from '@mui/icons-material/Send';
+import MicOffIcon from '@mui/icons-material/MicOff';
+// @ts-ignore
+import { RealtimeClient } from '@openai/realtime-api-beta';
 
 
 interface WorkFlowProps {
@@ -12,16 +17,46 @@ interface WorkFlowProps {
     setVideoKnowledgeInput: (input: string) => void;
     setRealityImageBase64: (input: string) => void;
     setAgentResponse: (input: string) => void;
+    setVoiceMuted: (muted: boolean) => void;
     voiceInput: string;
     videoKnowledgeInput: string;
     currentState: number;
     userEvent: number;
     realityImageBase64: string;
     agentResponse: string;
+    voiceMuted: boolean;
 }
 
 
+const client = new RealtimeClient({
+    apiKey: "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",
+    dangerouslyAllowAPIKeyInBrowser: true,
+});
+
+
 export default function WorkFlow(props: WorkFlowProps) {
+    useEffect(() => {
+        client.updateSession({ instructions: 'You are a great, upbeat friend.' });
+        // client.updateSession({ voice: 'alloy' });
+        client.updateSession({ modalities: ['text'] });
+        client.updateSession({
+            turn_detection: { type: 'server_vad' }, // or 'server_vad'
+            input_audio_transcription: { model: 'whisper-1' },
+        });
+
+        // Connect to Realtime API
+        client.connect();
+    }, [])
+
+    useEffect(() => {
+        client.on('conversation.updated', (event: any) => {
+            console.log(event);
+            const items = client.conversation.getItems();
+            console.log(items);
+
+        });
+    }, [])
+
     const gotoNextState = async () => {
         const nextEvent = await nextEventChooser(props.voiceInput, props.videoKnowledgeInput, props.currentState);
         if (nextEvent >= 0) {
@@ -33,6 +68,11 @@ export default function WorkFlow(props: WorkFlowProps) {
         let stateFunctionExeRes = executeStateFunction(props.currentState) as string;
         props.setAgentResponse(stateFunctionExeRes);
     };
+
+    const handleVoiceInputToggle = () => {
+        props.setVoiceMuted(!props.voiceMuted);
+    };
+
 
     return (
         <div>
@@ -54,7 +94,7 @@ export default function WorkFlow(props: WorkFlowProps) {
             />
 
             <h3>Voice Command (from user)</h3>
-            <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', marginBottom: '20px' }}>
                 <TextField
                     id="outlined-basic"
                     label="Sentence"
@@ -62,14 +102,20 @@ export default function WorkFlow(props: WorkFlowProps) {
                     onChange={(e) => props.setVoiceInput(e.target.value)}
                     sx={{ flexGrow: 1, marginRight: 2 }}
                 />
-                <Button
-                    variant="contained"
+                <IconButton
                     color="primary"
-                    onClick={() => gotoNextState()}
-                    sx={{ height: '56px' }}
+                    onClick={handleVoiceInputToggle}
+                    sx={{ marginRight: 1 }}
                 >
-                    activate
-                </Button>
+                    {props.voiceMuted ? <MicOffIcon /> : <MicIcon />}
+                </IconButton>
+                <IconButton
+                    color="default"
+                    onClick={() => gotoNextState()}
+                    sx={{ marginRight: 1 }}
+                >
+                    <SendIcon />
+                </IconButton>
             </Box>
 
             <h3>Current Event</h3>
@@ -100,6 +146,16 @@ export default function WorkFlow(props: WorkFlowProps) {
             <h3>Agent response</h3>
             <p>{props.agentResponse}</p>
 
+
+            <h3>OpenAI Realtime API</h3>
+            <Button
+                onClick={() => {
+                    // Send a item and triggers a generation
+                    client.sendUserMessageContent([{ type: 'input_text', text: `How are you?` }]);
+                }}
+            >
+                Connect
+            </Button>
         </div>
     );
 }
