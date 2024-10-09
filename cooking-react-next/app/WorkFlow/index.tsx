@@ -1,15 +1,13 @@
 "use client";
 
-import { Button, Grid, Stack, Box, TextField, IconButton } from "@mui/material";
+import { Button, Stack, Box, TextField, IconButton } from "@mui/material";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { stateTranslator, eventTranslator, stateMachine, stateFunctions, asyncNextEventChooser, executeStateFunction } from './stateMachine';
 import { WavRecorder, WavStreamPlayer } from '../wavtools/index.js';
 import { X, Codepen, XCircle, Edit, Zap, ArrowUp, ArrowDown, Mic } from 'react-feather';
-import Switch from '@mui/material/Switch';
 import { Toggle } from '../components/toggle/Toggle';
 import Button2 from '../components/button/Button';
 import SendIcon from '@mui/icons-material/Send';
-import MicOffIcon from '@mui/icons-material/MicOff';
 // @ts-ignore
 import { RealtimeClient } from '@openai/realtime-api-beta';
 // @ts-ignore
@@ -18,65 +16,41 @@ import secret from '../../secret.json';
 
 
 interface WorkFlowProps {
-    setUserEvent: (event: number) => void;
+    setStateMachineEvent: (event: number) => void;
     setCurrentState: (state: number) => void;
-    setVoiceInput: (input: string) => void;
+    setVoiceInputTranscript: (input: string) => void;
     setVideoKnowledgeInput: (input: string) => void;
     setRealityImageBase64: (input: string) => void;
     setStateFunctionExeRes: (input: string) => void;
-    voiceInput: string;
+    voiceInputTranscript: string;
     videoKnowledgeInput: string;
     currentState: number;
-    userEvent: number;
+    stateMachineEvent: number;
     realityImageBase64: string;
     stateFunctionExeRes: string;
 }
 
 
-interface RealtimeEvent {
-    time: string;
-    source: 'client' | 'server';
-    count?: number;
-    event: { [key: string]: any };
-}
-
-
 export default function WorkFlow(props: WorkFlowProps) {
-    const wavRecorderRef = useRef<WavRecorder>(
-        new WavRecorder({ sampleRate: 24000 })
-    );
-    const wavStreamPlayerRef = useRef<WavStreamPlayer>(
-        new WavStreamPlayer({ sampleRate: 24000 })
-    );
-    const clientRef = useRef<RealtimeClient>(
-        new RealtimeClient(
-            {
-                apiKey: secret.OPENAI_KEY,
-                dangerouslyAllowAPIKeyInBrowser: true,
-            }
-        )
-    );
+    const wavRecorderRef = useRef<WavRecorder>(new WavRecorder({ sampleRate: 24000 }));
+    const wavStreamPlayerRef = useRef<WavStreamPlayer>(new WavStreamPlayer({ sampleRate: 24000 }));
+    const clientRef = useRef<RealtimeClient>(new RealtimeClient({ apiKey: secret.OPENAI_KEY, dangerouslyAllowAPIKeyInBrowser: true }));
     const startTimeRef = useRef<string>(new Date().toISOString());
+    const conversationRef = useRef<HTMLDivElement>(null);
 
     const [isConnected, setIsConnected] = useState(false);
-    const [realtimeEvents, setRealtimeEvents] = useState<RealtimeEvent[]>([]);
     const [items, setItems] = useState<ItemType[]>([]);
     const [memoryKv, setMemoryKv] = useState<{ [key: string]: any }>({});
     const [isRecording, setIsRecording] = useState(false);
     const [canPushToTalk, setCanPushToTalk] = useState(true);
     const [audioAgentDuty, setAudioAgentDuty] = useState<'chatbot' | 'detect'>('chatbot');
-
-    const conversationRef = useRef<HTMLDivElement>(null);
-
     const possibleNextEventsObj = useMemo(() => stateMachine[props.currentState], [props.currentState]);
-
     const possibleNextEvents: string[] = useMemo(() =>
         Object.keys(possibleNextEventsObj).map(event => {
             const eventNumber = Number(event); // Convert event key to number
             const eventExplanation = eventTranslator[eventNumber]; // Get explanation from eventTranslator
             return `${eventNumber}: ${eventExplanation}`;
-        }),
-        [possibleNextEventsObj]
+        }), [possibleNextEventsObj]
     );
 
     /** Bootstrap functions */
@@ -89,24 +63,11 @@ export default function WorkFlow(props: WorkFlowProps) {
         // Set state variables
         startTimeRef.current = new Date().toISOString();
         setIsConnected(true);
-        setRealtimeEvents([]);
         setItems(client.conversation.getItems());
 
-        // Connect to microphone
         await wavRecorder.begin();
-
-        // Connect to audio output
         await wavStreamPlayer.connect();
-
-        // Connect to realtime API
         await client.connect();
-        // client.sendUserMessageContent([
-        //     {
-        //         type: `input_text`,
-        //         text: `Respond with: "Hi! Welcome to the non-visual cooking prototype system! How can I help you today?"`
-        //     },
-        // ]);
-
         if (client.getTurnDetectionType() === 'server_vad') {
             await wavRecorder.record((data) => client.appendInputAudio(data.mono));
         }
@@ -115,7 +76,6 @@ export default function WorkFlow(props: WorkFlowProps) {
     /* Disconnect and reset conversation state */
     const disconnectConversation = useCallback(async () => {
         setIsConnected(false);
-        setRealtimeEvents([]);
         setItems([]);
         setMemoryKv({});
 
@@ -173,10 +133,13 @@ export default function WorkFlow(props: WorkFlowProps) {
                     Please reply ONLY the index of the most appropriate category.`
                 }
             ]);
-        } else {
+        } else if (audioAgentDuty === 'chatbot') {
             client.createResponse();
+        } else {
+            console.error("Invalid audio agent duty");
         }
     };
+
 
     /**
      * Switch between Manual <> VAD mode for communication
@@ -196,24 +159,24 @@ export default function WorkFlow(props: WorkFlowProps) {
         setCanPushToTalk(value === 'none');
     };
 
+
     /* Go to the next state */
     const gotoNextState = async (nextEvent: number) => {
+        // update event and state in react states
         if (nextEvent >= 0) {
-            props.setUserEvent(nextEvent);
+            props.setStateMachineEvent(nextEvent);
             props.setCurrentState(stateMachine[props.currentState][nextEvent]);
         } else {
             console.log("No valid events found.");
         }
+        // execute the corresponding state function
         let stateFunctionExeRes = await executeStateFunction(stateMachine[props.currentState][nextEvent]) as string;
         props.setStateFunctionExeRes(stateFunctionExeRes);
     };
 
 
     /** Event handlers */
-    /**
-     * Core RealtimeClient and audio capture setup
-     * Set all of our instructions, tools, events and more
-     */
+    /** Core RealtimeClient and audio capture setup */
     useEffect(() => {
         // Get refs
         const wavStreamPlayer = wavStreamPlayerRef.current;
@@ -242,11 +205,10 @@ export default function WorkFlow(props: WorkFlowProps) {
             ${props.videoKnowledgeInput}
             `
         });
+
         // Set transcription, otherwise we don't get user transcriptions back
         client.updateSession({
-            input_audio_transcription: { model: 'whisper-1' }
-        });
-        client.updateSession({
+            input_audio_transcription: { model: 'whisper-1' },
             modalities: ['text', 'audio']
         });
 
@@ -282,18 +244,6 @@ export default function WorkFlow(props: WorkFlowProps) {
         );
 
         // handle realtime events from client + server for event logging
-        client.on('realtime.event', (realtimeEvent: RealtimeEvent) => {
-            setRealtimeEvents((realtimeEvents) => {
-                const lastEvent = realtimeEvents[realtimeEvents.length - 1];
-                if (lastEvent?.event.type === realtimeEvent.event.type) {
-                    // if we receive multiple events in a row, aggregate them for display purposes
-                    lastEvent.count = (lastEvent.count || 0) + 1;
-                    return realtimeEvents.slice(0, -1).concat(lastEvent);
-                } else {
-                    return realtimeEvents.concat(realtimeEvent);
-                }
-            });
-        });
         client.on('conversation.updated', async ({ item, delta }: any) => {
             const items = client.conversation.getItems();
             if (delta?.audio) {
@@ -326,13 +276,18 @@ export default function WorkFlow(props: WorkFlowProps) {
         };
     }, []);
 
+
     // Handle user transcript update
     useEffect(() => {
+        // scroll the conversation panel to the bottom
+        if (conversationRef.current) {
+            conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
+        }
         if (items.length > 0) {
             // read through items in reverse to find the latest user transcript and agent response
             for (let i = items.length - 1; i >= 0; i--) {
                 if (items[i].role === 'user' && items[i].formatted.transcript) {
-                    props.setVoiceInput(items[i].formatted.transcript || '');
+                    props.setVoiceInputTranscript(items[i].formatted.transcript || '');
                     break;
                 }
             }
@@ -340,11 +295,11 @@ export default function WorkFlow(props: WorkFlowProps) {
                 if (items[i].role === 'assistant') {
                     // set user event to the non-null value among transcript and text
                     if (items[i].formatted.transcript) {
-                        props.setUserEvent(Number(items[i].formatted.transcript));
+                        props.setStateMachineEvent(Number(items[i].formatted.transcript));
                     } else if (items[i].formatted.text) {
-                        props.setUserEvent(Number(items[i].formatted.text));
+                        props.setStateMachineEvent(Number(items[i].formatted.text));
                     } else {
-                        props.setUserEvent(-1);
+                        props.setStateMachineEvent(-1);
                     }
                     break;
                 }
@@ -352,19 +307,13 @@ export default function WorkFlow(props: WorkFlowProps) {
         }
     }, [items]);
 
-    // Add this useEffect to scroll to the bottom when items change
-    useEffect(() => {
-        if (conversationRef.current) {
-            conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
-        }
-    }, [items]);
 
-    // Every time when user event changes, execute the state function
+    // automatically execute the state function when user event changes
     useEffect(() => {
-        if (props.userEvent >= 0) {
-            gotoNextState(props.userEvent);
+        if (props.stateMachineEvent >= 0) {
+            gotoNextState(props.stateMachineEvent);
         }
-    }, [props.userEvent]);
+    }, [props.stateMachineEvent]);
 
     return (
         <div>
@@ -385,7 +334,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                 style={{ width: '50%', height: 'auto', objectFit: 'contain' }}
             />
 
-            <h3>Voice Command (from user)</h3>
+            <h3>Voice Command</h3>
             <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', marginBottom: '20px', gap: '16px' }}>
                 <Button2
                     label={isConnected ? 'disconnect' : 'connect'}
@@ -393,14 +342,12 @@ export default function WorkFlow(props: WorkFlowProps) {
                     buttonStyle={isConnected ? 'regular' : 'action'}
                     onClick={isConnected ? disconnectConversation : connectConversation}
                 />
-
                 <Toggle
                     defaultValue={false}
                     labels={['manual', 'vad']}
                     values={['none', 'server_vad']}
                     onChange={(_: boolean, value: string) => changeTurnEndType(value)}
                 />
-
                 {isConnected && canPushToTalk && (
                     <Button2
                         label={isRecording ? 'release to send' : 'push to talk'}
@@ -421,19 +368,20 @@ export default function WorkFlow(props: WorkFlowProps) {
                 />}
             </Box>
 
+            <h4>Conversation history</h4>
             <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', marginBottom: '20px' }}>
                 <TextField
                     id="outlined-basic"
                     label="Latest user command"
                     variant="outlined"
-                    onChange={(e) => props.setVoiceInput(e.target.value)}
-                    value={props.voiceInput}
-                    sx={{ flexGrow: 1, marginRight: 2 }}
+                    onChange={(e) => props.setVoiceInputTranscript(e.target.value)}
+                    value={props.voiceInputTranscript}
+                    sx={{ flexGrow: 1, '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'black', borderWidth: '2px', borderRadius: '10px' } } }}
                 />
                 <IconButton
-                    color="default"
+                    color="inherit"
                     onClick={async () => {
-                        let nextEvent = await asyncNextEventChooser(props.voiceInput, props.videoKnowledgeInput, props.currentState);
+                        let nextEvent = await asyncNextEventChooser(props.voiceInputTranscript, props.videoKnowledgeInput, props.currentState);
                         gotoNextState(nextEvent);
                     }}
                     sx={{ marginRight: 1 }}
@@ -442,7 +390,6 @@ export default function WorkFlow(props: WorkFlowProps) {
                 </IconButton>
             </Box>
 
-            <h3>Conversation history</h3>
             <div
                 className="content-block-body"
                 data-conversation-content
@@ -539,7 +486,7 @@ export default function WorkFlow(props: WorkFlowProps) {
             <p>{props.currentState} : {stateTranslator[Number(props.currentState)]}</p>
 
             <h3>Current Event</h3>
-            <p>{props.userEvent} : {eventTranslator[props.userEvent]}</p>
+            <p>{props.stateMachineEvent} : {eventTranslator[props.stateMachineEvent]}</p>
 
             <h3>State function executed result</h3>
             <p>{props.stateFunctionExeRes}</p>
@@ -552,7 +499,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                         <li key={event} style={{ marginBottom: '10px' }}>
                             <button
                                 onClick={async () => {
-                                    props.setUserEvent(Number(event));
+                                    props.setStateMachineEvent(Number(event));
                                     props.setCurrentState(stateMachine[props.currentState][Number(event)]);
                                     let stateFunctionExeRes = await executeStateFunction(stateMachine[props.currentState][Number(event)]) as string;
                                     props.setStateFunctionExeRes(stateFunctionExeRes);

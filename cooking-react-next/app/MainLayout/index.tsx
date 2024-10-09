@@ -2,12 +2,13 @@
 
 import React, { useRef } from 'react';
 import { useState, useEffect } from 'react';
-import { Grid } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import VideoPreview from '../VideoPreview';
 import RealityPreview from '../RealityPreview';
 import WorkFlow from '../WorkFlow';
 
 export default function MainLayout() {
+    // Video preview states
     const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
     // Reality preview states
@@ -22,23 +23,23 @@ export default function MainLayout() {
     const [fetchSentenceContent, setFetchSentenceContent] = useState('Making a steak that is not overcooked.');
 
     // Workflow states
-    const [currentState, setCurrentState] = useState(0);
-    const [voiceInput, setVoiceInput] = useState("");
-    const [streamInput, setStreamInput] = useState("");
+    const [voiceInputTranscript, setVoiceInputTranscript] = useState("");
     const [videoKnowledgeInput, setVideoKnowledgeInput] = useState("");
-    const [userEvent, setUserEvent] = useState(-1);
+    const [currentState, setCurrentState] = useState(0);
+    const [stateMachineEvent, setStateMachineEvent] = useState(-1);
     const [stateFunctionExeRes, setStateFunctionExeRes] = useState("");
+    const [videoStreamInput, setVideoStreamInput] = useState("");
 
 
     return (
         <Grid container spacing={3}>
-            <Grid item xs={6}>
+            <Grid size={6}>
                 <h2>Video preview</h2>
                 <div style={{ width: '70%', margin: '0 auto' }}>
                     <VideoPreview
                         vurl='https://www.youtube.com/watch?v=umiOuVA7PEc'
-                        isPlaying={isVideoPlaying}
-                        setIsPlaying={setIsVideoPlaying}
+                        isVideoPlaying={isVideoPlaying}
+                        setIsVideoPlaying={setIsVideoPlaying}
                     />
                 </div>
                 <h2>Reality preview</h2>
@@ -57,18 +58,18 @@ export default function MainLayout() {
                     fetchSentenceContent={fetchSentenceContent}
                 />
             </Grid>
-            <Grid item xs={6} style={{ height: '100vh', overflow: 'scroll' }}>
+            <Grid size={6} style={{ height: '100vh', overflow: 'scroll' }}>
                 <WorkFlow
-                    setUserEvent={setUserEvent}
+                    setStateMachineEvent={setStateMachineEvent}
                     setCurrentState={setCurrentState}
-                    setVoiceInput={setVoiceInput}
+                    setVoiceInputTranscript={setVoiceInputTranscript}
                     setVideoKnowledgeInput={setVideoKnowledgeInput}
                     setRealityImageBase64={setRealityImageBase64}
                     setStateFunctionExeRes={setStateFunctionExeRes}
-                    voiceInput={voiceInput}
+                    voiceInputTranscript={voiceInputTranscript}
                     videoKnowledgeInput={videoKnowledgeInput}
                     currentState={currentState}
-                    userEvent={userEvent}
+                    stateMachineEvent={stateMachineEvent}
                     realityImageBase64={realityImageBase64}
                     stateFunctionExeRes={stateFunctionExeRes}
                 />

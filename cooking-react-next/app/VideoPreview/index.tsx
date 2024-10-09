@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import ReactPlayer from 'react-player'
-import transriptSentenceList from '../data/cooking_steak_sentence.json';
 import { Stack, Button, Box } from '@mui/material';
 
 interface TransriptSentenceItemProps {
@@ -14,8 +13,8 @@ interface TransriptSentenceItemProps {
 
 interface VideoPreviewProps {
     vurl: string;
-    isPlaying: boolean;
-    setIsPlaying: (isPlaying: boolean) => void;
+    isVideoPlaying: boolean;
+    setIsVideoPlaying: (isVideoPlaying: boolean) => void;
 }
 
 export default function VideoPreview(props: VideoPreviewProps) {
@@ -43,7 +42,7 @@ export default function VideoPreview(props: VideoPreviewProps) {
                     <ReactPlayer
                         ref={videoPlayerRef}
                         url={props.vurl}
-                        playing={props.isPlaying}
+                        playing={props.isVideoPlaying}
                         style={{
                             position: "absolute",
                             top: 0,
@@ -61,7 +60,7 @@ export default function VideoPreview(props: VideoPreviewProps) {
                 <Button
                     variant="outlined"
                     color="primary"
-                    onClick={() => { props.setIsPlaying(true) }}
+                    onClick={() => { props.setIsVideoPlaying(true) }}
                     sx={{ marginRight: 2 }}
                 >
                     Video Play
@@ -69,7 +68,7 @@ export default function VideoPreview(props: VideoPreviewProps) {
                 <Button
                     variant="outlined"
                     color="primary"
-                    onClick={() => { props.setIsPlaying(false) }}
+                    onClick={() => { props.setIsVideoPlaying(false) }}
                     sx={{ marginRight: 2 }}
                 >
                     Video Pause

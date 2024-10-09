@@ -72,22 +72,22 @@ export default function RealityPreview(props: RealityPreviewProps) {
     };
 
 
-    const evaluateRealityFrame = async (base64Reality: string) => {
-        var prompt = 'What is inside the picture?';
-        props.setIsEvaluating(true);
-        let response = await utils.callGpt4V(prompt, [base64Reality]);
-        props.setIsEvaluating(false);
-        props.setRealityEvaluateResponse(response);
-    };
+    // const evaluateRealityFrame = async (base64Reality: string) => {
+    //     var prompt = 'What is inside the picture?';
+    //     props.setIsEvaluating(true);
+    //     let response = await utils.callGpt4V(prompt, [base64Reality]);
+    //     props.setIsEvaluating(false);
+    //     props.setRealityEvaluateResponse(response);
+    // };
 
 
-    const fetchSentenceFromVideo = async (sentence: string) => {
-        props.setIsFetchingSentences(true);
-        let response = await utils.findSentenceFromTranscript(sentence);
-        props.setIsFetchingSentences(false);
-        console.log(response);
-        props.setFetchedSentences(response.sentence_IDs);
-    };
+    // const fetchSentenceFromVideo = async (sentence: string) => {
+    //     props.setIsFetchingSentences(true);
+    //     let response = await utils.findSentenceFromTranscript(sentence);
+    //     props.setIsFetchingSentences(false);
+    //     console.log(response);
+    //     props.setFetchedSentences(response.sentence_IDs);
+    // };
 
 
     return (
