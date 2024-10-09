@@ -4,6 +4,7 @@ import { Button, Grid, Stack, Box, TextField, IconButton } from "@mui/material";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { stateTranslator, eventTranslator, stateMachine, stateFunctions, nextEventChooser, executeStateFunction } from './stateMachine';
 import { WavRecorder, WavStreamPlayer } from '../wavtools/index.js';
+import { X, Codepen, XCircle, Edit, Zap, ArrowUp, ArrowDown, Mic } from 'react-feather';
 import Switch from '@mui/material/Switch';
 import { Toggle } from '../components/toggle/Toggle';
 import Button2 from '../components/button/Button';
@@ -64,6 +65,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     const [isRecording, setIsRecording] = useState(false);
     const [canPushToTalk, setCanPushToTalk] = useState(true);
 
+    const conversationRef = useRef<HTMLDivElement>(null);
 
     /** Bootstrap functions */
     /** Connect to conversation */
@@ -89,7 +91,7 @@ export default function WorkFlow(props: WorkFlowProps) {
         client.sendUserMessageContent([
             {
                 type: `input_text`,
-                text: `For testing purposes, I want you to list 3 car brands. Number each item, e.g. "one (or whatever number you are one): the item name".`
+                text: `Respond with: "Hi! Welcome to the non-visual cooking prototype system! How can I help you today?"`
             },
         ]);
 
@@ -114,6 +116,14 @@ export default function WorkFlow(props: WorkFlowProps) {
         const wavStreamPlayer = wavStreamPlayerRef.current;
         await wavStreamPlayer.interrupt();
     }, []);
+
+
+    /** Delete a conversation item */
+    const deleteConversationItem = useCallback(async (id: string) => {
+        const client = clientRef.current;
+        client.deleteItem(id);
+    }, []);
+
 
     /**
      * In push-to-talk mode, start recording
@@ -283,6 +293,25 @@ export default function WorkFlow(props: WorkFlowProps) {
         };
     }, []);
 
+    // Handle user transcript update
+    useEffect(() => {
+        if (items.length > 0) {
+            // read through items in reverse to find the latest user transcript
+            for (let i = items.length - 1; i >= 0; i--) {
+                if (items[i].role === 'user' && items[i].formatted.transcript) {
+                    props.setVoiceInput(items[i].formatted.transcript || '');
+                    break;
+                }
+            }
+        }
+    }, [items]);
+
+    // Add this useEffect to scroll to the bottom when items change
+    useEffect(() => {
+        if (conversationRef.current) {
+            conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
+        }
+    }, [items]);
 
     return (
         <div>
@@ -333,9 +362,10 @@ export default function WorkFlow(props: WorkFlowProps) {
             <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', marginBottom: '20px' }}>
                 <TextField
                     id="outlined-basic"
-                    label="Sentence"
+                    label="Latest user command"
                     variant="outlined"
                     onChange={(e) => props.setVoiceInput(e.target.value)}
+                    value={props.voiceInput}
                     sx={{ flexGrow: 1, marginRight: 2 }}
                 />
                 <IconButton
@@ -346,6 +376,102 @@ export default function WorkFlow(props: WorkFlowProps) {
                     <SendIcon />
                 </IconButton>
             </Box>
+
+            <h3>Conversation history</h3>
+            <div
+                className="content-block-body"
+                data-conversation-content
+                ref={conversationRef}
+                style={{
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                    border: '1px solid #ccc',
+                    borderRadius: '5px',
+                    padding: '10px',
+                    marginBottom: '20px'
+                }}
+            >
+                {!items.length && `awaiting connection...`}
+                {items.map((conversationItem, i) => {
+                    return (
+                        <div className="conversation-item" key={conversationItem.id}>
+                            <div className={`speaker-content`}>
+                                {/* tool response */}
+                                {conversationItem.type === 'function_call_output' && (
+                                    <div>{conversationItem.formatted.output}</div>
+                                )}
+                                {/* tool call */}
+                                {!!conversationItem.formatted.tool && (
+                                    <div>
+                                        {conversationItem.formatted.tool.name}(
+                                        {conversationItem.formatted.tool.arguments})
+                                    </div>
+                                )}
+
+                                {/* Transcript from the user */}
+                                {!conversationItem.formatted.tool &&
+                                    conversationItem.role === 'user' && (
+                                        <div>
+                                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                <Mic /> <h5 style={{ marginLeft: '10px' }}>User transcript:</h5>
+                                                <div style={{ flexGrow: 1 }} />
+                                                <div
+                                                    className="close"
+                                                    style={{ cursor: 'pointer' }}
+                                                    onClick={() =>
+                                                        deleteConversationItem(conversationItem.id)
+                                                    }
+                                                >
+                                                    < XCircle />
+                                                </div>
+                                            </div>
+                                            {conversationItem.formatted.transcript ||
+                                                (conversationItem.formatted.audio?.length
+                                                    ? '(awaiting transcript)'
+                                                    : conversationItem.formatted.text ||
+                                                    '(item sent)')
+                                            }
+                                        </div>
+                                    )
+                                }
+                                {!conversationItem.formatted.tool &&
+                                    conversationItem.role === 'assistant' && (
+                                        <div>
+                                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                <Codepen /> <h5 style={{ marginLeft: '10px' }}>Agent response:</h5>
+                                                {/* div flexgrow */}
+                                                <div style={{ flexGrow: 1 }} />
+                                                <div
+                                                    className="close"
+                                                    style={{ cursor: 'pointer' }}
+                                                    onClick={() =>
+                                                        deleteConversationItem(conversationItem.id)
+                                                    }
+                                                >
+                                                    < XCircle />
+                                                </div>
+                                            </div>
+                                            {conversationItem.formatted.transcript ||
+                                                conversationItem.formatted.text ||
+                                                '(truncated)'
+                                            }
+                                        </div>
+                                    )
+                                }
+                                {/* {conversationItem.formatted.file && (
+                                    <audio
+                                        src={conversationItem.formatted.file.url}
+                                        controls
+                                    />
+                                )} */}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            <h3>Agent response</h3>
+            <p>{props.agentResponse}</p>
 
             <h3>Current Event</h3>
             <p>{props.userEvent} : {eventTranslator[props.userEvent]}</p>
@@ -373,9 +499,6 @@ export default function WorkFlow(props: WorkFlowProps) {
                         </li>
                     ))}
             </ul>
-
-            <h3>Agent response</h3>
-            <p>{props.agentResponse}</p>
 
             <h3>Memory</h3>
             <div className="content-block kv">

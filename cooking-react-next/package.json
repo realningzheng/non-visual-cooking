@@ -29,6 +29,7 @@
     "openai": "^4.28.0",
     "react": "^18",
     "react-dom": "^18",
+    "react-feather": "^2.0.10",
     "react-player": "^2.14.1",
     "react-redux": "^9.1.0",
     "react-scripts": "5.0.1",
