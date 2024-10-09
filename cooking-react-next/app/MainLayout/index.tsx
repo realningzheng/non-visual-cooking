@@ -28,18 +28,19 @@ export default function MainLayout() {
     const [videoKnowledgeInput, setVideoKnowledgeInput] = useState("");
     const [userEvent, setUserEvent] = useState(-1);
     const [agentResponse, setAgentResponse] = useState("");
-    const [voiceMuted, setVoiceMuted] = useState(true);
 
 
     return (
         <Grid container spacing={3}>
             <Grid item xs={6}>
                 <h2>Video preview</h2>
-                <VideoPreview
-                    vurl='https://www.youtube.com/watch?v=umiOuVA7PEc'
-                    isPlaying={isVideoPlaying}
-                    setIsPlaying={setIsVideoPlaying}
-                />
+                <div style={{ width: '70%', margin: '0 auto' }}>
+                    <VideoPreview
+                        vurl='https://www.youtube.com/watch?v=umiOuVA7PEc'
+                        isPlaying={isVideoPlaying}
+                        setIsPlaying={setIsVideoPlaying}
+                    />
+                </div>
                 <h2>Reality preview</h2>
                 <RealityPreview
                     setRealityImageBase64={setRealityImageBase64}
@@ -58,7 +59,6 @@ export default function MainLayout() {
             </Grid>
             <Grid item xs={6} style={{ height: '100vh', overflow: 'scroll' }}>
                 <WorkFlow
-                    setVoiceMuted={setVoiceMuted}
                     setUserEvent={setUserEvent}
                     setCurrentState={setCurrentState}
                     setVoiceInput={setVoiceInput}
@@ -71,7 +71,6 @@ export default function MainLayout() {
                     userEvent={userEvent}
                     realityImageBase64={realityImageBase64}
                     agentResponse={agentResponse}
-                    voiceMuted={voiceMuted}
                 />
             </Grid>
         </Grid>

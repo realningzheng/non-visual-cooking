@@ -249,7 +249,6 @@ export const nextEventChooser = async (
 	if (response) {
 		console.log(response);
 		const nextState = Number(response.gptResponse);
-		executeStateFunction(nextState);
 		return nextState;
 	}
 	return -1;
