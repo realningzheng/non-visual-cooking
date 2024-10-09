@@ -223,7 +223,7 @@ export const executeStateFunction = (stateNumber: number) => {
 
 
 // Modify the nextEventChooser function to call executeStateFunction
-export const nextEventChooser = async (
+export const asyncNextEventChooser = async (
 	voiceInput: string,
 	videoKnowledgeInput: string,
 	currentState: number

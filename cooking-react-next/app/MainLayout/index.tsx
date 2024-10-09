@@ -27,7 +27,7 @@ export default function MainLayout() {
     const [streamInput, setStreamInput] = useState("");
     const [videoKnowledgeInput, setVideoKnowledgeInput] = useState("");
     const [userEvent, setUserEvent] = useState(-1);
-    const [agentResponse, setAgentResponse] = useState("");
+    const [stateFunctionExeRes, setStateFunctionExeRes] = useState("");
 
 
     return (
@@ -64,13 +64,13 @@ export default function MainLayout() {
                     setVoiceInput={setVoiceInput}
                     setVideoKnowledgeInput={setVideoKnowledgeInput}
                     setRealityImageBase64={setRealityImageBase64}
-                    setAgentResponse={setAgentResponse}
+                    setStateFunctionExeRes={setStateFunctionExeRes}
                     voiceInput={voiceInput}
                     videoKnowledgeInput={videoKnowledgeInput}
                     currentState={currentState}
                     userEvent={userEvent}
                     realityImageBase64={realityImageBase64}
-                    agentResponse={agentResponse}
+                    stateFunctionExeRes={stateFunctionExeRes}
                 />
             </Grid>
         </Grid>

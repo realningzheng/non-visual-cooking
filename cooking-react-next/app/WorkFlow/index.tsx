@@ -1,8 +1,8 @@
 "use client";
 
 import { Button, Grid, Stack, Box, TextField, IconButton } from "@mui/material";
-import { useState, useEffect, useRef, useCallback } from "react";
-import { stateTranslator, eventTranslator, stateMachine, stateFunctions, nextEventChooser, executeStateFunction } from './stateMachine';
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { stateTranslator, eventTranslator, stateMachine, stateFunctions, asyncNextEventChooser, executeStateFunction } from './stateMachine';
 import { WavRecorder, WavStreamPlayer } from '../wavtools/index.js';
 import { X, Codepen, XCircle, Edit, Zap, ArrowUp, ArrowDown, Mic } from 'react-feather';
 import Switch from '@mui/material/Switch';
@@ -23,13 +23,13 @@ interface WorkFlowProps {
     setVoiceInput: (input: string) => void;
     setVideoKnowledgeInput: (input: string) => void;
     setRealityImageBase64: (input: string) => void;
-    setAgentResponse: (input: string) => void;
+    setStateFunctionExeRes: (input: string) => void;
     voiceInput: string;
     videoKnowledgeInput: string;
     currentState: number;
     userEvent: number;
     realityImageBase64: string;
-    agentResponse: string;
+    stateFunctionExeRes: string;
 }
 
 
@@ -64,8 +64,20 @@ export default function WorkFlow(props: WorkFlowProps) {
     const [memoryKv, setMemoryKv] = useState<{ [key: string]: any }>({});
     const [isRecording, setIsRecording] = useState(false);
     const [canPushToTalk, setCanPushToTalk] = useState(true);
+    const [audioAgentDuty, setAudioAgentDuty] = useState<'chatbot' | 'detect'>('chatbot');
 
     const conversationRef = useRef<HTMLDivElement>(null);
+
+    const possibleNextEventsObj = useMemo(() => stateMachine[props.currentState], [props.currentState]);
+
+    const possibleNextEvents: string[] = useMemo(() =>
+        Object.keys(possibleNextEventsObj).map(event => {
+            const eventNumber = Number(event); // Convert event key to number
+            const eventExplanation = eventTranslator[eventNumber]; // Get explanation from eventTranslator
+            return `${eventNumber}: ${eventExplanation}`;
+        }),
+        [possibleNextEventsObj]
+    );
 
     /** Bootstrap functions */
     /** Connect to conversation */
@@ -150,7 +162,20 @@ export default function WorkFlow(props: WorkFlowProps) {
         const client = clientRef.current;
         const wavRecorder = wavRecorderRef.current;
         await wavRecorder.pause();
-        client.createResponse();
+        if (audioAgentDuty === 'detect') {
+            // @TODO: should be a better way to append this message at the beginning of the conversation
+            client.sendUserMessageContent([
+                {
+                    type: `input_text`,
+                    text: `The content I just mentioned falls under which type of the following categories:\n\n
+                    ${possibleNextEvents.join("\n")}\n
+                    -1: Not related to cooking task at all\n
+                    Please reply ONLY the index of the most appropriate category.`
+                }
+            ]);
+        } else {
+            client.createResponse();
+        }
     };
 
     /**
@@ -171,17 +196,16 @@ export default function WorkFlow(props: WorkFlowProps) {
         setCanPushToTalk(value === 'none');
     };
 
-    /* Choose next event */
-    const gotoNextState = async () => {
-        const nextEvent = await nextEventChooser(props.voiceInput, props.videoKnowledgeInput, props.currentState);
+    /* Go to the next state */
+    const gotoNextState = async (nextEvent: number) => {
         if (nextEvent >= 0) {
             props.setUserEvent(nextEvent);
             props.setCurrentState(stateMachine[props.currentState][nextEvent]);
         } else {
             console.log("No valid events found.");
         }
-        let stateFunctionExeRes = executeStateFunction(stateMachine[props.currentState][nextEvent]) as string;
-        props.setAgentResponse(stateFunctionExeRes);
+        let stateFunctionExeRes = await executeStateFunction(stateMachine[props.currentState][nextEvent]) as string;
+        props.setStateFunctionExeRes(stateFunctionExeRes);
     };
 
 
@@ -218,10 +242,12 @@ export default function WorkFlow(props: WorkFlowProps) {
             ${props.videoKnowledgeInput}
             `
         });
-        
         // Set transcription, otherwise we don't get user transcriptions back
         client.updateSession({
             input_audio_transcription: { model: 'whisper-1' }
+        });
+        client.updateSession({
+            modalities: ['text', 'audio']
         });
 
         // Add tools
@@ -303,10 +329,23 @@ export default function WorkFlow(props: WorkFlowProps) {
     // Handle user transcript update
     useEffect(() => {
         if (items.length > 0) {
-            // read through items in reverse to find the latest user transcript
+            // read through items in reverse to find the latest user transcript and agent response
             for (let i = items.length - 1; i >= 0; i--) {
                 if (items[i].role === 'user' && items[i].formatted.transcript) {
                     props.setVoiceInput(items[i].formatted.transcript || '');
+                    break;
+                }
+            }
+            for (let i = items.length - 1; i >= 0; i--) {
+                if (items[i].role === 'assistant') {
+                    // set user event to the non-null value among transcript and text
+                    if (items[i].formatted.transcript) {
+                        props.setUserEvent(Number(items[i].formatted.transcript));
+                    } else if (items[i].formatted.text) {
+                        props.setUserEvent(Number(items[i].formatted.text));
+                    } else {
+                        props.setUserEvent(-1);
+                    }
                     break;
                 }
             }
@@ -319,6 +358,13 @@ export default function WorkFlow(props: WorkFlowProps) {
             conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
         }
     }, [items]);
+
+    // Every time when user event changes, execute the state function
+    useEffect(() => {
+        if (props.userEvent >= 0) {
+            gotoNextState(props.userEvent);
+        }
+    }, [props.userEvent]);
 
     return (
         <div>
@@ -364,6 +410,15 @@ export default function WorkFlow(props: WorkFlowProps) {
                         onMouseUp={stopRecording}
                     />
                 )}
+
+                <div style={{ flexGrow: 1 }} />
+
+                {!isConnected && <Toggle
+                    defaultValue={false}
+                    labels={['chatbot', 'detect']}
+                    values={['chatbot', 'detect']}
+                    onChange={(_: boolean, value: string) => setAudioAgentDuty(value as 'chatbot' | 'detect')}
+                />}
             </Box>
 
             <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', marginBottom: '20px' }}>
@@ -377,7 +432,10 @@ export default function WorkFlow(props: WorkFlowProps) {
                 />
                 <IconButton
                     color="default"
-                    onClick={() => gotoNextState()}
+                    onClick={async () => {
+                        let nextEvent = await asyncNextEventChooser(props.voiceInput, props.videoKnowledgeInput, props.currentState);
+                        gotoNextState(nextEvent);
+                    }}
                     sx={{ marginRight: 1 }}
                 >
                     <SendIcon />
@@ -398,7 +456,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                     marginBottom: '20px'
                 }}
             >
-                {!items.length && `awaiting connection...`}
+                {!items.length && !isConnected && `awaiting connection...`}
                 {items.map((conversationItem, i) => {
                     return (
                         <div className="conversation-item" key={conversationItem.id}>
@@ -477,14 +535,14 @@ export default function WorkFlow(props: WorkFlowProps) {
                 })}
             </div>
 
-            <h3>Agent response</h3>
-            <p>{props.agentResponse}</p>
+            <h3>Current State</h3>
+            <p>{props.currentState} : {stateTranslator[Number(props.currentState)]}</p>
 
             <h3>Current Event</h3>
             <p>{props.userEvent} : {eventTranslator[props.userEvent]}</p>
 
-            <h3>Current State</h3>
-            <p>{props.currentState} : {stateTranslator[Number(props.currentState)]}</p>
+            <h3>State function executed result</h3>
+            <p>{props.stateFunctionExeRes}</p>
 
             <h3>Possible Next Events</h3>
             <ul style={{ listStyleType: 'none', padding: 0 }}>
@@ -493,11 +551,11 @@ export default function WorkFlow(props: WorkFlowProps) {
                     .map((event) => (
                         <li key={event} style={{ marginBottom: '10px' }}>
                             <button
-                                onClick={() => {
+                                onClick={async () => {
                                     props.setUserEvent(Number(event));
                                     props.setCurrentState(stateMachine[props.currentState][Number(event)]);
-                                    let stateFunctionExeRes = executeStateFunction(stateMachine[props.currentState][Number(event)]) as string;
-                                    props.setAgentResponse(stateFunctionExeRes);
+                                    let stateFunctionExeRes = await executeStateFunction(stateMachine[props.currentState][Number(event)]) as string;
+                                    props.setStateFunctionExeRes(stateFunctionExeRes);
                                 }}
                                 style={{ padding: '5px 10px', width: '100%', textAlign: 'left' }}
                             >
