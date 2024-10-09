@@ -88,12 +88,12 @@ export default function WorkFlow(props: WorkFlowProps) {
 
         // Connect to realtime API
         await client.connect();
-        client.sendUserMessageContent([
-            {
-                type: `input_text`,
-                text: `Respond with: "Hi! Welcome to the non-visual cooking prototype system! How can I help you today?"`
-            },
-        ]);
+        // client.sendUserMessageContent([
+        //     {
+        //         type: `input_text`,
+        //         text: `Respond with: "Hi! Welcome to the non-visual cooking prototype system! How can I help you today?"`
+        //     },
+        // ]);
 
         if (client.getTurnDetectionType() === 'server_vad') {
             await wavRecorder.record((data) => client.appendInputAudio(data.mono));
@@ -201,21 +201,28 @@ export default function WorkFlow(props: WorkFlowProps) {
             Tool use: enabled.
 
             Instructions:
-            - You are an artificial intelligence agent responsible for helping test realtime voice capabilities
+            - You are an artificial intelligence agent responsible for helping low-vision users cook in the kitchen.
+            - The user has provided a video knowledge in JSON format which contains multimodal information on how to correctly cook in the kitchen.
+            - Please help the user by answering their questions and guiding them through the cooking process based on the video knowledge.
             - Please make sure to respond with a helpful voice via audio
-            - Be kind, helpful, and curteous
+            - Be kind, helpful, and courteous
             - It is okay to ask the user questions
             - Use tools and functions you have available liberally, it is part of the training apparatus
             - Be open to exploration and conversation
-            - Remember: this is just for fun and testing!
 
             Personality:
             - Be upbeat and genuine
             - Try speaking quickly as if excited
+
+            Video Knowledge:
+            ${props.videoKnowledgeInput}
             `
         });
+        
         // Set transcription, otherwise we don't get user transcriptions back
-        client.updateSession({ input_audio_transcription: { model: 'whisper-1' } });
+        client.updateSession({
+            input_audio_transcription: { model: 'whisper-1' }
+        });
 
         // Add tools
         client.addTool(
@@ -261,14 +268,6 @@ export default function WorkFlow(props: WorkFlowProps) {
                 }
             });
         });
-        client.on('error', (event: any) => console.error(event));
-        client.on('conversation.interrupted', async () => {
-            const trackSampleOffset = await wavStreamPlayer.interrupt();
-            if (trackSampleOffset?.trackId) {
-                const { trackId, offset } = trackSampleOffset;
-                await client.cancelResponse(trackId, offset);
-            }
-        });
         client.on('conversation.updated', async ({ item, delta }: any) => {
             const items = client.conversation.getItems();
             if (delta?.audio) {
@@ -284,6 +283,14 @@ export default function WorkFlow(props: WorkFlowProps) {
             }
             setItems(items);
         });
+        client.on('conversation.interrupted', async () => {
+            const trackSampleOffset = await wavStreamPlayer.interrupt();
+            if (trackSampleOffset?.trackId) {
+                const { trackId, offset } = trackSampleOffset;
+                await client.cancelResponse(trackId, offset);
+            }
+        });
+        client.on('error', (event: any) => console.error(event));
 
         setItems(client.conversation.getItems());
 
