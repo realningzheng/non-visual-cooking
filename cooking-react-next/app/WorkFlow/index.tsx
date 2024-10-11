@@ -319,13 +319,14 @@ export default function WorkFlow(props: WorkFlowProps) {
         <div>
             <h2>Work Flow</h2>
             <h3>Video Knowledge Input</h3>
-            <TextField
+            <div>hardcoded: ../data/rwYaDqXFH88_video_knowledge_brief.json</div>
+            {/* <TextField
                 id="outlined-basic"
-                label="Stream JSON"
+                label="backend/data/parser_res/rwYaDqXFH88_video_knowledge_brief.json"
                 variant="outlined"
                 onChange={(e) => props.setVideoKnowledgeInput(e.target.value)}
                 style={{ width: '50%' }}
-            />
+            /> */}
 
             <h3>Reality Capture</h3>
             <img
