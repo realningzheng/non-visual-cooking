@@ -45,9 +45,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     const [canPushToTalk, setCanPushToTalk] = useState(true);
     const [audioAgentDuty, setAudioAgentDuty] = useState<'chatbot' | 'detect'>('chatbot');
     const possibleNextEvents: string[] = useMemo(() => {
-        console.log('Current state:', props.currentState);
         return Object.keys(stateMachine[props.currentState]).map(event => {
-            console.log(`event: ${event}`);
             const eventNumber = Number(event);
             const eventExplanation = eventTranslator[eventNumber];
             return `${eventNumber}: ${eventExplanation}`;
