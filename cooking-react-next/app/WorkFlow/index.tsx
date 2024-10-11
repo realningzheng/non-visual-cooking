@@ -44,14 +44,15 @@ export default function WorkFlow(props: WorkFlowProps) {
     const [isRecording, setIsRecording] = useState(false);
     const [canPushToTalk, setCanPushToTalk] = useState(true);
     const [audioAgentDuty, setAudioAgentDuty] = useState<'chatbot' | 'detect'>('chatbot');
-    const possibleNextEventsObj = useMemo(() => stateMachine[props.currentState], [props.currentState]);
-    const possibleNextEvents: string[] = useMemo(() =>
-        Object.keys(possibleNextEventsObj).map(event => {
-            const eventNumber = Number(event); // Convert event key to number
-            const eventExplanation = eventTranslator[eventNumber]; // Get explanation from eventTranslator
+    const possibleNextEvents: string[] = useMemo(() => {
+        console.log('Current state:', props.currentState);
+        return Object.keys(stateMachine[props.currentState]).map(event => {
+            console.log(`event: ${event}`);
+            const eventNumber = Number(event);
+            const eventExplanation = eventTranslator[eventNumber];
             return `${eventNumber}: ${eventExplanation}`;
-        }), [possibleNextEventsObj]
-    );
+        });
+    }, [props.currentState]);
 
     /** Bootstrap functions */
     /** Connect to conversation */
@@ -161,16 +162,17 @@ export default function WorkFlow(props: WorkFlowProps) {
 
 
     /* Go to the next state */
-    const gotoNextState = async (nextEvent: number) => {
+    const gotoNextState = async (event: number) => {
+        console.log(`received event: ${event}, ready to go to the next state`);
         // update event and state in react states
-        if (nextEvent >= 0) {
-            props.setStateMachineEvent(nextEvent);
-            props.setCurrentState(stateMachine[props.currentState][nextEvent]);
+        if (event >= 0) {
+            props.setStateMachineEvent(event);
+            props.setCurrentState(stateMachine[props.currentState][event]);
         } else {
             console.log("No valid events found.");
         }
         // execute the corresponding state function
-        let stateFunctionExeRes = await executeStateFunction(stateMachine[props.currentState][nextEvent]) as string;
+        let stateFunctionExeRes = await executeStateFunction(stateMachine[props.currentState][event]) as string;
         props.setStateFunctionExeRes(stateFunctionExeRes);
     };
 
@@ -381,8 +383,8 @@ export default function WorkFlow(props: WorkFlowProps) {
                 <IconButton
                     color="inherit"
                     onClick={async () => {
-                        let nextEvent = await asyncNextEventChooser(props.voiceInputTranscript, props.videoKnowledgeInput, props.currentState);
-                        gotoNextState(nextEvent);
+                        let event = await asyncNextEventChooser(props.voiceInputTranscript, props.videoKnowledgeInput, props.currentState);
+                        props.setStateMachineEvent(event);
                     }}
                     sx={{ marginRight: 1 }}
                 >
@@ -488,22 +490,14 @@ export default function WorkFlow(props: WorkFlowProps) {
             <h3>Current Event</h3>
             <p>{props.stateMachineEvent} : {eventTranslator[props.stateMachineEvent]}</p>
 
-            <h3>State function executed result</h3>
-            <p>{props.stateFunctionExeRes}</p>
-
             <h3>Possible Next Events</h3>
             <ul style={{ listStyleType: 'none', padding: 0 }}>
                 {props.currentState in stateMachine && Object.keys(stateMachine[props.currentState])
                     .sort((a, b) => Number(a) - Number(b))
                     .map((event) => (
-                        <li key={event} style={{ marginBottom: '10px' }}>
+                        <li key={`button-triggered-event-${event}`} style={{ marginBottom: '10px' }}>
                             <button
-                                onClick={async () => {
-                                    props.setStateMachineEvent(Number(event));
-                                    props.setCurrentState(stateMachine[props.currentState][Number(event)]);
-                                    let stateFunctionExeRes = await executeStateFunction(stateMachine[props.currentState][Number(event)]) as string;
-                                    props.setStateFunctionExeRes(stateFunctionExeRes);
-                                }}
+                                onClick={() => { props.setStateMachineEvent(Number(event)) }}
                                 style={{ padding: '5px 10px', width: '100%', textAlign: 'left' }}
                             >
                                 {event}: {eventTranslator[Number(event)]}
@@ -511,6 +505,9 @@ export default function WorkFlow(props: WorkFlowProps) {
                         </li>
                     ))}
             </ul>
+
+            <h3>State function executed result</h3>
+            <p>{props.stateFunctionExeRes}</p>
 
             <h3>Memory</h3>
             <div className="content-block kv">

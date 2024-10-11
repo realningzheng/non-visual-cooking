@@ -211,6 +211,7 @@ export const stateFunctions: { [key: number]: () => void } = {
 
 // Add this new function after the stateFunctions object
 export const executeStateFunction = (stateNumber: number) => {
+	console.log(`Executing function for state ${stateNumber}`);
 	const stateFunction = stateFunctions[stateNumber];
 	if (stateFunction) {
 		console.log(`Executing function for state ${stateNumber}: ${stateTranslator[stateNumber]}`);
