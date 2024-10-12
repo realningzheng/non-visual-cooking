@@ -170,7 +170,7 @@ export default function WorkFlow(props: WorkFlowProps) {
             console.log("No valid events found.");
         }
         // execute the corresponding state function
-        let stateFunctionExeRes = await executeStateFunction(stateMachine[props.currentState][event]) as string;
+        let stateFunctionExeRes = await executeStateFunction(stateMachine[props.currentState][event], props.videoKnowledgeInput, props.realityImageBase64, props.voiceInputTranscript) as string;
         props.setStateFunctionExeRes(stateFunctionExeRes);
     };
 

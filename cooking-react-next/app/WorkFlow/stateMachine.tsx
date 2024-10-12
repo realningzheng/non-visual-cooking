@@ -162,43 +162,141 @@ export const stateMachine: StateMachine = {
 	},
 };
 
+const basePrompt = `
+	System settings:
+	Tool use: enabled.
+
+	Instructions:
+	- You are an artificial intelligence agent responsible for helping low-vision users cook in the kitchen.
+	- The user has provided a video knowledge in JSON format which contains multimodal information on how to correctly cook in the kitchen.
+	- Please help the user by answering their questions and guiding them through the cooking process based on the video knowledge.
+	- Please make sure to respond with a helpful voice via audio
+	- Be kind, helpful, and courteous
+	- It is okay to ask the user questions
+	- Use tools and functions you have available liberally, it is part of the training apparatus
+	- Be open to exploration and conversation
+
+	Personality:
+	- Be upbeat and genuine
+	- Try speaking quickly as if excited
+
+`
 // State functions
-const comparingVideoRealityAlignment = () => {
-	// Function for state 0
-	return "Comparing video-reality alignment";
+const comparingVideoRealityAlignment = async (	// state 0
+	videoKnowledgeInput: string,
+	realityImageBase64: string
+) => {
+	// TODO: extract reality information from realityImageBase64
+	const prompt = `
+		${basePrompt}
+		Video knowledge:
+		${videoKnowledgeInput}
+		Please compare the video-reality alignment.
+	`;
+	const response = await callChatGPT(prompt);
+	return "Comparing video-reality alignment\n" + response.gptResponse;
 };
 
-const explainCurrentState = () => {
-	// Function for state 1
-	return "Explain the current state";
+const explainCurrentState = async (				// state 1
+	videoKnowledgeInput: string,
+	realityImageBase64: string,
+	voiceInputTranscript: string
+) => {
+	// TODO: extract current state
+	const prompt = `
+		${basePrompt}
+		Video knowledge:
+		${videoKnowledgeInput}
+		Please explain the current state.
+	`;
+	const response = await callChatGPT(prompt);
+	return "Explaining the current state\n" + response.gptResponse;
 };
 
-const explainCurrentStepAction = () => {
-	// Function for state 2
-	return "Explain the current step/action";
+const explainCurrentStepAction = async (		// state 2
+	videoKnowledgeInput: string,
+	realityImageBase64: string,
+	voiceInputTranscript: string
+) => {
+	// TODO: extract step/action from videoKnowledgeInput
+	const prompt = `
+		${basePrompt}
+		Video knowledge:
+		${videoKnowledgeInput}
+		Please explain the current step/action.
+	`;
+	const response = await callChatGPT(prompt);
+	return "Explaining the current step/action\n" + response.gptResponse;
 };
 
-const respondWithHowToFix = () => {
-	// Function for state 3
-	return "Respond with how to fix";
+const respondWithHowToFix = async (				// state 3
+	videoKnowledgeInput: string,
+	realityImageBase64: string,
+	voiceInputTranscript: string
+) => {
+	// TODO: extract reality information from realityImageBase64
+	const prompt = `
+		${basePrompt}
+		Video knowledge:
+		${videoKnowledgeInput}
+		Please explain how to fix the issue presented by the user: "${voiceInputTranscript}".
+	`;
+	const response = await callChatGPT(prompt);
+	return "Responding with how to fix\n" + response.gptResponse;
 };
 
-const freeformResponse = () => {
-	// Function for state 4
-	return "Freeform response";
+const freeformResponse = async (				// state 4
+	videoKnowledgeInput: string,
+	realityImageBase64: string,
+	voiceInputTranscript: string
+) => {
+	// TODO: extract reality information from realityImageBase64
+	const prompt = `
+		${basePrompt}
+		Video knowledge:
+		${videoKnowledgeInput}
+		Please answer the user's question: "${voiceInputTranscript}".
+	`;
+	const response = await callChatGPT(prompt);
+	return "Freeform response:\n" + response.gptResponse;
 };
 
-const handlingUserDisagreements = () => {
-	// Function for state 5
-	return "Handling user disagreements";
+const handlingUserDisagreements = async (		// state 5
+	videoKnowledgeInput: string,
+	realityImageBase64: string,
+	voiceInputTranscript: string
+) => {
+	const prompt = `
+		${basePrompt}
+		Video knowledge:
+		${videoKnowledgeInput}
+		Please respond to the user's disagreement: "${voiceInputTranscript}".
+	`;
+	const response = await callChatGPT(prompt);
+	return "Handling user disagreements\n" + response.gptResponse;
 };
 
-const replayRelevantPartsFromVideos = () => {
-	// Function for state 6
-	return "Replay relevant parts from videos";
+const replayRelevantPartsFromVideos = async (	// state 6
+	videoKnowledgeInput: string,
+	realityImageBase64: string,
+	voiceInputTranscript: string
+) => {
+	const prompt = `
+		${basePrompt}
+		Video knowledge:
+		${videoKnowledgeInput}
+		Please present the timestamp of video knowledge related to "${voiceInputTranscript}".
+	`;
+	const response = await callChatGPT(prompt);
+	return "Handling user disagreements\n" + response.gptResponse;
 };
 
-export const stateFunctions: { [key: number]: () => void } = {
+export const stateFunctions: { 
+	[key: number]: (
+		videoKnowledgeInput: string, 
+		realityImageBase64: string,
+		voiceInputTranscript: string
+) => void } = {
 	0: comparingVideoRealityAlignment,
 	1: explainCurrentState,
 	2: explainCurrentStepAction,
@@ -210,12 +308,17 @@ export const stateFunctions: { [key: number]: () => void } = {
 
 
 // Add this new function after the stateFunctions object
-export const executeStateFunction = (stateNumber: number) => {
+export const executeStateFunction = (
+	stateNumber: number, 
+	videoKnowledgeInput: string, 
+	realityImageBase64: string, 
+	voiceInputTranscript: string
+) => {
 	console.log(`Executing function for state ${stateNumber}`);
 	const stateFunction = stateFunctions[stateNumber];
 	if (stateFunction) {
 		console.log(`Executing function for state ${stateNumber}: ${stateTranslator[stateNumber]}`);
-		return stateFunction();
+		return stateFunction(videoKnowledgeInput, realityImageBase64, voiceInputTranscript);
 	} else {
 		console.error(`No function found for event ${stateNumber}`);
 		return "<VOID>";
@@ -248,7 +351,7 @@ export const asyncNextEventChooser = async (
 	const response = await callChatGPT(prompt);
 	// @TODO: should either use functionCall or whatever to make sure the response is returned from a list of indices
 	if (response) {
-		console.log(response);
+		// console.log(response);
 		const nextState = Number(response.gptResponse);
 		return nextState;
 	}
@@ -258,7 +361,7 @@ export const asyncNextEventChooser = async (
 async function callChatGPT(prompt: string): Promise<{ "gptResponse": string }> {
 	let gptResponse = "";
 	try {
-		console.log(prompt);
+		// console.log(prompt);
 		const response = await openai.chat.completions.create({
 			model: "gpt-4o",
 			messages: [
