@@ -225,7 +225,7 @@ const explainCurrentStepAction = async (		// state 2
 		${videoKnowledgeInput}
 		${prompt}
 	`;
-	console.log(`[state specificprompt]: ${prompt}`);
+	console.log(`[state specific prompt]: ${prompt}`);
 	const response = await callChatGPT(fullPrompt, [realityImageBase64]);
 	return response.gptResponse;
 };
