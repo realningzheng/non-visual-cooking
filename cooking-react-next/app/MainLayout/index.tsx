@@ -7,6 +7,9 @@ import VideoPreview from '../VideoPreview';
 import RealityPreview from '../RealityPreview';
 import WorkFlow from '../WorkFlow';
 
+// hardcoded video knowledge data
+import videoKnowledgeData from "../data/rwYaDqXFH88_video_knowledge_brief.json";
+
 export default function MainLayout() {
     // Video preview states
     const [isVideoPlaying, setIsVideoPlaying] = useState(false);
@@ -30,6 +33,11 @@ export default function MainLayout() {
     const [stateFunctionExeRes, setStateFunctionExeRes] = useState("");
     const [videoStreamInput, setVideoStreamInput] = useState("");
 
+    // hardcoded video knowledge input
+    useEffect(() => {
+        setVideoKnowledgeInput(JSON.stringify(videoKnowledgeData, null, 2));
+        // console.log("videoKnowledgeData", videoKnowledgeData);
+      }, []);
 
     return (
         <Grid container spacing={3}>
