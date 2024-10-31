@@ -194,7 +194,7 @@ const comparingVideoRealityAlignment = async (	// state 0
 		Please compare the video-reality alignment.
 	`;
 	const response = await callChatGPT(prompt);
-	return "Comparing video-reality alignment\n" + response.gptResponse;
+	return response.gptResponse;
 };
 
 const explainCurrentState = async (				// state 1
@@ -209,8 +209,8 @@ const explainCurrentState = async (				// state 1
 		${videoKnowledgeInput}
 		Please explain the current state.
 	`;
-	const response = await callChatGPT(prompt);
-	return "Explaining the current state\n" + response.gptResponse;
+	const response = await callChatGPT(prompt, [realityImageBase64]);
+	return response.gptResponse;
 };
 
 const explainCurrentStepAction = async (		// state 2
@@ -218,15 +218,16 @@ const explainCurrentStepAction = async (		// state 2
 	realityImageBase64: string,
 	voiceInputTranscript: string
 ) => {
-	// TODO: extract step/action from videoKnowledgeInput
-	const prompt = `
+	const prompt = `\nPlease focus on the current action of the user, what is the user doing? what step the user is at given the video knowledge? How do to it right?`
+	const fullPrompt = `
 		${basePrompt}
 		Video knowledge:
 		${videoKnowledgeInput}
-		Please explain the current step/action.
+		${prompt}
 	`;
-	const response = await callChatGPT(prompt);
-	return "Explaining the current step/action\n" + response.gptResponse;
+	console.log(`[state specificprompt]: ${prompt}`);
+	const response = await callChatGPT(fullPrompt, [realityImageBase64]);
+	return response.gptResponse;
 };
 
 const respondWithHowToFix = async (				// state 3
@@ -242,7 +243,7 @@ const respondWithHowToFix = async (				// state 3
 		Please explain how to fix the issue presented by the user: "${voiceInputTranscript}".
 	`;
 	const response = await callChatGPT(prompt);
-	return "Responding with how to fix\n" + response.gptResponse;
+	return response.gptResponse;
 };
 
 const freeformResponse = async (				// state 4
@@ -258,7 +259,7 @@ const freeformResponse = async (				// state 4
 		Please answer the user's question: "${voiceInputTranscript}".
 	`;
 	const response = await callChatGPT(prompt);
-	return "Freeform response:\n" + response.gptResponse;
+	return response.gptResponse;
 };
 
 const handlingUserDisagreements = async (		// state 5
@@ -273,7 +274,7 @@ const handlingUserDisagreements = async (		// state 5
 		Please respond to the user's disagreement: "${voiceInputTranscript}".
 	`;
 	const response = await callChatGPT(prompt);
-	return "Handling user disagreements\n" + response.gptResponse;
+	return response.gptResponse;
 };
 
 const replayRelevantPartsFromVideos = async (	// state 6
@@ -288,15 +289,16 @@ const replayRelevantPartsFromVideos = async (	// state 6
 		Please present the timestamp of video knowledge related to "${voiceInputTranscript}".
 	`;
 	const response = await callChatGPT(prompt);
-	return "Handling user disagreements\n" + response.gptResponse;
+	return response.gptResponse;
 };
 
-export const stateFunctions: { 
+export const stateFunctions: {
 	[key: number]: (
-		videoKnowledgeInput: string, 
+		videoKnowledgeInput: string,
 		realityImageBase64: string,
 		voiceInputTranscript: string
-) => void } = {
+	) => void
+} = {
 	0: comparingVideoRealityAlignment,
 	1: explainCurrentState,
 	2: explainCurrentStepAction,
@@ -309,12 +311,11 @@ export const stateFunctions: {
 
 // Add this new function after the stateFunctions object
 export const executeStateFunction = (
-	stateNumber: number, 
-	videoKnowledgeInput: string, 
-	realityImageBase64: string, 
+	stateNumber: number,
+	videoKnowledgeInput: string,
+	realityImageBase64: string,
 	voiceInputTranscript: string
 ) => {
-	console.log(`Executing function for state ${stateNumber}`);
 	const stateFunction = stateFunctions[stateNumber];
 	if (stateFunction) {
 		console.log(`Executing function for state ${stateNumber}: ${stateTranslator[stateNumber]}`);
@@ -358,24 +359,37 @@ export const asyncNextEventChooser = async (
 	return -1;
 }
 
-async function callChatGPT(prompt: string): Promise<{ "gptResponse": string }> {
+async function callChatGPT(prompt: string, imageUrls: string[] = []): Promise<{ "gptResponse": string }> {
 	let gptResponse = "";
 	try {
-		// console.log(prompt);
+		// Construct content array with text prompt and any provided images
+		const content: Array<{ type: string } & Record<string, any>> = [
+			{ type: "text", text: prompt }
+		];
+
+		// Add any image URLs to the content array
+		imageUrls.forEach(url => {
+			content.push({
+				type: "image_url",
+				image_url: {
+					url: url
+				}
+			});
+		});
+
 		const response = await openai.chat.completions.create({
-			model: "gpt-4o",
+			model: "gpt-4o-mini",
 			messages: [
 				{
 					role: "user",
-					content: [
-						{ type: "text", text: `${prompt}` },
-					],
-				},
+					content: content as any[]
+				}
 			],
 			max_tokens: 1500,
 		});
-		if (response.choices[0]['message']['content']) {
-			gptResponse = response.choices[0]['message']['content'];
+
+		if (response.choices[0]?.message?.content) {
+			gptResponse = response.choices[0].message.content;
 		}
 	} catch (error) {
 		if (axios.isAxiosError(error)) {
