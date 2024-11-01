@@ -80,7 +80,7 @@ export default function MainLayout() {
     return (
         <Grid container spacing={3}>
             <Grid size={6}>
-                <h2>Video preview</h2>
+                <div className='text-2xl font-bold'>Video preview</div>
                 <div style={{ width: '70%', margin: '0 auto' }}>
                     <VideoPreview
                         vurl='https://www.youtube.com/watch?v=umiOuVA7PEc'
@@ -88,48 +88,76 @@ export default function MainLayout() {
                         setIsVideoPlaying={setIsVideoPlaying}
                     />
                 </div>
-                <h2>Reality preview</h2>
-                <Stack spacing={2} justifyContent={'center'}>
-                    {isClient &&
-                        <div style={{ width: 'auto', height: '30vh', position: 'relative' }}>
-                            <video ref={videoRef} style={{ width: '100%', height: '100%', position: 'absolute', zIndex: -1, margin: 'auto' }} />
-                        </div>
-                    }
-                    <canvas
-                        ref={canvasRef}
-                        style={{ display: 'none' }}
-                    />
-                    <Box
-                        display={'flex'}
-                        justifyContent={'center'}
-                        width={'100%'}
+                <div className='text-2xl font-bold'>Reality preview</div>
+                <div style={{ display: 'flex', flexDirection: 'row', gap: '20px', alignItems: 'flex-start' }}>
+                    <Stack spacing={0} justifyContent={'center'} sx={{ flex: 1 }}>
+                        {isClient &&
+                            <div style={{ width: '100%', height: '25vh', position: 'relative', backgroundColor: '#000000',borderRadius: '5px' }}>
+                                <video ref={videoRef} style={{ width: '100%', height: '100%', position: 'absolute', zIndex: 1, objectFit: 'contain', margin: 'auto' }} />
+                            </div>
+                        }
+
+                        <canvas
+                            ref={canvasRef}
+                            style={{ display: 'none' }}
+                        />
+
+                    </Stack>
+                    <div style={{ flex: 1 }}>
+                        {realityImageBase64 ? (
+                            <img
+                                src={realityImageBase64}
+                                alt="Reality Capture"
+                                style={{
+                                    width: '100%',
+                                    height: '25vh',
+                                    objectFit: 'contain',
+                                }}
+                            />
+                        ) : (
+                            <div
+                                style={{
+                                    width: '100%',
+                                    height: '25vh',
+                                    border: '2px dashed #ccc',
+                                    borderRadius: '5px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    backgroundColor: '#f5f5f5',
+                                }}
+                            >
+                                <span style={{ color: '#666', fontSize: '1.1rem' }}>
+                                    No image captured yet
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                <Box
+                    display={'flex'}
+                    justifyContent={'center'}
+                    width={'100%'}
+                    marginTop={'10px'}
+                >
+                    <button
+                        className='btn btn-outline'
+                        color="primary"
+                        onClick={() => { videoRef.current?.play() }}
+                        style={{ marginRight: 1 }}
                     >
-                        <Button
-                            variant="outlined"
-                            color="primary"
-                            onClick={() => { videoRef.current?.play() }}
-                            sx={{ mr: 1 }}
-                        >
-                            Reality Play
-                        </Button>
-                        <Button
-                            variant="outlined"
-                            color="primary"
-                            onClick={() => { videoRef.current?.pause() }}
-                            sx={{ mr: 1, ml: 1 }}
-                        >
-                            Reality Pause
-                        </Button>
-                        <Button
-                            variant="contained"
-                            color="success"
-                            onClick={captureRealityFrame}
-                            sx={{ ml: 1 }}
-                        >
-                            Capture Reality
-                        </Button>
-                    </Box>
-                </Stack >
+                        Reality Play
+                    </button>
+                    <button
+                        className='btn btn-outline'
+                        color="primary"
+                        onClick={() => { videoRef.current?.pause() }}
+                        style={{ marginRight: 1, marginLeft: 1 }}
+                    >
+                        Reality Pause
+                    </button>
+                </Box>
+
             </Grid>
             <Grid size={6} style={{ height: '100vh', overflow: 'scroll' }}>
                 <WorkFlow

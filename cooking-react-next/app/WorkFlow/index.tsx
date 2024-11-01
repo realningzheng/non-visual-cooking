@@ -1,18 +1,18 @@
 "use client";
 
-import { Button, Stack, Box, TextField, IconButton } from "@mui/material";
+import { Stack, Box, TextField, IconButton } from "@mui/material";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { stateTranslator, eventTranslator, stateMachine, stateFunctions, asyncNextEventChooser, executeStateFunction } from './stateMachine';
 import { WavRecorder, WavStreamPlayer } from '../wavtools/index.js';
 import { X, Codepen, XCircle, Edit, Zap, ArrowUp, ArrowDown, Mic } from 'react-feather';
-import { Toggle } from '../components/toggle/Toggle';
-import Button2 from '../components/button/Button';
 import SendIcon from '@mui/icons-material/Send';
 // @ts-ignore
 import { RealtimeClient } from '@openai/realtime-api-beta';
 // @ts-ignore
 import { ItemType } from "@openai/realtime-api-beta/dist/lib/client";
 import secret from '../../secret.json';
+import { FaUser } from "react-icons/fa";
+import { RiRobot2Fill } from "react-icons/ri";
 
 
 interface WorkFlowProps {
@@ -318,68 +318,79 @@ export default function WorkFlow(props: WorkFlowProps) {
     }, [props.stateMachineEvent]);
 
     return (
-        <div>
-            <h2>Work Flow</h2>
-            <h3>Video Knowledge Input</h3>
-            <div>hardcoded: ../data/rwYaDqXFH88_video_knowledge_brief.json</div>
-            {/* <TextField
-                id="outlined-basic"
-                label="backend/data/parser_res/rwYaDqXFH88_video_knowledge_brief.json"
-                variant="outlined"
-                onChange={(e) => props.setVideoKnowledgeInput(e.target.value)}
-                style={{ width: '50%' }}
-            /> */}
+        <Stack spacing={2}>
+            <div className='text-2xl font-bold'>Control Panel</div>
+            <div>
+                <p><span className='text-lg font-bold'>Video knowledge:</span> ../data/rwYaDqXFH88_video_knowledge_brief.json</p>
+                <p><span className='text-lg font-bold'>Current state:</span> {props.currentState} : {stateTranslator[Number(props.currentState)]}</p>
+                <p><span className='text-lg font-bold'>Current event:</span> {props.stateMachineEvent} : {eventTranslator[props.stateMachineEvent]}</p>
+            </div>
 
-            <h3>Reality Capture</h3>
-            <img
-                src={props.realityImageBase64}
-                alt="Reality Capture"
-                style={{ width: '50%', height: 'auto', objectFit: 'contain' }}
-            />
+            <div>
+                <div className='text-lg font-bold mb-2'>Voice Command</div>
+                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: '16px' }}>
+                    <button
+                        className={`px-4 py-2 rounded ${isConnected ? 'bg-gray-200' : 'bg-black text-white'}`}
+                        onClick={isConnected ? disconnectConversation : connectConversation}
+                    >
+                        {isConnected ? 'disconnect' : 'connect'}
+                    </button>
 
-            <h3>Voice Command</h3>
-            <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', marginBottom: '20px', gap: '16px' }}>
-                <Button2
-                    label={isConnected ? 'disconnect' : 'connect'}
-                    iconPosition={isConnected ? 'end' : 'start'}
-                    buttonStyle={isConnected ? 'regular' : 'action'}
-                    onClick={isConnected ? disconnectConversation : connectConversation}
-                />
-                <Toggle
-                    defaultValue={false}
-                    labels={['manual', 'vad']}
-                    values={['none', 'server_vad']}
-                    onChange={(_: boolean, value: string) => changeTurnEndType(value)}
-                />
-                {isConnected && canPushToTalk && (
-                    <Button2
-                        label={isRecording ? 'release to send' : 'push to talk'}
-                        buttonStyle={isRecording ? 'alert' : 'regular'}
-                        disabled={!isConnected || !canPushToTalk}
-                        onMouseDown={startRecording}
-                        onMouseUp={stopRecording}
-                    />
-                )}
+                    <div className="flex">
+                        <button
+                            className={`px-4 py-2 rounded ${canPushToTalk ? 'bg-black text-white' : 'bg-gray-200'}`}
+                            onClick={() => changeTurnEndType('none')}
+                        >
+                            manual
+                        </button>
+                        <button
+                            className={`px-4 py-2 rounded ${!canPushToTalk ? 'bg-black text-white' : 'bg-gray-200'}`}
+                            onClick={() => changeTurnEndType('server_vad')}
+                        >
+                            vad
+                        </button>
+                    </div>
 
-                <div style={{ flexGrow: 1 }} />
+                    {isConnected && canPushToTalk && (
+                        <button
+                            className={`px-4 py-2 rounded ${isRecording ? 'bg-red-500' : 'bg-gray-200'} 
+                                ${(!isConnected || !canPushToTalk) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            onMouseDown={startRecording}
+                            onMouseUp={stopRecording}
+                            disabled={!isConnected || !canPushToTalk}
+                        >
+                            {isRecording ? 'release to send' : 'push to talk'}
+                        </button>
+                    )}
 
-                {!isConnected && <Toggle
-                    defaultValue={false}
-                    labels={['chatbot', 'detect']}
-                    values={['chatbot', 'detect']}
-                    onChange={(_: boolean, value: string) => setAudioAgentDuty(value as 'chatbot' | 'detect')}
-                />}
-            </Box>
+                    <div style={{ flexGrow: 1 }} />
 
-            <h4>Conversation history</h4>
+                    {!isConnected && (
+                        <div className="flex gap-0">
+                            <button
+                                className={`px-4 py-2 rounded ${audioAgentDuty === 'chatbot' ? 'bg-black text-white' : 'bg-gray-200'}`}
+                                onClick={() => setAudioAgentDuty('chatbot')}
+                            >
+                                chatbot
+                            </button>
+                            <button
+                                className={`px-4 py-2 rounded ${audioAgentDuty === 'detect' ? 'bg-black text-white' : 'bg-gray-200'}`}
+                                onClick={() => setAudioAgentDuty('detect')}
+                            >
+                                detect
+                            </button>
+                        </div>
+                    )}
+                </Box>
+            </div>
+
             <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', marginBottom: '20px' }}>
-                <TextField
-                    id="outlined-basic"
-                    label="Latest user command"
-                    variant="outlined"
+                <input
+                    type="text"
+                    placeholder="Latest user command"
+                    className="input input-bordered w-full"
                     onChange={(e) => props.setVoiceInputTranscript(e.target.value)}
                     value={props.voiceInputTranscript}
-                    sx={{ flexGrow: 1, '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'black', borderWidth: '2px', borderRadius: '10px' } } }}
                 />
                 <IconButton
                     color="inherit"
@@ -427,8 +438,15 @@ export default function WorkFlow(props: WorkFlowProps) {
                                 {!conversationItem.formatted.tool &&
                                     conversationItem.role === 'user' && (
                                         <div>
-                                            <div style={{ display: 'flex', alignItems: 'center' }}>
-                                                <Mic /> <h5 style={{ marginLeft: '10px' }}>User transcript:</h5>
+                                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                                                <FaUser /> <h5 style={{ marginLeft: '10px' }}>
+                                                    {conversationItem.formatted.transcript ||
+                                                        (conversationItem.formatted.audio?.length
+                                                            ? '(awaiting transcript)'
+                                                            : conversationItem.formatted.text ||
+                                                            '(item sent)')
+                                                    }
+                                                </h5>
                                                 <div style={{ flexGrow: 1 }} />
                                                 <div
                                                     className="close"
@@ -440,20 +458,20 @@ export default function WorkFlow(props: WorkFlowProps) {
                                                     < XCircle />
                                                 </div>
                                             </div>
-                                            {conversationItem.formatted.transcript ||
-                                                (conversationItem.formatted.audio?.length
-                                                    ? '(awaiting transcript)'
-                                                    : conversationItem.formatted.text ||
-                                                    '(item sent)')
-                                            }
+
                                         </div>
                                     )
                                 }
                                 {!conversationItem.formatted.tool &&
                                     conversationItem.role === 'assistant' && (
                                         <div>
-                                            <div style={{ display: 'flex', alignItems: 'center' }}>
-                                                <Codepen /> <h5 style={{ marginLeft: '10px' }}>Agent response:</h5>
+                                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                                                <RiRobot2Fill /> <h5 style={{ marginLeft: '10px' }}>
+                                                    {conversationItem.formatted.transcript ||
+                                                        conversationItem.formatted.text ||
+                                                        '(truncated)'
+                                                    }
+                                                </h5>
                                                 {/* div flexgrow */}
                                                 <div style={{ flexGrow: 1 }} />
                                                 <div
@@ -466,57 +484,41 @@ export default function WorkFlow(props: WorkFlowProps) {
                                                     < XCircle />
                                                 </div>
                                             </div>
-                                            {conversationItem.formatted.transcript ||
-                                                conversationItem.formatted.text ||
-                                                '(truncated)'
-                                            }
                                         </div>
                                     )
                                 }
-                                {/* {conversationItem.formatted.file && (
-                                    <audio
-                                        src={conversationItem.formatted.file.url}
-                                        controls
-                                    />
-                                )} */}
                             </div>
                         </div>
                     );
                 })}
             </div>
 
-            <h3>Current State</h3>
-            <p>{props.currentState} : {stateTranslator[Number(props.currentState)]}</p>
+            <div className="divider"></div>
 
-            <h3>Current Event</h3>
-            <p>{props.stateMachineEvent} : {eventTranslator[props.stateMachineEvent]}</p>
-
-            <h3>Possible Next Events</h3>
+            <div className='text-lg font-bold'>Possible Next Events</div>
             <ul style={{ listStyleType: 'none', padding: 0 }}>
                 {props.currentState in stateMachine && Object.keys(stateMachine[props.currentState])
                     .sort((a, b) => Number(a) - Number(b))
                     .map((event) => (
-                        <li key={`button-triggered-event-${event}`} style={{ marginBottom: '10px' }}>
-                            <button
-                                onClick={() => { props.setStateMachineEvent(Number(event)) }}
-                                style={{ padding: '5px 10px', width: '100%', textAlign: 'left' }}
-                            >
-                                {event}: {eventTranslator[Number(event)]}
-                            </button>
+                        <li
+                            key={`event-${event}`}
+                            onClick={() => props.setStateMachineEvent(Number(event))}
+                            className='btn btn-outline btn-xs text-left mb-2.5 mr-1 cursor-pointer'
+                        >
+                            {event}: {eventTranslator[Number(event)]}
                         </li>
                     ))}
             </ul>
+            <div className="divider"></div>
 
-            <h3>State function executed result</h3>
+            <div className='text-lg font-bold'>State function executed result</div>
             <p>{props.stateFunctionExeRes}</p>
+            <div className="divider"></div>
 
-            <h3>Memory</h3>
-            <div className="content-block kv">
-                <div className="content-block-title">Memory</div>
-                <div className="content-block-body content-kv">
-                    {JSON.stringify(memoryKv, null, 2)}
-                </div>
+            <div className='text-lg font-bold content-block kv'>Memory</div>
+            <div className="content-block-body content-kv">
+                {JSON.stringify(memoryKv, null, 2)}
             </div>
-        </div>
+        </Stack>
     );
 }

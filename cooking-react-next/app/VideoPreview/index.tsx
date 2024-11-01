@@ -57,22 +57,22 @@ export default function VideoPreview(props: VideoPreviewProps) {
                 }
             </div>
             <Box display={'flex'} justifyContent={'center'} width={'100%'}>
-                <Button
-                    variant="outlined"
+                <button
+                    className='btn btn-outline'
                     color="primary"
                     onClick={() => { props.setIsVideoPlaying(true) }}
-                    sx={{ marginRight: 2 }}
+                    style={{ marginRight: 2 }}
                 >
                     Video Play
-                </Button>
-                <Button
-                    variant="outlined"
+                </button>
+                <button
+                    className='btn btn-outline'
                     color="primary"
                     onClick={() => { props.setIsVideoPlaying(false) }}
-                    sx={{ marginRight: 2 }}
+                    style={{ marginRight: 2 }}
                 >
                     Video Pause
-                </Button>
+                </button>
             </Box>
             
             {/* <div style={{ height: '40vh', overflowY: 'scroll' }}>
