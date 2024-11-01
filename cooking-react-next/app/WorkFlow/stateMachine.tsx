@@ -170,6 +170,8 @@ const basePrompt = `
 	- You are an artificial intelligence agent responsible for helping low-vision users cook in the kitchen.
 	- The user has provided a video knowledge in JSON format which contains multimodal information on how to correctly cook in the kitchen.
 	- Please help the user by answering their questions and guiding them through the cooking process based on the video knowledge.
+	- Video knowledge is provided in JSON format, after the tag <VIDEO KNOWLEDGE>.
+	- User's request is provided after the tag <USER REQUEST>.
 	- Please make sure to respond with a helpful voice via audio
 	- Be kind, helpful, and courteous
 	- It is okay to ask the user questions
@@ -218,10 +220,16 @@ const explainCurrentStepAction = async (		// state 2
 	realityImageBase64: string,
 	voiceInputTranscript: string
 ) => {
-	const prompt = `\nPlease focus on the current action of the user, what is the user doing? what step the user is at given the video knowledge? How do to it right?`
+	const prompt = `
+		Please focus on the current action of the user, what is the user doing? 
+		what step the user is at given the video knowledge? 
+		How do to it right?
+		<USER REQUEST>
+		${voiceInputTranscript}
+	`;
 	const fullPrompt = `
 		${basePrompt}
-		Video knowledge:
+		<VIDEO KNOWLEDGE>:
 		${videoKnowledgeInput}
 		${prompt}
 	`;

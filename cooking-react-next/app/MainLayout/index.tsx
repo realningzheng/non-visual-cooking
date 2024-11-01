@@ -169,6 +169,7 @@ export default function MainLayout() {
                     setVideoKnowledgeInput={setVideoKnowledgeInput}
                     setRealityImageBase64={setRealityImageBase64}
                     setStateFunctionExeRes={setStateFunctionExeRes}
+                    captureRealityFrame={captureRealityFrame}
                     isProcessing={isProcessing}
                     voiceInputTranscript={voiceInputTranscript}
                     videoKnowledgeInput={videoKnowledgeInput}
@@ -176,7 +177,6 @@ export default function MainLayout() {
                     stateMachineEvent={stateMachineEvent}
                     realityImageBase64={realityImageBase64}
                     stateFunctionExeRes={stateFunctionExeRes}
-                    captureRealityFrame={captureRealityFrame}
                 />
             </Grid>
         </Grid>
