@@ -22,12 +22,14 @@ interface WorkFlowProps {
     setVideoKnowledgeInput: (input: string) => void;
     setRealityImageBase64: (input: string) => void;
     setStateFunctionExeRes: (input: string) => void;
+    setIsProcessing: (input: boolean) => void;
     voiceInputTranscript: string;
     videoKnowledgeInput: string;
     currentState: number;
     stateMachineEvent: number;
     realityImageBase64: string;
     stateFunctionExeRes: string;
+    isProcessing: boolean;
     captureRealityFrame: () => Promise<string>;
 }
 
@@ -163,6 +165,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     /* Go to the next state */
     const gotoNextState = async (event: number) => {
         console.log(`received event: ${event}, ready to go to the next state`);
+        props.setIsProcessing(true);
         // update event and state in react states
         if (event >= 0) {
             props.setStateMachineEvent(event);
@@ -174,6 +177,7 @@ export default function WorkFlow(props: WorkFlowProps) {
         const realityImageBase64 = await props.captureRealityFrame();
         let stateFunctionExeRes = await executeStateFunction(stateMachine[props.currentState][event], props.videoKnowledgeInput, realityImageBase64, props.voiceInputTranscript) as string;
         props.setStateFunctionExeRes(stateFunctionExeRes);
+        props.setIsProcessing(false);
     };
 
 
@@ -511,7 +515,10 @@ export default function WorkFlow(props: WorkFlowProps) {
             </ul>
             <div className="divider"></div>
 
-            <div className='text-lg font-bold'>State function executed result</div>
+            <div className='flex items-center gap-2'>
+                <div className='text-lg font-bold'>State function executed result</div>
+                {props.isProcessing && <span className="loading loading-dots loading-lg"></span>}
+            </div>
             <p>{props.stateFunctionExeRes}</p>
             <div className="divider"></div>
 

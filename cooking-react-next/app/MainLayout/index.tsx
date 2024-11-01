@@ -15,6 +15,7 @@ export default function MainLayout() {
     const [realityImageBase64, setRealityImageBase64] = useState('');
 
     // Workflow states
+    const [isProcessing, setIsProcessing] = useState(false);
     const [voiceInputTranscript, setVoiceInputTranscript] = useState("");
     const [videoKnowledgeInput, setVideoKnowledgeInput] = useState("");
     const [currentState, setCurrentState] = useState(0);
@@ -161,12 +162,14 @@ export default function MainLayout() {
             </Grid>
             <Grid size={6} style={{ height: '100vh', overflow: 'scroll' }}>
                 <WorkFlow
+                    setIsProcessing={setIsProcessing}
                     setStateMachineEvent={setStateMachineEvent}
                     setCurrentState={setCurrentState}
                     setVoiceInputTranscript={setVoiceInputTranscript}
                     setVideoKnowledgeInput={setVideoKnowledgeInput}
                     setRealityImageBase64={setRealityImageBase64}
                     setStateFunctionExeRes={setStateFunctionExeRes}
+                    isProcessing={isProcessing}
                     voiceInputTranscript={voiceInputTranscript}
                     videoKnowledgeInput={videoKnowledgeInput}
                     currentState={currentState}
