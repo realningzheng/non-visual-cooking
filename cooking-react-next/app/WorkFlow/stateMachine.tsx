@@ -66,6 +66,8 @@ State Transitions:
 import OpenAI from 'openai';
 import axios from "axios";
 import credential from '../../secret.json';
+// hardcoded segmented sentence list
+import transriptSentenceList from '../data/rwYaDqXFH88_sentence.json';
 
 const apiKey = credential.OPENAI_KEY;
 const openai = new OpenAI({ apiKey: apiKey, dangerouslyAllowBrowser: true });
@@ -156,12 +158,14 @@ export const eventDetailedExplanation: StateMachineTranslator = {
          * "What was that last part?"`,
 
     6: `User asks for replaying relevant parts from the video
-       - Specific requests to see video content
+       - Request for replaying only a specific part from the video
        - Examples:
-         * "Can you show me how they did the folding technique?"
+         * "Can you show me how they did xxxxxx?"
          * "I need to see the kneading part again"
+		 * "I need to hear xxxxx again"
          * "Show me the video for this step"
-         * "What does it look like in the video?"`,
+         * "What does it look like in the video?"
+         * "Show me the part from the video that mentions xxxx"`,
 
     7: `User asks for other types of questions
        - General cooking queries based on the video knowledge
@@ -384,19 +388,15 @@ const handlingUserDisagreements = async (		// state 5
 	return response.gptResponse;
 };
 
+// @TODO: Test with script only for now, need to replace with video knowledge but with longer items length
 const replayRelevantPartsFromVideos = async (	// state 6
 	videoKnowledgeInput: string,
 	realityImageBase64: string,
 	voiceInputTranscript: string
 ) => {
-	const prompt = `
-		${basePrompt}
-		Video knowledge:
-		${videoKnowledgeInput}
-		Please present the timestamp of video knowledge related to "${voiceInputTranscript}".
-	`;
-	const response = await callChatGPT(prompt);
-	return response.gptResponse;
+	const response = await findSentenceFromTranscript(voiceInputTranscript);
+	console.log(response.gptResponse);
+	return JSON.stringify(response.gptResponse);
 };
 
 export const stateFunctions: {
@@ -435,7 +435,6 @@ export const executeStateFunction = (
 
 
 // Modify the nextEventChooser function to call executeStateFunction
-// @TODO: should be able to handle system-intitated events
 export const asyncNextEventChooser = async (
 	voiceInput: string,
 	videoKnowledgeInput: string,
@@ -446,7 +445,7 @@ export const asyncNextEventChooser = async (
 
 	const possibleNextEvents: string[] = Object.keys(possibleNextEventsObj).map(event => {
 		const eventNumber = Number(event); // Convert event key to number
-		const eventExplanation = eventTranslator[eventNumber]; // Get explanation from eventTranslator
+		const eventExplanation = eventDetailedExplanation[eventNumber]; // Get explanation from eventTranslator
 		return `${eventNumber}: ${eventExplanation}`;
 	});
 	// 2. (openai_api) Select the category of the next event based on user inputs (stream and voice)
@@ -466,6 +465,7 @@ export const asyncNextEventChooser = async (
 	}
 	return -1;
 }
+
 
 async function callChatGPT(prompt: string, imageUrls: string[] = []): Promise<{ "gptResponse": string }> {
 	let gptResponse = "";
@@ -499,6 +499,47 @@ async function callChatGPT(prompt: string, imageUrls: string[] = []): Promise<{ 
 		if (response.choices[0]?.message?.content) {
 			gptResponse = response.choices[0].message.content;
 		}
+	} catch (error) {
+		if (axios.isAxiosError(error)) {
+			console.error("Error calling GPT-4 API:", error.response?.data);
+		} else {
+			console.error("Unknown error:", error);
+		}
+	}
+	return { "gptResponse": gptResponse };
+}
+
+
+async function findSentenceFromTranscript(prompt: string) {
+	const importantSentencesPrompt = "This is the transcript of video that teaches blind people how to cook. \n" +
+		`Given the transcript, please tell me which sentences are relevant to ${prompt}, elusive for non-expert audiences to understand and are better with a visual explanation. \n` +
+		"You are required to pick up sentences evenly from the beginning, middle and end of the transcript. \n" +
+		"The transcript is given as a list of sentences with ID. Only return the sentence IDs to form the great version. \n" +
+		"Do not include full sentences in your reply. Only return a list of IDs. Return all relevant sentences. \n" +
+		"Use the following format: `{'sentence_IDs': [1, 4, 45, 100]}`. \n" +
+		"Make sure the returned format is a list that can be parsed by Json. \n" +
+		transriptSentenceList.map((s) => `${s["sentenceIndex"]}: ${s["text"]}`).join("\n\n");
+	let gptResponse: { "sentence_IDs": number[] } = { "sentence_IDs": [] };
+
+	try {
+		const response = await openai.chat.completions.create({
+			model: "gpt-4o-mini",
+			response_format: { "type": "json_object" },
+			messages: [
+				{
+					role: "user",
+					content: [
+						{ type: "text", text: `${importantSentencesPrompt}` },
+					],
+				},
+			],
+			max_tokens: 1500,
+		});
+		
+		if (response.choices[0]['message']['content']) {
+			gptResponse = JSON.parse(response.choices[0]['message']['content']);
+		}
+
 	} catch (error) {
 		if (axios.isAxiosError(error)) {
 			console.error("Error calling GPT-4 API:", error.response?.data);

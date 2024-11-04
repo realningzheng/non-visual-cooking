@@ -13,7 +13,7 @@ import videoKnowledgeData from "../data/rwYaDqXFH88_video_knowledge_brief.json";
 export default function MainLayout() {
     const [isVideoPlaying, setIsVideoPlaying] = useState(false);
     const [realityImageBase64, setRealityImageBase64] = useState('');
-
+    
     // Workflow states
     const [isProcessing, setIsProcessing] = useState(false);
     const [voiceInputTranscript, setVoiceInputTranscript] = useState("");
@@ -84,8 +84,10 @@ export default function MainLayout() {
                 <div className='text-2xl font-bold'>Video preview</div>
                 <div style={{ width: '70%', margin: '0 auto' }}>
                     <VideoPreview
-                        vurl='https://www.youtube.com/watch?v=umiOuVA7PEc'
+                        vurl='https://www.youtube.com/watch?v=rwYaDqXFH88'
                         isVideoPlaying={isVideoPlaying}
+                        currentState={currentState}
+                        stateFunctionExeRes={stateFunctionExeRes}
                         setIsVideoPlaying={setIsVideoPlaying}
                     />
                 </div>
@@ -158,7 +160,6 @@ export default function MainLayout() {
                         Reality Pause
                     </button>
                 </Box>
-
             </Grid>
             <Grid size={6} style={{ height: '100vh', overflow: 'scroll' }}>
                 <WorkFlow

@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import ReactPlayer from 'react-player'
-import { Stack, Button, Box } from '@mui/material';
+import { Stack, Box } from '@mui/material';
+import transriptSentenceList from '../data/rwYaDqXFH88_sentence.json';
 
 interface TransriptSentenceItemProps {
     sentenceIndex: number;
@@ -14,6 +15,8 @@ interface TransriptSentenceItemProps {
 interface VideoPreviewProps {
     vurl: string;
     isVideoPlaying: boolean;
+    currentState: number;
+    stateFunctionExeRes: string;
     setIsVideoPlaying: (isVideoPlaying: boolean) => void;
 }
 
@@ -31,6 +34,7 @@ export default function VideoPreview(props: VideoPreviewProps) {
     return (
         <Stack spacing={2} justifyContent={'center'} width={'100%'}>
             <div
+                id='raw-video-preview'
                 style={{
                     position: "relative",
                     width: "100%",
@@ -74,16 +78,38 @@ export default function VideoPreview(props: VideoPreviewProps) {
                     Video Pause
                 </button>
             </Box>
-            
-            {/* <div style={{ height: '40vh', overflowY: 'scroll' }}>
-                {transriptSentenceList.map((item: TransriptSentenceItemProps) => {
-                    return (
-                        <div key={item.sentenceIndex}>
-                            {`${item.sentenceIndex}: ${Number(item.startTime) / 1000}-${Number(item.endTime) / 1000}: ${item.text}`}
-                        </div>
-                    );
-                })}
-            </div> */}
-        </Stack>
+            <div className='divider'></div>
+            <div
+                id='segmented-video-preview'
+                style={{
+                    width: '100%',
+                    height: '20vh',
+                    border: '2px dashed #ccc',
+                    borderRadius: '5px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#f5f5f5',
+                }}
+            >
+                <span style={{ color: '#666', fontSize: '1.1rem' }}>
+                    Segmented video unavailable
+                </span>
+            </div>
+            {props.currentState === 6 && props.stateFunctionExeRes && (
+                <div style={{ height: '40vh', overflowY: 'scroll' }}>
+                    {JSON.parse(props.stateFunctionExeRes).sentence_IDs.map((item: number) => {
+                        const sentence = transriptSentenceList.find(
+                            (s) => s.sentenceIndex === item
+                        );
+                        return sentence ? (
+                            <div key={`retrieved-sentence-id-${item}`}>
+                                {`${sentence.sentenceIndex}: ${Number(sentence.startTime) / 1000}-${Number(sentence.endTime) / 1000}: ${sentence.text}`}
+                            </div>
+                        ) : null;
+                    })}
+                </div>
+            )}
+        </Stack >
     );
 }
