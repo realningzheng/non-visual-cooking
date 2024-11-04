@@ -2,9 +2,17 @@
 
 import { Stack, Box, TextField, IconButton } from "@mui/material";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { stateTranslator, eventTranslator, stateMachine, stateFunctions, asyncNextEventChooser, executeStateFunction } from './stateMachine';
+import {
+    stateTranslator,
+    eventTranslator,
+    stateMachine,
+    stateFunctions,
+    asyncNextEventChooser,
+    executeStateFunction,
+    eventDetailedExplanation
+} from './stateMachine';
 import { WavRecorder, WavStreamPlayer } from '../wavtools/index.js';
-import { X, Codepen, XCircle, Edit, Zap, ArrowUp, ArrowDown, Mic } from 'react-feather';
+import { XCircle } from 'react-feather';
 import SendIcon from '@mui/icons-material/Send';
 // @ts-ignore
 import { RealtimeClient } from '@openai/realtime-api-beta';
@@ -46,11 +54,11 @@ export default function WorkFlow(props: WorkFlowProps) {
     const [memoryKv, setMemoryKv] = useState<{ [key: string]: any }>({});
     const [isRecording, setIsRecording] = useState(false);
     const [canPushToTalk, setCanPushToTalk] = useState(true);
-    const [audioAgentDuty, setAudioAgentDuty] = useState<'chatbot' | 'detect'>('chatbot');
+    const [audioAgentDuty, setAudioAgentDuty] = useState<'chatbot' | 'detect'>('detect');
     const possibleNextEvents: string[] = useMemo(() => {
         return Object.keys(stateMachine[props.currentState]).map(event => {
             const eventNumber = Number(event);
-            const eventExplanation = eventTranslator[eventNumber];
+            const eventExplanation = eventDetailedExplanation[eventNumber];
             return `${eventNumber}: ${eventExplanation}`;
         });
     }, [props.currentState]);
@@ -129,9 +137,10 @@ export default function WorkFlow(props: WorkFlowProps) {
             client.sendUserMessageContent([
                 {
                     type: `input_text`,
-                    text: `The content I just mentioned falls under which type of the following categories:\n\n
+                    text: `Please decide the sentence I just said falls under which type of the following categories:\n\n
                     ${possibleNextEvents.join("\n")}\n
-                    -1: Not related to cooking task at all\n
+                    -1: unable to determine\n\n
+
                     Please reply ONLY the index of the most appropriate category.`
                 }
             ]);
@@ -439,7 +448,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                                 )}
 
                                 {/* Transcript from the user */}
-                                {!conversationItem.formatted.tool &&
+                                {!conversationItem.formatted.tool && 
                                     conversationItem.role === 'user' && (
                                         <div>
                                             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
@@ -466,7 +475,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                                         </div>
                                     )
                                 }
-                                {!conversationItem.formatted.tool &&
+                                {!conversationItem.formatted.tool && audioAgentDuty === 'chatbot' &&
                                     conversationItem.role === 'assistant' && (
                                         <div>
                                             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>

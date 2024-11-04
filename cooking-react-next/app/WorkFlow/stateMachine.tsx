@@ -96,7 +96,6 @@ export const stateTranslator: StateMachineTranslator = {
 
 export const eventTranslator: StateMachineTranslator = {
 	0: "User asks about a step",
-	1: "User asks about the current state (not used)",
 	2: "User asks how to fix something",
 	3: "User disagrees",
 	4: "User agrees/satisfies",
@@ -104,14 +103,114 @@ export const eventTranslator: StateMachineTranslator = {
 	6: "User asks for replaying relevant parts from the video",
 	7: "User asks for other types of questions",
 	8: "User asks confirmation-type questions",
-	9: "User asks others",
 	10: "System automatically detects misalignment",
 	11: "System automatically detects a new action/step",
 	12: "System automatically detects missing previous steps",
-	13: "Problem solved",
-	14: "Problem unsolved",
 	20: "System automatically evaluates reality"
 }
+
+
+export const eventDetailedExplanation: StateMachineTranslator = {
+    0: `User asks about a step
+       - Questions about current, previous, or future steps in the cooking process
+       - Examples:
+         * "What's the next step I should do?"
+         * "How many steps are still left?"
+         * "What did I do just now?"
+         * "What steps did I miss?"
+         * "What step am I on right now?"
+         * "How many steps are left?"
+         * "What should I do next?"
+         * "Can you explain this step again?"
+         * "Was I supposed to preheat the oven?"`,
+
+    2: `User asks how to fix something
+       - Requests for correction or problem-solving
+       - Examples:
+         * "The sauce is too thick, how do I fix it?"
+         * "I added too much salt, what should I do?"
+         * "The dough isn't rising, how can I fix this?"
+         * "I burned the bottom, can this be saved?"`,
+
+    3: `User disagrees
+       - Expressions of disagreement with instructions or feedback
+       - Examples:
+         * "That's not right, the recipe said medium heat"
+         * "No, I already added the eggs"
+         * "I don't think that's correct"`,
+
+    4: `User agrees/satisfies
+       - Confirmations and positive acknowledgments
+       - Examples:
+         * "Ok, got it"
+         * "Yes, that looks right"
+         * "I understand now"
+         * "That worked, thank you"`,
+
+    5: `User asks for a repeat
+       - Requests for information to be repeated
+       - Examples:
+         * "Can you say that again?"
+         * "I didn't catch that"
+         * "Please repeat the last instruction"
+         * "What was that last part?"`,
+
+    6: `User asks for replaying relevant parts from the video
+       - Specific requests to see video content
+       - Examples:
+         * "Can you show me how they did the folding technique?"
+         * "I need to see the kneading part again"
+         * "Show me the video for this step"
+         * "What does it look like in the video?"`,
+
+    7: `User asks for other types of questions
+       - General cooking queries based on the video knowledge
+       - Examples:
+         * "What other ingredients do we need?"`,
+
+    8: `User asks confirmation-type questions
+       - Seeking verification or validation
+       - Examples:
+         * "Is this the right consistency?"
+         * "Should it be this color?"
+         * "Am I stirring fast enough?"
+         * "Is everything going okay?"
+         * "Am I on track?"
+         * "Is this what it's supposed to look like?"
+         * "Does this look done?"`,
+
+    10: `System automatically detects misalignment
+        - AI detects discrepancy between video and user's actions
+        - Examples:
+          * Detecting wrong ingredient usage
+          * Noticing incorrect cooking temperature
+          * Identifying wrong sequence of steps
+          * Spotting incorrect technique`,
+
+    11: `System automatically detects a new action/step
+        - AI recognizes transition to new cooking phase
+        - Examples:
+          * Detecting user has started mixing ingredients
+          * Noticing transition to cooking phase
+          * Identifying completion of preparation
+          * Recognizing start of new recipe section`,
+
+    12: `System automatically detects missing previous steps
+        - AI identifies skipped or incomplete steps
+        - Examples:
+          * Noticing missing ingredient preparation
+          * Detecting skipped preheating step
+          * Identifying missing mixing step
+          * Recognizing incomplete preparation`,
+
+    20: `System automatically evaluates reality
+        - AI performs regular assessment of cooking progress
+        - Examples:
+          * Checking food doneness
+          * Evaluating consistency
+          * Assessing temperature
+          * Monitoring cooking time`
+} 
 
 
 export const stateMachine: StateMachine = {
@@ -130,7 +229,7 @@ export const stateMachine: StateMachine = {
 		5: 1,  // Repeat
 		2: 3,  // How to fix
 		6: 6,  // Replay requested
-		9: 4,  // Other questions
+		7: 4,  // Other questions
 		4: 0,  // Agree/Satisfy
 	},
 	2: {
@@ -152,8 +251,8 @@ export const stateMachine: StateMachine = {
 		4: 0,  // Agree/Satisfy
 	},
 	5: {
-		13: 0, // Problem solved
-		14: 5, // Problem unsolved, stay in disagreement
+		4: 0, // Problem solved
+		3: 5, // Problem unsolved, stay in disagreement
 	},
 	6: {
 		3: 5,  // Disagreement
@@ -336,6 +435,7 @@ export const executeStateFunction = (
 
 
 // Modify the nextEventChooser function to call executeStateFunction
+// @TODO: should be able to handle system-intitated events
 export const asyncNextEventChooser = async (
 	voiceInput: string,
 	videoKnowledgeInput: string,
@@ -355,7 +455,7 @@ export const asyncNextEventChooser = async (
 					User request is: "${voiceInput}", 
 					which of the following categories is most appropriate:\n 
 					${possibleNextEvents.join("\n")}\n
-					-1: Not related to cooking task at all\n
+					-1: unable to determine\n
 					Please reply ONLY the index of the most appropriate category`;
 	const response = await callChatGPT(prompt);
 	// @TODO: should either use functionCall or whatever to make sure the response is returned from a list of indices
