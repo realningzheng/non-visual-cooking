@@ -13,3 +13,4 @@ backend/data/**.srt
 backend/data/audio_output/**
 backend/data/key_frames/**
 backend/data/parser_res/**
+cooking-react-next/public

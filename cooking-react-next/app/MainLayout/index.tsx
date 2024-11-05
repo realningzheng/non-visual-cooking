@@ -84,7 +84,7 @@ export default function MainLayout() {
                 <div className='text-2xl font-bold'>Video preview</div>
                 <div style={{ width: '70%', margin: '0 auto' }}>
                     <VideoPreview
-                        vurl='https://www.youtube.com/watch?v=rwYaDqXFH88'
+                        vurl='rwYaDqXFH88.mp4'
                         isVideoPlaying={isVideoPlaying}
                         currentState={currentState}
                         stateFunctionExeRes={stateFunctionExeRes}

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactPlayer from 'react-player'
 import { Stack, Box } from '@mui/material';
 import transriptSentenceList from '../data/rwYaDqXFH88_sentence.json';
+import VideoSegmentPlayer from '../components/VideoSegmentPlayer';
 
 interface TransriptSentenceItemProps {
     sentenceIndex: number;
@@ -60,26 +61,8 @@ export default function VideoPreview(props: VideoPreviewProps) {
                     />
                 }
             </div>
-            <Box display={'flex'} justifyContent={'center'} width={'100%'}>
-                <button
-                    className='btn btn-outline'
-                    color="primary"
-                    onClick={() => { props.setIsVideoPlaying(true) }}
-                    style={{ marginRight: 2 }}
-                >
-                    Video Play
-                </button>
-                <button
-                    className='btn btn-outline'
-                    color="primary"
-                    onClick={() => { props.setIsVideoPlaying(false) }}
-                    style={{ marginRight: 2 }}
-                >
-                    Video Pause
-                </button>
-            </Box>
             <div className='divider'></div>
-            <div
+            {/* <div
                 id='segmented-video-preview'
                 style={{
                     width: '100%',
@@ -95,7 +78,15 @@ export default function VideoPreview(props: VideoPreviewProps) {
                 <span style={{ color: '#666', fontSize: '1.1rem' }}>
                     Segmented video unavailable
                 </span>
-            </div>
+            </div> */}
+            <VideoSegmentPlayer
+                sourceUrl={props.vurl}
+                segments={[
+                    [0, 2],    // First segment: 0-2 seconds
+                    [4, 6],    // Second segment: 4-6 seconds
+                ]}
+                // onReady={() => console.log('Video segments ready to play')}
+            />
             {props.currentState === 6 && props.stateFunctionExeRes && (
                 <div style={{ height: '40vh', overflowY: 'scroll' }}>
                     {JSON.parse(props.stateFunctionExeRes).sentence_IDs.map((item: number) => {
