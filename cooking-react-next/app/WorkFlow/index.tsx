@@ -139,7 +139,6 @@ export default function WorkFlow(props: WorkFlowProps) {
                     type: `input_text`,
                     text: `Please decide the sentence I just said falls under which type of the following categories:\n\n
                     ${possibleNextEvents.join("\n")}\n
-                    -1: unable to determine\n\n
 
                     Please reply ONLY the index of the most appropriate category.`
                 }

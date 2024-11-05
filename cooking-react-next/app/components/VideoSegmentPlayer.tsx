@@ -4,9 +4,10 @@ import ReactPlayer from 'react-player';
 interface VideoSegmentPlayerProps {
 	sourceUrl: string;
 	segments: [number, number][]; // Array of tuples representing start and end times
+	setPlaySeconds: (seconds: number) => void;
 }
 
-const VideoSegmentPlayer: React.FC<VideoSegmentPlayerProps> = ({ sourceUrl, segments }) => {
+const VideoSegmentPlayer: React.FC<VideoSegmentPlayerProps> = ({ sourceUrl, segments, setPlaySeconds }) => {
 	const [currentSegmentIndex, setCurrentSegmentIndex] = useState(0);
 	const [playing, setPlaying] = useState(false);
 	const playerRef = useRef<ReactPlayer>(null);
@@ -36,6 +37,12 @@ const VideoSegmentPlayer: React.FC<VideoSegmentPlayerProps> = ({ sourceUrl, segm
 							left: 0,
 						}}
 						onProgress={({ playedSeconds }) => {
+							setPlaySeconds(playedSeconds);
+							// Ensure playback starts from first segment
+							if (playedSeconds < segments[0][0]) {
+								playerRef.current?.seekTo(segments[0][0]);
+								return;
+							}
 							// Stop at final segment end
 							if (playedSeconds >= segments[segments.length - 1][1]) {
 								setPlaying(false);
@@ -51,9 +58,6 @@ const VideoSegmentPlayer: React.FC<VideoSegmentPlayerProps> = ({ sourceUrl, segm
 					/>
 				</div>
 			)}
-			{segments.map((segment, index) => (
-				<div key={index}>{segment[0]} - {segment[1]}</div>
-			))}
 		</div>
 	);
 };

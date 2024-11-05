@@ -113,7 +113,7 @@ export const eventTranslator: StateMachineTranslator = {
 
 
 export const eventDetailedExplanation: StateMachineTranslator = {
-    0: `User asks about a step
+	0: `User asks about a step
        - Questions about current, previous, or future steps in the cooking process
        - Examples:
          * "What's the next step I should do?"
@@ -126,7 +126,7 @@ export const eventDetailedExplanation: StateMachineTranslator = {
          * "Can you explain this step again?"
          * "Was I supposed to preheat the oven?"`,
 
-    2: `User asks how to fix something
+	2: `User asks how to fix something
        - Requests for correction or problem-solving
        - Examples:
          * "The sauce is too thick, how do I fix it?"
@@ -134,14 +134,14 @@ export const eventDetailedExplanation: StateMachineTranslator = {
          * "The dough isn't rising, how can I fix this?"
          * "I burned the bottom, can this be saved?"`,
 
-    3: `User disagrees
+	3: `User disagrees
        - Expressions of disagreement with instructions or feedback
        - Examples:
          * "That's not right, the recipe said medium heat"
          * "No, I already added the eggs"
          * "I don't think that's correct"`,
 
-    4: `User agrees/satisfies
+	4: `User agrees/satisfies
        - Confirmations and positive acknowledgments
        - Examples:
          * "Ok, got it"
@@ -149,7 +149,7 @@ export const eventDetailedExplanation: StateMachineTranslator = {
          * "I understand now"
          * "That worked, thank you"`,
 
-    5: `User asks for a repeat
+	5: `User asks for a repeat
        - Requests for information to be repeated
        - Examples:
          * "Can you say that again?"
@@ -157,7 +157,7 @@ export const eventDetailedExplanation: StateMachineTranslator = {
          * "Please repeat the last instruction"
          * "What was that last part?"`,
 
-    6: `User asks for replaying relevant parts from the video
+	6: `User asks for replaying relevant parts from the video
        - Request for replaying only a specific part from the video
        - Examples:
          * "Can you show me how they did xxxxxx?"
@@ -167,12 +167,12 @@ export const eventDetailedExplanation: StateMachineTranslator = {
          * "What does it look like in the video?"
          * "Show me the part from the video that mentions xxxx"`,
 
-    7: `User asks for other types of questions
+	7: `User asks for other types of questions
        - General cooking queries based on the video knowledge
        - Examples:
          * "What other ingredients do we need?"`,
 
-    8: `User asks confirmation-type questions
+	8: `User asks confirmation-type questions
        - Seeking verification or validation
        - Examples:
          * "Is this the right consistency?"
@@ -183,7 +183,7 @@ export const eventDetailedExplanation: StateMachineTranslator = {
          * "Is this what it's supposed to look like?"
          * "Does this look done?"`,
 
-    10: `System automatically detects misalignment
+	10: `System automatically detects misalignment
         - AI detects discrepancy between video and user's actions
         - Examples:
           * Detecting wrong ingredient usage
@@ -191,7 +191,7 @@ export const eventDetailedExplanation: StateMachineTranslator = {
           * Identifying wrong sequence of steps
           * Spotting incorrect technique`,
 
-    11: `System automatically detects a new action/step
+	11: `System automatically detects a new action/step
         - AI recognizes transition to new cooking phase
         - Examples:
           * Detecting user has started mixing ingredients
@@ -199,7 +199,7 @@ export const eventDetailedExplanation: StateMachineTranslator = {
           * Identifying completion of preparation
           * Recognizing start of new recipe section`,
 
-    12: `System automatically detects missing previous steps
+	12: `System automatically detects missing previous steps
         - AI identifies skipped or incomplete steps
         - Examples:
           * Noticing missing ingredient preparation
@@ -207,14 +207,14 @@ export const eventDetailedExplanation: StateMachineTranslator = {
           * Identifying missing mixing step
           * Recognizing incomplete preparation`,
 
-    20: `System automatically evaluates reality
+	20: `System automatically evaluates reality
         - AI performs regular assessment of cooking progress
         - Examples:
           * Checking food doneness
           * Evaluating consistency
           * Assessing temperature
           * Monitoring cooking time`
-} 
+}
 
 
 export const stateMachine: StateMachine = {
@@ -291,15 +291,7 @@ const comparingVideoRealityAlignment = async (	// state 0
 	videoKnowledgeInput: string,
 	realityImageBase64: string
 ) => {
-	// TODO: extract reality information from realityImageBase64
-	const prompt = `
-		${basePrompt}
-		Video knowledge:
-		${videoKnowledgeInput}
-		Please compare the video-reality alignment.
-	`;
-	const response = await callChatGPT(prompt);
-	return response.gptResponse;
+	return '<System automatically compares video-reality alignment>';
 };
 
 const explainCurrentState = async (				// state 1
@@ -454,7 +446,6 @@ export const asyncNextEventChooser = async (
 					User request is: "${voiceInput}", 
 					which of the following categories is most appropriate:\n 
 					${possibleNextEvents.join("\n")}\n
-					-1: unable to determine\n
 					Please reply ONLY the index of the most appropriate category`;
 	const response = await callChatGPT(prompt);
 	// @TODO: should either use functionCall or whatever to make sure the response is returned from a list of indices
@@ -535,7 +526,7 @@ async function findSentenceFromTranscript(prompt: string) {
 			],
 			max_tokens: 1500,
 		});
-		
+
 		if (response.choices[0]['message']['content']) {
 			gptResponse = JSON.parse(response.choices[0]['message']['content']);
 		}

@@ -13,7 +13,7 @@ import videoKnowledgeData from "../data/rwYaDqXFH88_video_knowledge_brief.json";
 export default function MainLayout() {
     const [isVideoPlaying, setIsVideoPlaying] = useState(false);
     const [realityImageBase64, setRealityImageBase64] = useState('');
-    
+
     // Workflow states
     const [isProcessing, setIsProcessing] = useState(false);
     const [voiceInputTranscript, setVoiceInputTranscript] = useState("");
@@ -80,9 +80,9 @@ export default function MainLayout() {
 
     return (
         <Grid container spacing={3}>
-            <Grid size={6}>
+            <Grid size={4}>
                 <div className='text-2xl font-bold'>Video preview</div>
-                <div style={{ width: '70%', margin: '0 auto' }}>
+                <div style={{ width: '100%', margin: '0 auto' }}>
                     <VideoPreview
                         vurl='rwYaDqXFH88.mp4'
                         isVideoPlaying={isVideoPlaying}
@@ -91,11 +91,14 @@ export default function MainLayout() {
                         setIsVideoPlaying={setIsVideoPlaying}
                     />
                 </div>
+
+                <div className='divider'></div>
+
                 <div className='text-2xl font-bold'>Reality preview</div>
                 <div style={{ display: 'flex', flexDirection: 'row', gap: '20px', alignItems: 'flex-start' }}>
                     <Stack spacing={0} justifyContent={'center'} sx={{ flex: 1 }}>
                         {isClient &&
-                            <div style={{ width: '100%', height: '25vh', position: 'relative', backgroundColor: '#000000',borderRadius: '5px' }}>
+                            <div style={{ width: '100%', height: '15vh', position: 'relative', backgroundColor: '#000000', borderRadius: '5px' }}>
                                 <video ref={videoRef} style={{ width: '100%', height: '100%', position: 'absolute', zIndex: 1, objectFit: 'contain', margin: 'auto' }} />
                             </div>
                         }
@@ -113,7 +116,7 @@ export default function MainLayout() {
                                 alt="Reality Capture"
                                 style={{
                                     width: '100%',
-                                    height: '25vh',
+                                    height: '15vh',
                                     objectFit: 'contain',
                                 }}
                             />
@@ -121,7 +124,7 @@ export default function MainLayout() {
                             <div
                                 style={{
                                     width: '100%',
-                                    height: '25vh',
+                                    height: '15vh',
                                     border: '2px dashed #ccc',
                                     borderRadius: '5px',
                                     display: 'flex',
@@ -161,7 +164,7 @@ export default function MainLayout() {
                     </button>
                 </Box>
             </Grid>
-            <Grid size={6} style={{ height: '100vh', overflow: 'scroll' }}>
+            <Grid size={8} style={{ height: '100vh', overflow: 'scroll' }}>
                 <WorkFlow
                     setIsProcessing={setIsProcessing}
                     setStateMachineEvent={setStateMachineEvent}
