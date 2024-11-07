@@ -56,6 +56,8 @@ export default function WorkFlow(props: WorkFlowProps) {
     const [canPushToTalk, setCanPushToTalk] = useState(true);
     const [audioAgentDuty, setAudioAgentDuty] = useState<'chatbot' | 'detect'>('detect');
     const possibleNextEvents: string[] = useMemo(() => {
+        if (props.currentState === -1 || props.currentState === undefined) return [];
+        console.log("currentState", props.currentState);
         return Object.keys(stateMachine[props.currentState]).map(event => {
             const eventNumber = Number(event);
             const eventExplanation = eventDetailedExplanation[eventNumber];
@@ -66,6 +68,9 @@ export default function WorkFlow(props: WorkFlowProps) {
     /** Bootstrap functions */
     /** Connect to conversation */
     const connectConversation = useCallback(async () => {
+        // initiate automatic checking for video-reality alignment
+        props.setStateMachineEvent(20);
+        props.setCurrentState(0);
         const client = clientRef.current;
         const wavRecorder = wavRecorderRef.current;
         const wavStreamPlayer = wavStreamPlayerRef.current;
@@ -85,6 +90,8 @@ export default function WorkFlow(props: WorkFlowProps) {
 
     /* Disconnect and reset conversation state */
     const disconnectConversation = useCallback(async () => {
+        props.setStateMachineEvent(-1);
+        props.setCurrentState(-1);
         setIsConnected(false);
         setItems([]);
         setMemoryKv({});
@@ -195,7 +202,6 @@ export default function WorkFlow(props: WorkFlowProps) {
         // Get refs
         const wavStreamPlayer = wavStreamPlayerRef.current;
         const client = clientRef.current;
-        console.log("client", client);
         // Set instructions
         client.updateSession({
             instructions: `System settings:
@@ -324,25 +330,44 @@ export default function WorkFlow(props: WorkFlowProps) {
 
     // automatically execute the state function when user event changes
     useEffect(() => {
-        if (props.stateMachineEvent >= 0) {
-            gotoNextState(props.stateMachineEvent);
-        }
+        const executeNextState = async () => {
+            if (props.stateMachineEvent >= 0) {
+                console.log("New event detected: ", props.stateMachineEvent);
+                await gotoNextState(props.stateMachineEvent);
+            }
+        };
+        executeNextState();
     }, [props.stateMachineEvent]);
 
+    
     // periodically trigger event 20 (comparingVideoRealityAlignment) 
         // when in state 0 (System automatically compares video-reality alignment)
     useEffect(() => {
+        console.log("currentState changes to: ", props.currentState);
         if (props.currentState === 0) {
-            // Define the function to be called periodically
+            let isChecking = false;
+            
             const automaticCheck = async () => {
-                console.log("checking for automatic events...");
-                props.setStateMachineEvent(20);
+                if (isChecking) return; // Skip if previous check is running or if event isn't 20
+                
+                try {
+                    isChecking = true;
+                    console.log("checking for automatic events...");
+                    await gotoNextState(20);
+                } finally {
+                    isChecking = false;
+                }
             };
-            const intervalId = setInterval(automaticCheck, 5000); // Calls every 5 seconds
-            return () => clearInterval(intervalId);
+
+            // Initial check
+            automaticCheck();
+            
+            // Set up timer for subsequent checks
+            const timeoutId = setInterval(automaticCheck, 500);
+            return () => clearInterval(timeoutId);
         }
     }, [props.currentState]);
-        
+
 
     return (
         <Stack spacing={2}>
@@ -522,20 +547,21 @@ export default function WorkFlow(props: WorkFlowProps) {
 
             <div className="divider"></div>
 
-            <div className='text-lg font-bold'>Possible Next Events</div>
-            <ul style={{ listStyleType: 'none', padding: 0 }}>
-                {props.currentState in stateMachine && Object.keys(stateMachine[props.currentState])
-                    .sort((a, b) => Number(a) - Number(b))
-                    .map((event) => (
-                        <li
-                            key={`event-${event}`}
-                            onClick={() => props.setStateMachineEvent(Number(event))}
-                            className='btn btn-outline btn-xs text-left mb-2.5 mr-1 cursor-pointer'
-                        >
-                            {event}: {eventTranslator[Number(event)]}
-                        </li>
-                    ))}
-            </ul>
+            {props.currentState !== -1 && (
+                <ul style={{ listStyleType: 'none', padding: 0 }}>
+                    {props.currentState in stateMachine && Object.keys(stateMachine[props.currentState])
+                        .sort((a, b) => Number(a) - Number(b))
+                        .map((event) => (
+                            <li
+                                key={`event-${event}`}
+                                onClick={() => props.setStateMachineEvent(Number(event))}
+                                className='btn btn-outline btn-xs text-left mb-2.5 mr-1 cursor-pointer'
+                            >
+                                {event}: {eventTranslator[Number(event)]}
+                            </li>
+                        ))}
+                </ul>
+            )}
             <div className="divider"></div>
 
             <div className='flex items-center gap-2'>

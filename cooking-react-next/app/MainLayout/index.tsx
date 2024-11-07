@@ -18,7 +18,7 @@ export default function MainLayout() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [voiceInputTranscript, setVoiceInputTranscript] = useState("");
     const [videoKnowledgeInput, setVideoKnowledgeInput] = useState("");
-    const [currentState, setCurrentState] = useState(0);
+    const [currentState, setCurrentState] = useState(-1);
     const [stateMachineEvent, setStateMachineEvent] = useState(-1);
     const [stateFunctionExeRes, setStateFunctionExeRes] = useState("");
 
