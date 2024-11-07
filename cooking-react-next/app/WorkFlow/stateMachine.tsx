@@ -292,6 +292,9 @@ const comparingVideoRealityAlignment = async (	// state 0
 	realityImageBase64: string
 	// TODO: memory: string
 ) => {
+	// await for 3 seconds
+	await new Promise(resolve => setTimeout(resolve, 2000));
+
 	console.log("Comparing video-reality alignment");
 	// TODO: compare video and reality
 		// 10: "System automatically detects misalignment",
