@@ -195,7 +195,7 @@ export default function WorkFlow(props: WorkFlowProps) {
         // Get refs
         const wavStreamPlayer = wavStreamPlayerRef.current;
         const client = clientRef.current;
-
+        console.log("client", client);
         // Set instructions
         client.updateSession({
             instructions: `System settings:
@@ -328,6 +328,29 @@ export default function WorkFlow(props: WorkFlowProps) {
             gotoNextState(props.stateMachineEvent);
         }
     }, [props.stateMachineEvent]);
+
+    // periodically checks (when in state 0: System automatically compares video-reality alignment):
+        // 10: "System automatically detects misalignment",
+        // 11: "System automatically detects a new action/step",
+        // 12: "System automatically detects missing previous steps",
+        // 20: "System automatically evaluates reality"
+    useEffect(() => {
+        if (props.currentState === 0) {
+            // Define the function to be called periodically
+            const automaticCheck = async () => {
+                console.log("checking for automatic events...");
+                
+                // TODO: implement automatic event detection
+                let event = -1; // choose one from 10, 11, 12, 20, -1
+                if (event >= 0) {
+                    props.setStateMachineEvent(event);
+                }
+            };
+            const intervalId = setInterval(automaticCheck, 5000); // Calls every 5 seconds
+            return () => clearInterval(intervalId);
+        }
+    }, [props.currentState]);
+        
 
     return (
         <Stack spacing={2}>

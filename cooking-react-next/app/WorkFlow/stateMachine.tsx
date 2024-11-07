@@ -291,6 +291,7 @@ const comparingVideoRealityAlignment = async (	// state 0
 	videoKnowledgeInput: string,
 	realityImageBase64: string
 ) => {
+	console.log("Comparing video-reality alignment");
 	return '<System automatically compares video-reality alignment>';
 };
 
