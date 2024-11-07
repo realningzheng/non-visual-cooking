@@ -290,8 +290,29 @@ const basePrompt = `
 const comparingVideoRealityAlignment = async (	// state 0
 	videoKnowledgeInput: string,
 	realityImageBase64: string
+	// TODO: memory: string
 ) => {
 	console.log("Comparing video-reality alignment");
+	// TODO: compare video and reality
+		// 10: "System automatically detects misalignment",
+        // 11: "System automatically detects a new action/step",
+        // 12: "System automatically detects missing previous steps",
+        // 20: "System automatically evaluates reality"
+	// const prompt = `
+	// 	${basePrompt}
+	// 	Video knowledge:
+	// 	${videoKnowledgeInput}
+	// 	Memory:
+	// 	${memory}
+	// 	Based on the reality image provided and the video knowledge and memory, please select the most appropriate category:
+	// 	10: "System automatically detects misalignment",
+    //     11: "System automatically detects a new action/step",
+    //     12: "System automatically detects missing previous steps",
+    //     20: "System automatically evaluates reality"
+	// 	Please reply ONLY the index of the most appropriate category.
+	// `;
+	// const response = await callChatGPT(prompt, [realityImageBase64]);
+	// return response.gptResponse;
 	return '<System automatically compares video-reality alignment>';
 };
 
