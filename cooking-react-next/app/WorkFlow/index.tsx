@@ -56,16 +56,25 @@ export default function WorkFlow(props: WorkFlowProps) {
     const [canPushToTalk, setCanPushToTalk] = useState(true);
     const [audioAgentDuty, setAudioAgentDuty] = useState<'chatbot' | 'detect'>('detect');
     const possibleNextEvents: string[] = useMemo(() => {
-        return Object.keys(stateMachine[props.currentState]).map(event => {
-            const eventNumber = Number(event);
-            const eventExplanation = eventDetailedExplanation[eventNumber];
-            return `${eventNumber}: ${eventExplanation}`;
-        });
+        if (props.currentState === -1) return [];
+        try {
+            return Object.keys(stateMachine[props.currentState] || {}).map(event => {
+                const eventNumber = Number(event);
+                const eventExplanation = eventDetailedExplanation[eventNumber];
+                return `${eventNumber}: ${eventExplanation}`;
+            });
+        } catch (error) {
+            console.error('Error getting possible next events:', error);
+            return [];
+        }
     }, [props.currentState]);
 
     /** Bootstrap functions */
     /** Connect to conversation */
     const connectConversation = useCallback(async () => {
+        // initiate automatic checking for video-reality alignment
+        props.setStateMachineEvent(20);
+        props.setCurrentState(0);
         const client = clientRef.current;
         const wavRecorder = wavRecorderRef.current;
         const wavStreamPlayer = wavStreamPlayerRef.current;
@@ -85,6 +94,8 @@ export default function WorkFlow(props: WorkFlowProps) {
 
     /* Disconnect and reset conversation state */
     const disconnectConversation = useCallback(async () => {
+        props.setStateMachineEvent(-1);
+        props.setCurrentState(-1);
         setIsConnected(false);
         setItems([]);
         setMemoryKv({});
@@ -171,19 +182,19 @@ export default function WorkFlow(props: WorkFlowProps) {
 
 
     /* Go to the next state */
-    const gotoNextState = async (event: number) => {
-        console.log(`received event: ${event}, ready to go to the next state`);
+    const gotoNextState = async (statePrev: number, event: number) => {
+        console.log(`[go to next state]: with event: ${event}, from state: ${statePrev}`);
         props.setIsProcessing(true);
         // update event and state in react states
         if (event >= 0) {
             props.setStateMachineEvent(event);
-            props.setCurrentState(stateMachine[props.currentState][event]);
+            props.setCurrentState(stateMachine[statePrev][event]);
         } else {
-            console.log("No valid events found.");
+            console.log("[go to next state]: No valid events found.");
         }
         // execute the corresponding state function
         const realityImageBase64 = await props.captureRealityFrame();
-        let stateFunctionExeRes = await executeStateFunction(stateMachine[props.currentState][event], props.videoKnowledgeInput, realityImageBase64, props.voiceInputTranscript) as string;
+        let stateFunctionExeRes = await executeStateFunction(stateMachine[statePrev][event], props.videoKnowledgeInput, realityImageBase64, props.voiceInputTranscript) as string;
         props.setStateFunctionExeRes(stateFunctionExeRes);
         props.setIsProcessing(false);
     };
@@ -195,7 +206,6 @@ export default function WorkFlow(props: WorkFlowProps) {
         // Get refs
         const wavStreamPlayer = wavStreamPlayerRef.current;
         const client = clientRef.current;
-
         // Set instructions
         client.updateSession({
             instructions: `System settings:
@@ -209,7 +219,6 @@ export default function WorkFlow(props: WorkFlowProps) {
             - Be kind, helpful, and courteous
             - It is okay to ask the user questions
             - Use tools and functions you have available liberally, it is part of the training apparatus
-            - Be open to exploration and conversation
 
             Personality:
             - Be upbeat and genuine
@@ -309,11 +318,13 @@ export default function WorkFlow(props: WorkFlowProps) {
                 if (items[i].role === 'assistant') {
                     // set user event to the non-null value among transcript and text
                     if (items[i].formatted.transcript) {
-                        props.setStateMachineEvent(Number(items[i].formatted.transcript));
+                        if (Object.keys(stateMachine[props.currentState]).includes(Number(items[i].formatted.transcript).toString())) {
+                            props.setStateMachineEvent(Number(items[i].formatted.transcript));
+                        }
                     } else if (items[i].formatted.text) {
-                        props.setStateMachineEvent(Number(items[i].formatted.text));
-                    } else {
-                        props.setStateMachineEvent(-1);
+                        if (Object.keys(stateMachine[props.currentState]).includes(Number(items[i].formatted.text).toString())) {
+                            props.setStateMachineEvent(Number(items[i].formatted.text));
+                        }
                     }
                     break;
                 }
@@ -324,10 +335,40 @@ export default function WorkFlow(props: WorkFlowProps) {
 
     // automatically execute the state function when user event changes
     useEffect(() => {
-        if (props.stateMachineEvent >= 0) {
-            gotoNextState(props.stateMachineEvent);
-        }
+        const executeNextState = async () => {
+            if (props.stateMachineEvent >= 0) {
+                console.log("[state machine event changes]: ", props.stateMachineEvent);
+                await gotoNextState(props.currentState, props.stateMachineEvent);
+            }
+        };
+        executeNextState();
     }, [props.stateMachineEvent]);
+
+
+    // periodically trigger event 20 (comparingVideoRealityAlignment) 
+    // when in state 0 (System automatically compares video-reality alignment)
+    useEffect(() => {
+        console.log("[current state changes]: ", props.currentState);
+        if (props.currentState === 0) {
+            let isChecking = false;
+            const automaticCheck = async () => {
+                if (isChecking) return; // Skip if previous check is running or if event isn't 20
+                try {
+                    isChecking = true;
+                    console.log("[automatic runs event 20]");
+                    await gotoNextState(0, 20);
+                } finally {
+                    isChecking = false;
+                }
+            };
+            // Initial check
+            automaticCheck();
+            // Set up timer for subsequent checks
+            const timeoutId = setInterval(automaticCheck, 500);
+            return () => clearInterval(timeoutId);
+        }
+    }, [props.currentState]);
+
 
     return (
         <Stack spacing={2}>
@@ -447,7 +488,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                                 )}
 
                                 {/* Transcript from the user */}
-                                {!conversationItem.formatted.tool && 
+                                {!conversationItem.formatted.tool &&
                                     conversationItem.role === 'user' && (
                                         <div>
                                             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
@@ -507,32 +548,34 @@ export default function WorkFlow(props: WorkFlowProps) {
 
             <div className="divider"></div>
 
-            <div className='text-lg font-bold'>Possible Next Events</div>
-            <ul style={{ listStyleType: 'none', padding: 0 }}>
-                {props.currentState in stateMachine && Object.keys(stateMachine[props.currentState])
-                    .sort((a, b) => Number(a) - Number(b))
-                    .map((event) => (
-                        <li
-                            key={`event-${event}`}
-                            onClick={() => props.setStateMachineEvent(Number(event))}
-                            className='btn btn-outline btn-xs text-left mb-2.5 mr-1 cursor-pointer'
-                        >
-                            {event}: {eventTranslator[Number(event)]}
-                        </li>
-                    ))}
-            </ul>
+            <div className='text-lg font-bold'>Possible next events</div>
+            {props.currentState !== -1 && (
+                <ul style={{ listStyleType: 'none', padding: 0 }}>
+                    {props.currentState in stateMachine && Object.keys(stateMachine[props.currentState])
+                        .sort((a, b) => Number(a) - Number(b))
+                        .map((event) => (
+                            <li
+                                key={`event-${event}`}
+                                onClick={() => props.setStateMachineEvent(Number(event))}
+                                className='btn btn-outline btn-xs text-left mb-2.5 mr-1 cursor-pointer'
+                            >
+                                {event}: {eventTranslator[Number(event)]}
+                            </li>
+                        ))}
+                </ul>
+            )}
             <div className="divider"></div>
 
             <div className='flex items-center gap-2'>
                 <div className='text-lg font-bold'>State function executed result</div>
-                {props.isProcessing && <span className="loading loading-dots loading-lg"></span>}
+                {props.currentState !== -1 && (props.isProcessing && <span className="loading loading-dots loading-lg"></span>)}
             </div>
-            <p>{props.stateFunctionExeRes}</p>
+            {props.currentState !== -1 && (<p>{props.stateFunctionExeRes}</p>)}
             <div className="divider"></div>
 
             <div className='text-lg font-bold content-block kv'>Memory</div>
             <div className="content-block-body content-kv">
-                {JSON.stringify(memoryKv, null, 2)}
+                {props.currentState !== -1 && (JSON.stringify(memoryKv, null, 2))}
             </div>
         </Stack>
     );
