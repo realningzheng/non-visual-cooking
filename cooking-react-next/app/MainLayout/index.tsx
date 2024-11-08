@@ -29,7 +29,6 @@ export default function MainLayout() {
     // hardcoded video knowledge input
     useEffect(() => {
         setVideoKnowledgeInput(JSON.stringify(videoKnowledgeData, null, 2));
-        // console.log("videoKnowledgeData", videoKnowledgeData);
     }, []);
 
     // set up client state

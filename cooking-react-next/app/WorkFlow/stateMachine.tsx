@@ -295,12 +295,12 @@ const comparingVideoRealityAlignment = async (	// state 0
 	// await for 3 seconds
 	await new Promise(resolve => setTimeout(resolve, 2000));
 
-	console.log("Comparing video-reality alignment");
+	console.log("[executing]: Comparing video-reality alignment");
 	// TODO: compare video and reality
-		// 10: "System automatically detects misalignment",
-        // 11: "System automatically detects a new action/step",
-        // 12: "System automatically detects missing previous steps",
-        // 20: "System automatically evaluates reality"
+	// 10: "System automatically detects misalignment",
+	// 11: "System automatically detects a new action/step",
+	// 12: "System automatically detects missing previous steps",
+	// 20: "System automatically evaluates reality"
 	// const prompt = `
 	// 	${basePrompt}
 	// 	Video knowledge:
@@ -309,9 +309,9 @@ const comparingVideoRealityAlignment = async (	// state 0
 	// 	${memory}
 	// 	Based on the reality image provided and the video knowledge and memory, please select the most appropriate category:
 	// 	10: "System automatically detects misalignment",
-    //     11: "System automatically detects a new action/step",
-    //     12: "System automatically detects missing previous steps",
-    //     20: "System automatically evaluates reality"
+	//     11: "System automatically detects a new action/step",
+	//     12: "System automatically detects missing previous steps",
+	//     20: "System automatically evaluates reality"
 	// 	Please reply ONLY the index of the most appropriate category.
 	// `;
 	// const response = await callChatGPT(prompt, [realityImageBase64]);
@@ -421,7 +421,7 @@ export const stateFunctions: {
 		videoKnowledgeInput: string,
 		realityImageBase64: string,
 		voiceInputTranscript: string
-	) => void
+	) => Promise<any>
 } = {
 	0: comparingVideoRealityAlignment,
 	1: explainCurrentState,
@@ -434,7 +434,7 @@ export const stateFunctions: {
 
 
 // Add this new function after the stateFunctions object
-export const executeStateFunction = (
+export const executeStateFunction = async (
 	stateNumber: number,
 	videoKnowledgeInput: string,
 	realityImageBase64: string,
@@ -443,7 +443,7 @@ export const executeStateFunction = (
 	const stateFunction = stateFunctions[stateNumber];
 	if (stateFunction) {
 		console.log(`Executing function for state ${stateNumber}: ${stateTranslator[stateNumber]}`);
-		return stateFunction(videoKnowledgeInput, realityImageBase64, voiceInputTranscript);
+		return await stateFunction(videoKnowledgeInput, realityImageBase64, voiceInputTranscript);
 	} else {
 		console.error(`No function found for event ${stateNumber}`);
 		return "<VOID>";
@@ -475,7 +475,6 @@ export const asyncNextEventChooser = async (
 	const response = await callChatGPT(prompt);
 	// @TODO: should either use functionCall or whatever to make sure the response is returned from a list of indices
 	if (response) {
-		// console.log(response);
 		const nextState = Number(response.gptResponse);
 		return nextState;
 	}
