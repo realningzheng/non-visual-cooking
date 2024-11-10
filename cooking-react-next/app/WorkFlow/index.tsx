@@ -194,7 +194,7 @@ export default function WorkFlow(props: WorkFlowProps) {
         }
         // execute the corresponding state function
         const realityImageBase64 = await props.captureRealityFrame();
-        let stateFunctionExeRes = await executeStateFunction(stateMachine[statePrev][event], props.videoKnowledgeInput, realityImageBase64, props.voiceInputTranscript) as string;
+        let stateFunctionExeRes = await executeStateFunction(stateMachine[statePrev][event], props.videoKnowledgeInput, realityImageBase64, props.voiceInputTranscript, memoryKv) as string;
         props.setStateFunctionExeRes(stateFunctionExeRes);
         props.setIsProcessing(false);
     };

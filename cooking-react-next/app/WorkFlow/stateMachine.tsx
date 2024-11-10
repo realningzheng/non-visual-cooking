@@ -289,8 +289,9 @@ const basePrompt = `
 // State functions
 const comparingVideoRealityAlignment = async (	// state 0
 	videoKnowledgeInput: string,
-	realityImageBase64: string
-	// TODO: memory: string
+	realityImageBase64: string,
+	voiceInputTranscript: string,
+	memoryKv: { [key: string]: any }
 ) => {
 	// await for 3 seconds
 	await new Promise(resolve => setTimeout(resolve, 2000));
@@ -322,14 +323,17 @@ const comparingVideoRealityAlignment = async (	// state 0
 const explainCurrentState = async (				// state 1
 	videoKnowledgeInput: string,
 	realityImageBase64: string,
-	voiceInputTranscript: string
+	voiceInputTranscript: string,
+	memoryKv: { [key: string]: any }
 ) => {
 	// TODO: extract current state
 	const prompt = `
 		${basePrompt}
-		Video knowledge:
+		<VIDEO KNOWLEDGE>:
 		${videoKnowledgeInput}
-		Please explain the current state.
+		<MEMORY>:
+		${memoryKv}
+		Please explain the current state based on the memory.
 	`;
 	const response = await callChatGPT(prompt, [realityImageBase64]);
 	return response.gptResponse;
@@ -338,7 +342,8 @@ const explainCurrentState = async (				// state 1
 const explainCurrentStepAction = async (		// state 2
 	videoKnowledgeInput: string,
 	realityImageBase64: string,
-	voiceInputTranscript: string
+	voiceInputTranscript: string,
+	memoryKv: { [key: string]: any }
 ) => {
 	const prompt = `
 		Please focus on the current action of the user, what is the user doing? 
@@ -351,6 +356,8 @@ const explainCurrentStepAction = async (		// state 2
 		${basePrompt}
 		<VIDEO KNOWLEDGE>:
 		${videoKnowledgeInput}
+		<MEMORY>:
+		${memoryKv}
 		${prompt}
 	`;
 	console.log(`[state specific prompt]: ${prompt}`);
@@ -361,13 +368,16 @@ const explainCurrentStepAction = async (		// state 2
 const respondWithHowToFix = async (				// state 3
 	videoKnowledgeInput: string,
 	realityImageBase64: string,
-	voiceInputTranscript: string
+	voiceInputTranscript: string,
+	memoryKv: { [key: string]: any }
 ) => {
 	// TODO: extract reality information from realityImageBase64
 	const prompt = `
 		${basePrompt}
-		Video knowledge:
+		<VIDEO KNOWLEDGE>:
 		${videoKnowledgeInput}
+		<MEMORY>:
+		${memoryKv}
 		Please explain how to fix the issue presented by the user: "${voiceInputTranscript}".
 	`;
 	const response = await callChatGPT(prompt);
@@ -377,13 +387,16 @@ const respondWithHowToFix = async (				// state 3
 const freeformResponse = async (				// state 4
 	videoKnowledgeInput: string,
 	realityImageBase64: string,
-	voiceInputTranscript: string
+	voiceInputTranscript: string,
+	memoryKv: { [key: string]: any }
 ) => {
 	// TODO: extract reality information from realityImageBase64
 	const prompt = `
 		${basePrompt}
-		Video knowledge:
+		<VIDEO KNOWLEDGE>:
 		${videoKnowledgeInput}
+		<MEMORY>:
+		${memoryKv}
 		Please answer the user's question: "${voiceInputTranscript}".
 	`;
 	const response = await callChatGPT(prompt);
@@ -393,12 +406,15 @@ const freeformResponse = async (				// state 4
 const handlingUserDisagreements = async (		// state 5
 	videoKnowledgeInput: string,
 	realityImageBase64: string,
-	voiceInputTranscript: string
+	voiceInputTranscript: string,
+	memoryKv: { [key: string]: any }
 ) => {
 	const prompt = `
 		${basePrompt}
-		Video knowledge:
+		<VIDEO KNOWLEDGE>:
 		${videoKnowledgeInput}
+		<MEMORY>:
+		${memoryKv}
 		Please respond to the user's disagreement: "${voiceInputTranscript}".
 	`;
 	const response = await callChatGPT(prompt);
@@ -409,7 +425,8 @@ const handlingUserDisagreements = async (		// state 5
 const replayRelevantPartsFromVideos = async (	// state 6
 	videoKnowledgeInput: string,
 	realityImageBase64: string,
-	voiceInputTranscript: string
+	voiceInputTranscript: string,
+	memoryKv: { [key: string]: any }
 ) => {
 	const response = await findSentenceFromTranscript(voiceInputTranscript);
 	console.log(response.gptResponse);
@@ -420,7 +437,8 @@ export const stateFunctions: {
 	[key: number]: (
 		videoKnowledgeInput: string,
 		realityImageBase64: string,
-		voiceInputTranscript: string
+		voiceInputTranscript: string,
+		memoryKv: { [key: string]: any }
 	) => Promise<any>
 } = {
 	0: comparingVideoRealityAlignment,
@@ -438,12 +456,13 @@ export const executeStateFunction = async (
 	stateNumber: number,
 	videoKnowledgeInput: string,
 	realityImageBase64: string,
-	voiceInputTranscript: string
+	voiceInputTranscript: string,
+	memoryKv: { [key: string]: any }
 ) => {
 	const stateFunction = stateFunctions[stateNumber];
 	if (stateFunction) {
 		console.log(`Executing function for state ${stateNumber}: ${stateTranslator[stateNumber]}`);
-		return await stateFunction(videoKnowledgeInput, realityImageBase64, voiceInputTranscript);
+		return await stateFunction(videoKnowledgeInput, realityImageBase64, voiceInputTranscript, memoryKv);
 	} else {
 		console.error(`No function found for event ${stateNumber}`);
 		return "<VOID>";
