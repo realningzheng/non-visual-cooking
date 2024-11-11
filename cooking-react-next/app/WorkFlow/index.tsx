@@ -333,7 +333,6 @@ export default function WorkFlow(props: WorkFlowProps) {
     // periodically trigger event 20 (comparingVideoRealityAlignment) 
     // when in state 0 (System automatically compares video-reality alignment)
     useEffect(() => {
-        console.log("[current state changes]: ", props.currentState);
         if (props.currentState === 0 && props.isProcessing === false) {
             let isChecking = false;
             const automaticCheck = async () => {

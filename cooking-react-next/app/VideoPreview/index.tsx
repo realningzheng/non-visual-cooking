@@ -24,12 +24,10 @@ interface VideoPreviewProps {
 export default function VideoPreview(props: VideoPreviewProps) {
     const videoPlayerRef = useRef<ReactPlayer>(null);
     const [isClient, setIsClient] = useState(false);
-    const [videoSegments, setVideoSegments] = useState<[number, number][]>([[0, 0]]);
-    const [isJsonfiedExeres, setIsJsonfiedExeres] = useState<boolean>(false);
+    const [videoSegments, setVideoSegments] = useState<TransriptSentenceItemProps[]>([]);
     const [playSeconds, setPlaySeconds] = useState<number>(0);
-    const sentenceListRef = useRef<HTMLDivElement>(null);
     const [currentSentenceIndex, setCurrentSentenceIndex] = useState<number | null>(null);
-    
+
     // set up client state
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -38,46 +36,41 @@ export default function VideoPreview(props: VideoPreviewProps) {
     }, []);
 
 
-    useEffect(() => {
-        if (props.currentState === 6 && isJsonfiedExeres) {
-            const parsedRes = JSON.parse(props.stateFunctionExeRes);
-            setVideoSegments(parsedRes.sentence_IDs.map((item: number) => {
-                const sentence = transriptSentenceList.find(s => s.sentenceIndex === item);
-                return [Number(sentence?.startTime) / 1000, Number(sentence?.endTime) / 1000] as [number, number];
-            }));
-        }
-    }, [isJsonfiedExeres, props.stateFunctionExeRes, props.currentState]);
-
-
     // check if the response can be parsed as json
     useEffect(() => {
-        try {
-            JSON.parse(props.stateFunctionExeRes);
-            setIsJsonfiedExeres(true);
-        } catch (error) {
-            setIsJsonfiedExeres(false);
+        if (props.currentState === 6) {
+            try {
+                let parsedRes = JSON.parse(props.stateFunctionExeRes);
+                setVideoSegments(parsedRes.map((item: number) => {
+                    let sentence = transriptSentenceList.find(s => s.sentenceIndex === item);
+                    return sentence;
+                }));
+                setPlaySeconds(0);
+            } catch (error) {
+                setVideoSegments([]);
+                setPlaySeconds(0);
+            }
         }
-    }, [props.stateFunctionExeRes]);
+    }, [props.stateFunctionExeRes, props.currentState]);
 
-
+    
+    // scroll to the current sentence
     useEffect(() => {
-        if (props.currentState === 6 && isJsonfiedExeres) {
-            const parsedRes = JSON.parse(props.stateFunctionExeRes);
-            const currentSentence = parsedRes.sentence_IDs.find((item: number) => {
-                const sentence = transriptSentenceList.find(s => s.sentenceIndex === item);
-                return sentence && 
-                    playSeconds >= Number(sentence.startTime) / 1000 && 
-                    playSeconds <= Number(sentence.endTime) / 1000;
+        if (props.currentState === 6 && videoSegments.length > 0) {
+            const currentSentence = videoSegments.find((item: TransriptSentenceItemProps) => {
+                return item &&
+                    playSeconds >= Number(item.startTime) / 1000 &&
+                    playSeconds <= Number(item.endTime) / 1000;
             });
-            setCurrentSentenceIndex(currentSentence || null);
+            setCurrentSentenceIndex(currentSentence ? currentSentence.sentenceIndex : null);
 
             // Scroll to the current sentence
             if (currentSentence) {
-                const element = document.getElementById(`sentence-${currentSentence}`);
+                const element = document.getElementById(`sentence-${currentSentence.sentenceIndex}`);
                 element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
-    }, [playSeconds, props.currentState, isJsonfiedExeres, props.stateFunctionExeRes]);
+    }, [playSeconds]);
 
 
     return (
@@ -110,10 +103,14 @@ export default function VideoPreview(props: VideoPreviewProps) {
                 }
             </div>
             <div className='text-2xl font-bold'>Segmented video preview</div>
-            {props.currentState === 6 && isJsonfiedExeres ?
+            {props.currentState === 6 && videoSegments.length > 0 ?
                 <VideoSegmentPlayer
                     sourceUrl={props.vurl}
-                    segments={videoSegments}
+                    segments={videoSegments.map(
+                        segment =>
+                            [Number(segment.startTime) / 1000,
+                            Number(segment.endTime) / 1000]
+                    )}
                     setPlaySeconds={setPlaySeconds}
                 />
                 :
@@ -135,7 +132,7 @@ export default function VideoPreview(props: VideoPreviewProps) {
                     </span>
                 </div>
             }
-            {props.currentState === 6 && isJsonfiedExeres && (
+            {props.currentState === 6 && videoSegments.length > 0 && (
                 <Box
                     sx={{
                         height: '20vh',
@@ -146,36 +143,31 @@ export default function VideoPreview(props: VideoPreviewProps) {
                         backgroundColor: '#fafafa',
                     }}
                 >
-                    {JSON.parse(props.stateFunctionExeRes).sentence_IDs.map((item: number) => {
-                        const sentence = transriptSentenceList.find(
-                            (s) => s.sentenceIndex === item
-                        );
-                        return sentence ? (
-                            <Box
-                                id={`sentence-${item}`}
-                                key={`retrieved-sentence-id-${item}`}
-                                sx={{
-                                    padding: 1.5,
-                                    marginBottom: 1,
-                                    borderLeft: '4px solid #2196f3',
-                                    backgroundColor: currentSentenceIndex === item ? '#e3f2fd' : 'white',
-                                    borderRadius: '4px',
-                                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                                    transition: 'all 0.2s ease',
-                                    '&:hover': {
-                                        backgroundColor: '#f5f5f5',
-                                    }
-                                }}
-                            >
-                                <Typography variant="body2" color="text.secondary" sx={{ marginBottom: 0.5 }}>
-                                    {`${sentence.sentenceIndex} • ${Number(sentence.startTime) / 1000}s - ${Number(sentence.endTime) / 1000}s`}
-                                </Typography>
-                                <Typography variant="body1">
-                                    {sentence.text}
-                                </Typography>
-                            </Box>
-                        ) : null;
-                    })}
+                    {videoSegments.map((sentence: TransriptSentenceItemProps) => (
+                        <Box
+                            id={`sentence-${sentence.sentenceIndex}`}
+                            key={`retrieved-sentence-id-${sentence.sentenceIndex}`}
+                            sx={{
+                                padding: 1.5,
+                                marginBottom: 1,
+                                borderLeft: '4px solid #2196f3',
+                                backgroundColor: currentSentenceIndex === sentence.sentenceIndex ? '#e3f2fd' : 'white',
+                                borderRadius: '4px',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                transition: 'all 0.2s ease',
+                                '&:hover': {
+                                    backgroundColor: '#f5f5f5',
+                                }
+                            }}
+                        >
+                            <Typography variant="body2" color="text.secondary" sx={{ marginBottom: 0.5 }}>
+                                {`${sentence.sentenceIndex} • ${Number(sentence.startTime) / 1000}s - ${Number(sentence.endTime) / 1000}s`}
+                            </Typography>
+                            <Typography variant="body1">
+                                {sentence.text}
+                            </Typography>
+                        </Box>
+                    ))}
                 </Box>
             )}
         </Stack >
