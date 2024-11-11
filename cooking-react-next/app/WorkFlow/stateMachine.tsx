@@ -9,7 +9,7 @@ States:
 6   : Agent: Replay the relevant parts from videos
 -----------------------------------------------------------------
 UserInput Categories:
-0   : User asks about a step
+0   : User asks about step related questions
 1   : User asks about the current state (not used)
 2   : User asks how to fix something
 3   : User disagrees
@@ -17,7 +17,7 @@ UserInput Categories:
 5   : User asks for a repeat
 6   : User asks for replay
 7   : User asks for other types of questions
-8   : User asks confirmation-type questions
+8   : User asks evaluation type of question or questions regarding the current visual scene
 9   : User asks others
 
 10  : System automatically detects misalignment
@@ -62,15 +62,16 @@ State Transitions:
 | 6     | 5        | 6          |
 | 6     | 4        | 0          |
 -----------------------------------------------------------------*/
-
-import OpenAI from 'openai';
-import axios from "axios";
-import credential from '../../secret.json';
-// hardcoded segmented sentence list
-import transriptSentenceList from '../data/rwYaDqXFH88_sentence.json';
-
-const apiKey = credential.OPENAI_KEY;
-const openai = new OpenAI({ apiKey: apiKey, dangerouslyAllowBrowser: true });
+import {
+	comparingVideoRealityAlignment,
+	explainCurrentState,
+	explainCurrentStep,
+	respondWithHowToFix,
+	freeformResponse,
+	handlingUserDisagreements,
+	replayRelevantPartsFromVideos,
+	callChatGPT
+} from './stateFunctions';
 
 // define states and transitions
 type StateMachineTranslator = {
@@ -97,14 +98,14 @@ export const stateTranslator: StateMachineTranslator = {
 
 
 export const eventTranslator: StateMachineTranslator = {
-	0: "User asks about a step",
+	0: "User asks about step related questions",
 	2: "User asks how to fix something",
 	3: "User disagrees",
 	4: "User agrees/satisfies",
 	5: "User asks for a repeat",
 	6: "User asks for replaying relevant parts from the video",
 	7: "User asks for other types of questions",
-	8: "User asks confirmation-type questions",
+	8: "User asks evaluation type of question or questions regarding the current visual scene",
 	10: "System automatically detects misalignment",
 	11: "System automatically detects a new action/step",
 	12: "System automatically detects missing previous steps",
@@ -113,7 +114,7 @@ export const eventTranslator: StateMachineTranslator = {
 
 
 export const eventDetailedExplanation: StateMachineTranslator = {
-	0: `User asks about a step
+	0: `User asks about step related questions
        - Questions about current, previous, or future steps in the cooking process
        - Examples:
          * "What's the next step I should do?"
@@ -172,14 +173,15 @@ export const eventDetailedExplanation: StateMachineTranslator = {
        - Examples:
          * "What other ingredients do we need?"`,
 
-	8: `User asks confirmation-type questions
+	8: `User asks evaluation type of question or questions regarding the current visual scene
        - Seeking verification or validation
        - Examples:
-         * "Is this the right consistency?"
+         * "Can you explain the current scene for me?"
+         * "What are things around me now?"
+         * "Where is the pan?"
+         * "How does my steak look like now?"
          * "Should it be this color?"
          * "Am I stirring fast enough?"
-         * "Is everything going okay?"
-         * "Am I on track?"
          * "Is this what it's supposed to look like?"
          * "Does this look done?"`,
 
@@ -265,156 +267,6 @@ export const stateMachine: StateMachine = {
 	},
 };
 
-const basePrompt = `
-	System settings:
-	Tool use: enabled.
-
-	Instructions:
-	- You are an artificial intelligence agent responsible for helping low-vision users cook in the kitchen.
-	- The user has provided a video knowledge in JSON format which contains multimodal information on how to correctly cook in the kitchen.
-	- Please help the user by answering their questions and guiding them through the cooking process based on the video knowledge.
-	- Video knowledge is provided in JSON format, after the tag <VIDEO KNOWLEDGE>.
-	- User's request is provided after the tag <USER REQUEST>.
-	- Please make sure to respond with a helpful voice via audio
-	- Be kind, helpful, and courteous
-	- It is okay to ask the user questions
-	- Use tools and functions you have available liberally, it is part of the training apparatus
-	- Be open to exploration and conversation
-
-	Personality:
-	- Be upbeat and genuine
-	- Try speaking quickly as if excited
-
-`
-// State functions
-const comparingVideoRealityAlignment = async (	// state 0
-	videoKnowledgeInput: string,
-	realityImageBase64: string
-	// TODO: memory: string
-) => {
-	// await for 3 seconds
-	await new Promise(resolve => setTimeout(resolve, 2000));
-
-	console.log("[executing]: Comparing video-reality alignment");
-	// TODO: compare video and reality
-	// 10: "System automatically detects misalignment",
-	// 11: "System automatically detects a new action/step",
-	// 12: "System automatically detects missing previous steps",
-	// 20: "System automatically evaluates reality"
-	// const prompt = `
-	// 	${basePrompt}
-	// 	Video knowledge:
-	// 	${videoKnowledgeInput}
-	// 	Memory:
-	// 	${memory}
-	// 	Based on the reality image provided and the video knowledge and memory, please select the most appropriate category:
-	// 	10: "System automatically detects misalignment",
-	//     11: "System automatically detects a new action/step",
-	//     12: "System automatically detects missing previous steps",
-	//     20: "System automatically evaluates reality"
-	// 	Please reply ONLY the index of the most appropriate category.
-	// `;
-	// const response = await callChatGPT(prompt, [realityImageBase64]);
-	// return response.gptResponse;
-	return '<System automatically compares video-reality alignment>';
-};
-
-const explainCurrentState = async (				// state 1
-	videoKnowledgeInput: string,
-	realityImageBase64: string,
-	voiceInputTranscript: string
-) => {
-	// TODO: extract current state
-	const prompt = `
-		${basePrompt}
-		Video knowledge:
-		${videoKnowledgeInput}
-		Please explain the current state.
-	`;
-	const response = await callChatGPT(prompt, [realityImageBase64]);
-	return response.gptResponse;
-};
-
-const explainCurrentStepAction = async (		// state 2
-	videoKnowledgeInput: string,
-	realityImageBase64: string,
-	voiceInputTranscript: string
-) => {
-	const prompt = `
-		Please focus on the current action of the user, what is the user doing? 
-		what step the user is at given the video knowledge? 
-		How do to it right?
-		<USER REQUEST>
-		${voiceInputTranscript}
-	`;
-	const fullPrompt = `
-		${basePrompt}
-		<VIDEO KNOWLEDGE>:
-		${videoKnowledgeInput}
-		${prompt}
-	`;
-	console.log(`[state specific prompt]: ${prompt}`);
-	const response = await callChatGPT(fullPrompt, [realityImageBase64]);
-	return response.gptResponse;
-};
-
-const respondWithHowToFix = async (				// state 3
-	videoKnowledgeInput: string,
-	realityImageBase64: string,
-	voiceInputTranscript: string
-) => {
-	// TODO: extract reality information from realityImageBase64
-	const prompt = `
-		${basePrompt}
-		Video knowledge:
-		${videoKnowledgeInput}
-		Please explain how to fix the issue presented by the user: "${voiceInputTranscript}".
-	`;
-	const response = await callChatGPT(prompt);
-	return response.gptResponse;
-};
-
-const freeformResponse = async (				// state 4
-	videoKnowledgeInput: string,
-	realityImageBase64: string,
-	voiceInputTranscript: string
-) => {
-	// TODO: extract reality information from realityImageBase64
-	const prompt = `
-		${basePrompt}
-		Video knowledge:
-		${videoKnowledgeInput}
-		Please answer the user's question: "${voiceInputTranscript}".
-	`;
-	const response = await callChatGPT(prompt);
-	return response.gptResponse;
-};
-
-const handlingUserDisagreements = async (		// state 5
-	videoKnowledgeInput: string,
-	realityImageBase64: string,
-	voiceInputTranscript: string
-) => {
-	const prompt = `
-		${basePrompt}
-		Video knowledge:
-		${videoKnowledgeInput}
-		Please respond to the user's disagreement: "${voiceInputTranscript}".
-	`;
-	const response = await callChatGPT(prompt);
-	return response.gptResponse;
-};
-
-// @TODO: Test with script only for now, need to replace with video knowledge but with longer items length
-const replayRelevantPartsFromVideos = async (	// state 6
-	videoKnowledgeInput: string,
-	realityImageBase64: string,
-	voiceInputTranscript: string
-) => {
-	const response = await findSentenceFromTranscript(voiceInputTranscript);
-	console.log(response.gptResponse);
-	return JSON.stringify(response.gptResponse);
-};
 
 export const stateFunctions: {
 	[key: number]: (
@@ -425,7 +277,7 @@ export const stateFunctions: {
 } = {
 	0: comparingVideoRealityAlignment,
 	1: explainCurrentState,
-	2: explainCurrentStepAction,
+	2: explainCurrentStep,
 	3: respondWithHowToFix,
 	4: freeformResponse,
 	5: handlingUserDisagreements,
@@ -442,16 +294,15 @@ export const executeStateFunction = async (
 ) => {
 	const stateFunction = stateFunctions[stateNumber];
 	if (stateFunction) {
-		console.log(`Executing function for state ${stateNumber}: ${stateTranslator[stateNumber]}`);
 		return await stateFunction(videoKnowledgeInput, realityImageBase64, voiceInputTranscript);
 	} else {
 		console.error(`No function found for event ${stateNumber}`);
-		return "<VOID>";
+		return `No function found for event ${stateNumber}`;
 	}
 };
 
 
-// Modify the nextEventChooser function to call executeStateFunction
+// This function is used by possible next event bottons
 export const asyncNextEventChooser = async (
 	voiceInput: string,
 	videoKnowledgeInput: string,
@@ -479,88 +330,4 @@ export const asyncNextEventChooser = async (
 		return nextState;
 	}
 	return -1;
-}
-
-
-async function callChatGPT(prompt: string, imageUrls: string[] = []): Promise<{ "gptResponse": string }> {
-	let gptResponse = "";
-	try {
-		// Construct content array with text prompt and any provided images
-		const content: Array<{ type: string } & Record<string, any>> = [
-			{ type: "text", text: prompt }
-		];
-
-		// Add any image URLs to the content array
-		imageUrls.forEach(url => {
-			content.push({
-				type: "image_url",
-				image_url: {
-					url: url
-				}
-			});
-		});
-
-		const response = await openai.chat.completions.create({
-			model: "gpt-4o-mini",
-			messages: [
-				{
-					role: "user",
-					content: content as any[]
-				}
-			],
-			max_tokens: 1500,
-		});
-
-		if (response.choices[0]?.message?.content) {
-			gptResponse = response.choices[0].message.content;
-		}
-	} catch (error) {
-		if (axios.isAxiosError(error)) {
-			console.error("Error calling GPT-4 API:", error.response?.data);
-		} else {
-			console.error("Unknown error:", error);
-		}
-	}
-	return { "gptResponse": gptResponse };
-}
-
-
-async function findSentenceFromTranscript(prompt: string) {
-	const importantSentencesPrompt = "This is the transcript of video that teaches blind people how to cook. \n" +
-		`Given the transcript, please tell me which sentences are relevant to ${prompt}, elusive for non-expert audiences to understand and are better with a visual explanation. \n` +
-		"You are required to pick up sentences evenly from the beginning, middle and end of the transcript. \n" +
-		"The transcript is given as a list of sentences with ID. Only return the sentence IDs to form the great version. \n" +
-		"Do not include full sentences in your reply. Only return a list of IDs. Return all relevant sentences. \n" +
-		"Use the following format: `{'sentence_IDs': [1, 4, 45, 100]}`. \n" +
-		"Make sure the returned format is a list that can be parsed by Json. \n" +
-		transriptSentenceList.map((s) => `${s["sentenceIndex"]}: ${s["text"]}`).join("\n\n");
-	let gptResponse: { "sentence_IDs": number[] } = { "sentence_IDs": [] };
-
-	try {
-		const response = await openai.chat.completions.create({
-			model: "gpt-4o-mini",
-			response_format: { "type": "json_object" },
-			messages: [
-				{
-					role: "user",
-					content: [
-						{ type: "text", text: `${importantSentencesPrompt}` },
-					],
-				},
-			],
-			max_tokens: 1500,
-		});
-
-		if (response.choices[0]['message']['content']) {
-			gptResponse = JSON.parse(response.choices[0]['message']['content']);
-		}
-
-	} catch (error) {
-		if (axios.isAxiosError(error)) {
-			console.error("Error calling GPT-4 API:", error.response?.data);
-		} else {
-			console.error("Unknown error:", error);
-		}
-	}
-	return { "gptResponse": gptResponse };
 }

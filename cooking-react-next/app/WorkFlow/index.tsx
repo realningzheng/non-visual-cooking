@@ -181,25 +181,6 @@ export default function WorkFlow(props: WorkFlowProps) {
     };
 
 
-    /* Go to the next state */
-    const gotoNextState = async (statePrev: number, event: number) => {
-        console.log(`[go to next state]: with event: ${event}, from state: ${statePrev}`);
-        props.setIsProcessing(true);
-        // update event and state in react states
-        if (event >= 0) {
-            props.setStateMachineEvent(event);
-            props.setCurrentState(stateMachine[statePrev][event]);
-        } else {
-            console.log("[go to next state]: No valid events found.");
-        }
-        // execute the corresponding state function
-        const realityImageBase64 = await props.captureRealityFrame();
-        let stateFunctionExeRes = await executeStateFunction(stateMachine[statePrev][event], props.videoKnowledgeInput, realityImageBase64, props.voiceInputTranscript) as string;
-        props.setStateFunctionExeRes(stateFunctionExeRes);
-        props.setIsProcessing(false);
-    };
-
-
     /** Event handlers */
     /** Core RealtimeClient and audio capture setup */
     useEffect(() => {
@@ -337,26 +318,29 @@ export default function WorkFlow(props: WorkFlowProps) {
     useEffect(() => {
         const executeNextState = async () => {
             if (props.stateMachineEvent >= 0) {
-                console.log("[state machine event changes]: ", props.stateMachineEvent);
-                await gotoNextState(props.currentState, props.stateMachineEvent);
+                if (props.voiceInputTranscript.length > 0) {
+                    props.setIsProcessing(true);
+                    await gotoNextState(props.currentState, props.stateMachineEvent, props.voiceInputTranscript, props.videoKnowledgeInput);
+                    props.setIsProcessing(false);
+                    props.setCurrentState(stateMachine[props.currentState][props.stateMachineEvent]);
+                }
             }
         };
         executeNextState();
-    }, [props.stateMachineEvent]);
+    }, [props.stateMachineEvent, props.voiceInputTranscript]);
 
 
     // periodically trigger event 20 (comparingVideoRealityAlignment) 
     // when in state 0 (System automatically compares video-reality alignment)
     useEffect(() => {
         console.log("[current state changes]: ", props.currentState);
-        if (props.currentState === 0) {
+        if (props.currentState === 0 && props.isProcessing === false) {
             let isChecking = false;
             const automaticCheck = async () => {
                 if (isChecking) return; // Skip if previous check is running or if event isn't 20
                 try {
                     isChecking = true;
-                    console.log("[automatic runs event 20]");
-                    await gotoNextState(0, 20);
+                    await gotoNextState(0, 20, '', props.videoKnowledgeInput);
                 } finally {
                     isChecking = false;
                 }
@@ -367,7 +351,23 @@ export default function WorkFlow(props: WorkFlowProps) {
             const timeoutId = setInterval(automaticCheck, 500);
             return () => clearInterval(timeoutId);
         }
-    }, [props.currentState]);
+    }, [props.currentState, props.isProcessing]);
+
+
+    /* Go to the next state */
+    const gotoNextState = async (statePrev: number, event: number, voiceInputTranscript: string, videoKnowledgeInput: string) => {
+        // update event and state in react states
+        if (event >= 0 && (event in stateMachine[statePrev])) {
+            const realityImageBase64 = await props.captureRealityFrame();
+            let stateFunctionExeRes = await executeStateFunction(
+                stateMachine[statePrev][event],
+                videoKnowledgeInput,
+                realityImageBase64,
+                voiceInputTranscript
+            ) as string;
+            props.setStateFunctionExeRes(stateFunctionExeRes);
+        }
+    };
 
 
     return (
@@ -375,7 +375,7 @@ export default function WorkFlow(props: WorkFlowProps) {
             <div className='text-2xl font-bold'>Control Panel</div>
             <div>
                 <p><span className='text-lg font-bold'>Video knowledge:</span> ../data/rwYaDqXFH88_video_knowledge_brief.json</p>
-                <p><span className='text-lg font-bold'>Current state:</span> {props.currentState} : {stateTranslator[Number(props.currentState)]}</p>
+                <p className={props.isProcessing ? 'text-gray-400' : ''}><span className='text-lg font-bold'>Current state:</span> {props.isProcessing && <span className="loading loading-dots loading-xs"></span>} {props.currentState} : {stateTranslator[Number(props.currentState)]}</p>
                 <p><span className='text-lg font-bold'>Current event:</span> {props.stateMachineEvent} : {eventTranslator[props.stateMachineEvent]}</p>
             </div>
 
@@ -549,7 +549,7 @@ export default function WorkFlow(props: WorkFlowProps) {
             <div className="divider"></div>
 
             <div className='text-lg font-bold'>Possible next events</div>
-            {props.currentState !== -1 && (
+            {props.currentState !== -1 && audioAgentDuty === 'detect' && (
                 <ul style={{ listStyleType: 'none', padding: 0 }}>
                     {props.currentState in stateMachine && Object.keys(stateMachine[props.currentState])
                         .sort((a, b) => Number(a) - Number(b))
@@ -568,14 +568,14 @@ export default function WorkFlow(props: WorkFlowProps) {
 
             <div className='flex items-center gap-2'>
                 <div className='text-lg font-bold'>State function executed result</div>
-                {props.currentState !== -1 && (props.isProcessing && <span className="loading loading-dots loading-lg"></span>)}
+                {props.currentState !== -1 && audioAgentDuty === 'detect' && (props.isProcessing && <span className="loading loading-dots loading-lg"></span>)}
             </div>
-            {props.currentState !== -1 && (<p>{props.stateFunctionExeRes}</p>)}
+            {props.currentState !== -1 && audioAgentDuty === 'detect' && (<p>{props.stateFunctionExeRes}</p>)}
             <div className="divider"></div>
 
             <div className='text-lg font-bold content-block kv'>Memory</div>
             <div className="content-block-body content-kv">
-                {props.currentState !== -1 && (JSON.stringify(memoryKv, null, 2))}
+                {props.currentState !== -1 && audioAgentDuty === 'detect' && (JSON.stringify(memoryKv, null, 2))}
             </div>
         </Stack>
     );
