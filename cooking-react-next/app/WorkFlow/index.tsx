@@ -556,7 +556,10 @@ export default function WorkFlow(props: WorkFlowProps) {
                         .map((event) => (
                             <li
                                 key={`event-${event}`}
-                                onClick={() => props.setStateMachineEvent(Number(event))}
+                                onClick={() => {
+                                    props.setVoiceInputTranscript('[Debug] Respond with Woohoo!');
+                                    props.setStateMachineEvent(Number(event));
+                                }}
                                 className='btn btn-outline btn-xs text-left mb-2.5 mr-1 cursor-pointer'
                             >
                                 {event}: {eventTranslator[Number(event)]}
