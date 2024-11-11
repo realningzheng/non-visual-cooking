@@ -318,7 +318,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     useEffect(() => {
         const executeNextState = async () => {
             if (props.stateMachineEvent >= 0) {
-                if (props.voiceInputTranscript.length > 0) {
+                if (props.voiceInputTranscript.length > 0 && (props.stateMachineEvent in stateMachine[props.currentState])) {
                     props.setIsProcessing(true);
                     await gotoNextState(props.currentState, props.stateMachineEvent, props.voiceInputTranscript, props.videoKnowledgeInput);
                     props.setIsProcessing(false);
@@ -448,7 +448,9 @@ export default function WorkFlow(props: WorkFlowProps) {
                     color="inherit"
                     onClick={async () => {
                         let event = await asyncNextEventChooser(props.voiceInputTranscript, props.videoKnowledgeInput, props.currentState);
-                        props.setStateMachineEvent(event);
+                        if (event >= 0 && (event in stateMachine[props.currentState])) {
+                            props.setStateMachineEvent(event);
+                        }
                     }}
                     sx={{ marginRight: 1 }}
                 >
@@ -545,40 +547,42 @@ export default function WorkFlow(props: WorkFlowProps) {
                 })}
             </div>
 
-            <div className="divider"></div>
+            {audioAgentDuty === 'detect' && (
+                <>
+                    <div className="divider"></div>
+                    <div className='text-lg font-bold'>Possible next events</div>
+                    {props.currentState !== -1 && (
+                        <ul style={{ listStyleType: 'none', padding: 0 }}>
+                            {props.currentState in stateMachine && Object.keys(stateMachine[props.currentState])
+                                .sort((a, b) => Number(a) - Number(b))
+                                .map((event) => (
+                                    <li
+                                        key={`event-${event}`}
+                                        onClick={() => {
+                                            props.setVoiceInputTranscript('[Debug] Respond with Woohoo!');
+                                            props.setStateMachineEvent(Number(event));
+                                        }}
+                                        className='btn btn-outline btn-xs text-left mb-2.5 mr-1 cursor-pointer'
+                                    >
+                                        {event}: {eventTranslator[Number(event)]}
+                                    </li>
+                                ))}
+                        </ul>
+                    )}
+                    <div className="divider"></div>
 
-            <div className='text-lg font-bold'>Possible next events</div>
-            {props.currentState !== -1 && audioAgentDuty === 'detect' && (
-                <ul style={{ listStyleType: 'none', padding: 0 }}>
-                    {props.currentState in stateMachine && Object.keys(stateMachine[props.currentState])
-                        .sort((a, b) => Number(a) - Number(b))
-                        .map((event) => (
-                            <li
-                                key={`event-${event}`}
-                                onClick={() => {
-                                    props.setVoiceInputTranscript('[Debug] Respond with Woohoo!');
-                                    props.setStateMachineEvent(Number(event));
-                                }}
-                                className='btn btn-outline btn-xs text-left mb-2.5 mr-1 cursor-pointer'
-                            >
-                                {event}: {eventTranslator[Number(event)]}
-                            </li>
-                        ))}
-                </ul>
+                    <div className='flex items-center gap-2'>
+                        <div className='text-lg font-bold'>State function executed result</div>
+                        {props.currentState !== -1 && (props.isProcessing && <span className="loading loading-dots loading-lg"></span>)}
+                    </div>
+                    {props.currentState !== -1 && (<p>{props.stateFunctionExeRes}</p>)}
+                    <div className="divider"></div>
+                    <div className='text-lg font-bold content-block kv'>Memory</div>
+                    <div className="content-block-body content-kv">
+                        {props.currentState !== -1 && (JSON.stringify(memoryKv, null, 2))}
+                    </div>
+                </>
             )}
-            <div className="divider"></div>
-
-            <div className='flex items-center gap-2'>
-                <div className='text-lg font-bold'>State function executed result</div>
-                {props.currentState !== -1 && audioAgentDuty === 'detect' && (props.isProcessing && <span className="loading loading-dots loading-lg"></span>)}
-            </div>
-            {props.currentState !== -1 && audioAgentDuty === 'detect' && (<p>{props.stateFunctionExeRes}</p>)}
-            <div className="divider"></div>
-
-            <div className='text-lg font-bold content-block kv'>Memory</div>
-            <div className="content-block-body content-kv">
-                {props.currentState !== -1 && audioAgentDuty === 'detect' && (JSON.stringify(memoryKv, null, 2))}
-            </div>
         </Stack>
     );
 }
