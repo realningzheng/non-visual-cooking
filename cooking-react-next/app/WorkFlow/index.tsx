@@ -370,73 +370,73 @@ export default function WorkFlow(props: WorkFlowProps) {
 
 
     return (
-        <Stack spacing={2}>
-            <div className='text-2xl font-bold'>Control Panel</div>
+        <Stack spacing={1}>
+            <div className='text-xl font-bold gap-2 pt-1 flex items-center'>
+                CONTROL PANEL
+                <button
+                    className={`btn btn-xs ${isConnected ? 'bg-success' : 'btn-outline'}`}
+                    onClick={isConnected ? disconnectConversation : connectConversation}
+                >
+                    {isConnected ? 'disconnect' : 'connect'}
+                </button>
+                <div className="flex-grow" />
+                {!isConnected && (
+                    <div className="join">
+                        <input
+                            type="radio"
+                            name="audioAgent"
+                            className="join-item btn btn-xs btn-outline"
+                            aria-label="detect"
+                            checked={audioAgentDuty === 'detect'}
+                            onChange={() => setAudioAgentDuty('detect')}
+                        />
+                        <input
+                            type="radio"
+                            name="audioAgent"
+                            className="join-item btn btn-xs btn-outline"
+                            aria-label="chatbot"
+                            checked={audioAgentDuty === 'chatbot'}
+                            onChange={() => setAudioAgentDuty('chatbot')}
+                        />
+                    </div>
+                )}
+                <div className="join">
+                    <input
+                        type="radio"
+                        name="mode"
+                        className="join-item btn btn-xs btn-outline"
+                        aria-label="manual"
+                        checked={canPushToTalk}
+                        onChange={() => changeTurnEndType('none')}
+                    />
+                    <input
+                        type="radio"
+                        name="mode"
+                        className="join-item btn btn-xs btn-outline"
+                        aria-label="auto vad"
+                        checked={!canPushToTalk}
+                        onChange={() => changeTurnEndType('server_vad')}
+                    />
+                </div>
+            </div>
             <div>
                 <p><span className='text-lg font-bold'>Video knowledge:</span> ../data/rwYaDqXFH88_video_knowledge_brief.json</p>
                 <p className={props.isProcessing ? 'text-gray-400' : ''}><span className='text-lg font-bold'>Current state:</span> {props.isProcessing && <span className="loading loading-dots loading-xs"></span>} {props.currentState} : {stateTranslator[Number(props.currentState)]}</p>
                 <p><span className='text-lg font-bold'>Current event:</span> {props.stateMachineEvent} : {eventTranslator[props.stateMachineEvent]}</p>
             </div>
 
-            <div>
-                <div className='text-lg font-bold mb-2'>Voice Command</div>
-                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: '16px' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: '20px', pt: '15px', gap: '10px' }}>
+                {isConnected && canPushToTalk && (
                     <button
-                        className={`px-4 py-2 rounded ${isConnected ? 'bg-gray-200' : 'bg-black text-white'}`}
-                        onClick={isConnected ? disconnectConversation : connectConversation}
+                        className={`btn btn-m ${isRecording ? 'btn-error' : 'btn-active'} 
+                                ${(!isConnected || !canPushToTalk) ? 'btn-disabled' : ''}`}
+                        onMouseDown={startRecording}
+                        onMouseUp={stopRecording}
+                        disabled={!isConnected || !canPushToTalk}
                     >
-                        {isConnected ? 'disconnect' : 'connect'}
+                        {isRecording ? 'release to send' : 'push to talk'}
                     </button>
-
-                    <div className="flex">
-                        <button
-                            className={`px-4 py-2 rounded ${canPushToTalk ? 'bg-black text-white' : 'bg-gray-200'}`}
-                            onClick={() => changeTurnEndType('none')}
-                        >
-                            manual
-                        </button>
-                        <button
-                            className={`px-4 py-2 rounded ${!canPushToTalk ? 'bg-black text-white' : 'bg-gray-200'}`}
-                            onClick={() => changeTurnEndType('server_vad')}
-                        >
-                            vad
-                        </button>
-                    </div>
-
-                    {isConnected && canPushToTalk && (
-                        <button
-                            className={`px-4 py-2 rounded ${isRecording ? 'bg-red-500' : 'bg-gray-200'} 
-                                ${(!isConnected || !canPushToTalk) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            onMouseDown={startRecording}
-                            onMouseUp={stopRecording}
-                            disabled={!isConnected || !canPushToTalk}
-                        >
-                            {isRecording ? 'release to send' : 'push to talk'}
-                        </button>
-                    )}
-
-                    <div style={{ flexGrow: 1 }} />
-
-                    {!isConnected && (
-                        <div className="flex gap-0">
-                            <button
-                                className={`px-4 py-2 rounded ${audioAgentDuty === 'chatbot' ? 'bg-black text-white' : 'bg-gray-200'}`}
-                                onClick={() => setAudioAgentDuty('chatbot')}
-                            >
-                                chatbot
-                            </button>
-                            <button
-                                className={`px-4 py-2 rounded ${audioAgentDuty === 'detect' ? 'bg-black text-white' : 'bg-gray-200'}`}
-                                onClick={() => setAudioAgentDuty('detect')}
-                            >
-                                detect
-                            </button>
-                        </div>
-                    )}
-                </Box>
-            </div>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', marginBottom: '20px' }}>
+                )}
                 <input
                     type="text"
                     placeholder="Latest user command"
@@ -463,7 +463,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                 data-conversation-content
                 ref={conversationRef}
                 style={{
-                    maxHeight: '200px',
+                    maxHeight: `${audioAgentDuty === 'chatbot' ? '50vh' : '200px'}`,
                     overflowY: 'auto',
                     border: '1px solid #ccc',
                     borderRadius: '5px',

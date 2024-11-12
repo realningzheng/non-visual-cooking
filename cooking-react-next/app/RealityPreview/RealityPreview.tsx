@@ -77,7 +77,7 @@ export default function RealityPreview(props: RealityPreviewProps) {
                 marginTop={'10px'}
             >
                 <button
-                    className='btn btn-outline'
+                    className='btn btn-outline btn-sm'
                     color="primary"
                     onClick={() => { props.videoRef.current?.play() }}
                     style={{ marginRight: 1 }}
@@ -85,7 +85,7 @@ export default function RealityPreview(props: RealityPreviewProps) {
                     Reality Play
                 </button>
                 <button
-                    className='btn btn-outline'
+                    className='btn btn-outline btn-sm'
                     color="primary"
                     onClick={() => { props.videoRef.current?.pause() }}
                     style={{ marginRight: 1, marginLeft: 1 }}

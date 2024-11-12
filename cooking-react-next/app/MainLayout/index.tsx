@@ -12,7 +12,25 @@ import ImageUploader from '../RealityPreview/ImageUploader';
 import RealityPreview from '../RealityPreview/RealityPreview';
 
 
+import transriptSentenceList from '../data/rwYaDqXFH88_sentence.json';
+import SegVideoPlayerComp from '../SegVideoPlayerComp/SegVideoPlayerComp';
+
+interface TransriptSentenceItemProps {
+    sentenceIndex: number;
+    text: string;
+    startTime: string;
+    endTime: string;
+}
+
 export default function MainLayout() {
+    // original video states
+    const [videoUrl, setVideoUrl] = useState('rwYaDqXFH88.mp4');
+    const [videoSegments, setVideoSegments] = useState<TransriptSentenceItemProps[]>([]);
+    const [playSeconds, setPlaySeconds] = useState<number>(0);
+    const [currentSentenceIndex, setCurrentSentenceIndex] = useState<number>(0);
+    const [showRawVideo, setShowRawVideo] = useState(true);
+    const [verticalCaptions, setVerticalCaptions] = useState(false);
+
     // Reality preview states
     const [isVideoPlaying, setIsVideoPlaying] = useState(false);
     const [realityImageBase64, setRealityImageBase64] = useState('');
@@ -40,6 +58,40 @@ export default function MainLayout() {
     useEffect(() => {
         getVideo();
     }, [videoRef, debugMode]);
+
+
+    // Add these new effects
+    useEffect(() => {
+        if (currentState === 6) {
+            try {
+                let parsedRes = JSON.parse(stateFunctionExeRes);
+                setVideoSegments(parsedRes.map((item: number) => {
+                    let sentence = transriptSentenceList.find(s => s.sentenceIndex === item);
+                    return sentence;
+                }));
+                setPlaySeconds(0);
+            } catch (error) {
+                setVideoSegments([]);
+                setPlaySeconds(0);
+            }
+        }
+    }, [stateFunctionExeRes, currentState]);
+
+
+    useEffect(() => {
+        if (currentState === 6 && videoSegments.length > 0) {
+            const currentSentence = videoSegments.find((item: TransriptSentenceItemProps) => {
+                return item &&
+                    playSeconds >= Number(item.startTime) / 1000 &&
+                    playSeconds <= Number(item.endTime) / 1000;
+            });
+            if (currentSentence) {
+                setCurrentSentenceIndex(currentSentence.sentenceIndex);
+                const element = document.getElementById(`sentence-${currentSentence.sentenceIndex}`);
+                element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    }, [playSeconds]);
 
 
     const getVideo = () => {
@@ -82,22 +134,47 @@ export default function MainLayout() {
 
     return (
         <Grid container spacing={3}>
-            <Grid size={4}>
-                <div className='text-2xl font-bold'>Video preview</div>
-                <div style={{ width: '100%', margin: '0 auto' }}>
-                    <VideoPreview
-                        vurl='rwYaDqXFH88.mp4'
-                        isVideoPlaying={isVideoPlaying}
+            <Grid size={5}>
+                <div className='text-xl font-bold flex items-center gap-2 p-1'>
+                    VIDEO PREVIEW
+                    <button
+                        className={`btn btn-xs ${showRawVideo ? 'btn-primary' : 'btn-outline'}`}
+                        onClick={() => setShowRawVideo(!showRawVideo)}
+                    >
+                        show raw video
+                    </button>
+                    <button
+                        className={`btn btn-xs ${verticalCaptions ? 'btn-primary' : 'btn-outline'}`}
+                        onClick={() => setVerticalCaptions(!verticalCaptions)}
+                    >
+                        vertical captions
+                    </button>
+                </div>
+                <div style={{ width: '70%', margin: '0 auto' }}>
+                    {showRawVideo &&
+                        <VideoPreview
+                            vurl={videoUrl}
+                            isVideoPlaying={isVideoPlaying}
+                            setIsVideoPlaying={setIsVideoPlaying}
+                        />
+                    }
+                </div>
+                <div className='p-1.5' />
+                <div>
+                    <SegVideoPlayerComp
+                        sourceUrl={videoUrl}
+                        videoSegments={videoSegments}
+                        currentSentenceIndex={currentSentenceIndex}
+                        verticalCaptions={verticalCaptions}
                         currentState={currentState}
-                        stateFunctionExeRes={stateFunctionExeRes}
-                        setIsVideoPlaying={setIsVideoPlaying}
+                        setPlaySeconds={setPlaySeconds}
                     />
                 </div>
 
                 <div className='divider'></div>
 
-                <div className='text-2xl font-bold flex items-center gap-2'>
-                    Reality preview
+                <div className='text-xl font-bold flex items-center gap-2 p-1'>
+                    REALITY PREVIEW
                     <button
                         className={`btn btn-xs ${debugMode ? 'btn-primary' : 'btn-outline'}`}
                         onClick={() => setDebugMode(!debugMode)}
@@ -118,7 +195,7 @@ export default function MainLayout() {
                     />
                 }
             </Grid>
-            <Grid size={8} style={{ height: '100vh', overflow: 'scroll' }}>
+            <Grid size={7} style={{ height: '100vh', overflow: 'scroll' }}>
                 <WorkFlow
                     setIsProcessing={setIsProcessing}
                     setStateMachineEvent={setStateMachineEvent}
