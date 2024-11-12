@@ -267,12 +267,180 @@ export const stateMachine: StateMachine = {
 	},
 };
 
+const basePrompt = `
+	System settings:
+	Tool use: enabled.
+
+	Instructions:
+	- You are an artificial intelligence agent responsible for helping low-vision users cook in the kitchen.
+	- The user has provided a video knowledge in JSON format which contains multimodal information on how to correctly cook in the kitchen.
+	- Please help the user by answering their questions and guiding them through the cooking process based on the video knowledge.
+	- Video knowledge is provided in JSON format, after the tag <VIDEO KNOWLEDGE>.
+	- User's request is provided after the tag <USER REQUEST>.
+	- Please make sure to respond with a helpful voice via audio
+	- Be kind, helpful, and courteous
+	- It is okay to ask the user questions
+	- Use tools and functions you have available liberally, it is part of the training apparatus
+	- Be open to exploration and conversation
+
+	Personality:
+	- Be upbeat and genuine
+	- Try speaking quickly as if excited
+
+`
+// State functions
+const comparingVideoRealityAlignment = async (	// state 0
+	videoKnowledgeInput: string,
+	realityImageBase64: string,
+	voiceInputTranscript: string,
+	memoryKv: { [key: string]: any }
+) => {
+	// await for 3 seconds
+	await new Promise(resolve => setTimeout(resolve, 2000));
+
+	console.log("[executing]: Comparing video-reality alignment");
+	// TODO: compare video and reality
+	// 10: "System automatically detects misalignment",
+	// 11: "System automatically detects a new action/step",
+	// 12: "System automatically detects missing previous steps",
+	// 20: "System automatically evaluates reality"
+	// const prompt = `
+	// 	${basePrompt}
+	// 	Video knowledge:
+	// 	${videoKnowledgeInput}
+	// 	Memory:
+	// 	${memory}
+	// 	Based on the reality image provided and the video knowledge and memory, please select the most appropriate category:
+	// 	10: "System automatically detects misalignment",
+	//     11: "System automatically detects a new action/step",
+	//     12: "System automatically detects missing previous steps",
+	//     20: "System automatically evaluates reality"
+	// 	Please reply ONLY the index of the most appropriate category.
+	// `;
+	// const response = await callChatGPT(prompt, [realityImageBase64]);
+	// return response.gptResponse;
+	return '<System automatically compares video-reality alignment>';
+};
+
+const explainCurrentState = async (				// state 1
+	videoKnowledgeInput: string,
+	realityImageBase64: string,
+	voiceInputTranscript: string,
+	memoryKv: { [key: string]: any }
+) => {
+	// TODO: extract current state
+	const prompt = `
+		${basePrompt}
+		<VIDEO KNOWLEDGE>:
+		${videoKnowledgeInput}
+		<MEMORY>:
+		${memoryKv}
+		Please explain the current state based on the memory.
+	`;
+	const response = await callChatGPT(prompt, [realityImageBase64]);
+	return response.gptResponse;
+};
+
+const explainCurrentStepAction = async (		// state 2
+	videoKnowledgeInput: string,
+	realityImageBase64: string,
+	voiceInputTranscript: string,
+	memoryKv: { [key: string]: any }
+) => {
+	const prompt = `
+		Please focus on the current action of the user, what is the user doing? 
+		what step the user is at given the video knowledge? 
+		How do to it right?
+		<USER REQUEST>
+		${voiceInputTranscript}
+	`;
+	const fullPrompt = `
+		${basePrompt}
+		<VIDEO KNOWLEDGE>:
+		${videoKnowledgeInput}
+		<MEMORY>:
+		${memoryKv}
+		${prompt}
+	`;
+	console.log(`[state specific prompt]: ${prompt}`);
+	const response = await callChatGPT(fullPrompt, [realityImageBase64]);
+	return response.gptResponse;
+};
+
+const respondWithHowToFix = async (				// state 3
+	videoKnowledgeInput: string,
+	realityImageBase64: string,
+	voiceInputTranscript: string,
+	memoryKv: { [key: string]: any }
+) => {
+	// TODO: extract reality information from realityImageBase64
+	const prompt = `
+		${basePrompt}
+		<VIDEO KNOWLEDGE>:
+		${videoKnowledgeInput}
+		<MEMORY>:
+		${memoryKv}
+		Please explain how to fix the issue presented by the user: "${voiceInputTranscript}".
+	`;
+	const response = await callChatGPT(prompt);
+	return response.gptResponse;
+};
+
+const freeformResponse = async (				// state 4
+	videoKnowledgeInput: string,
+	realityImageBase64: string,
+	voiceInputTranscript: string,
+	memoryKv: { [key: string]: any }
+) => {
+	// TODO: extract reality information from realityImageBase64
+	const prompt = `
+		${basePrompt}
+		<VIDEO KNOWLEDGE>:
+		${videoKnowledgeInput}
+		<MEMORY>:
+		${memoryKv}
+		Please answer the user's question: "${voiceInputTranscript}".
+	`;
+	const response = await callChatGPT(prompt);
+	return response.gptResponse;
+};
+
+const handlingUserDisagreements = async (		// state 5
+	videoKnowledgeInput: string,
+	realityImageBase64: string,
+	voiceInputTranscript: string,
+	memoryKv: { [key: string]: any }
+) => {
+	const prompt = `
+		${basePrompt}
+		<VIDEO KNOWLEDGE>:
+		${videoKnowledgeInput}
+		<MEMORY>:
+		${memoryKv}
+		Please respond to the user's disagreement: "${voiceInputTranscript}".
+	`;
+	const response = await callChatGPT(prompt);
+	return response.gptResponse;
+};
+
+// @TODO: Test with script only for now, need to replace with video knowledge but with longer items length
+const replayRelevantPartsFromVideos = async (	// state 6
+	videoKnowledgeInput: string,
+	realityImageBase64: string,
+	voiceInputTranscript: string,
+	memoryKv: { [key: string]: any }
+) => {
+	const response = await findSentenceFromTranscript(voiceInputTranscript);
+	console.log(response.gptResponse);
+	return JSON.stringify(response.gptResponse);
+};
 
 export const stateFunctions: {
 	[key: number]: (
 		videoKnowledgeInput: string,
 		realityImageBase64: string,
-		voiceInputTranscript: string
+		voiceInputTranscript: string,
+		memoryKv: { [key: string]: any }
 	) => Promise<any>
 } = {
 	0: comparingVideoRealityAlignment,
@@ -290,11 +458,13 @@ export const executeStateFunction = async (
 	stateNumber: number,
 	videoKnowledgeInput: string,
 	realityImageBase64: string,
-	voiceInputTranscript: string
+	voiceInputTranscript: string,
+	memoryKv: { [key: string]: any }
 ) => {
 	const stateFunction = stateFunctions[stateNumber];
 	if (stateFunction) {
-		return await stateFunction(videoKnowledgeInput, realityImageBase64, voiceInputTranscript);
+		console.log(`Executing function for state ${stateNumber}: ${stateTranslator[stateNumber]}`);
+		return await stateFunction(videoKnowledgeInput, realityImageBase64, voiceInputTranscript, memoryKv);
 	} else {
 		console.error(`No function found for event ${stateNumber}`);
 		return `No function found for event ${stateNumber}`;
