@@ -549,7 +549,6 @@ export default function WorkFlow(props: WorkFlowProps) {
 
             {audioAgentDuty === 'detect' && (
                 <>
-                    <div className="divider"></div>
                     <div className='text-lg font-bold'>Possible next events</div>
                     {props.currentState !== -1 && (
                         <ul style={{ listStyleType: 'none', padding: 0 }}>
