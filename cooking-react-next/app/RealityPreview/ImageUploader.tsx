@@ -21,18 +21,28 @@ export default function ImageUploader(props: ImageUploaderProps) {
         // Get the component's bounding rectangle
         const rect = e.currentTarget.getBoundingClientRect();
         
-        // Check if the drop position is outside the component's boundaries
+        // Only delete if dropped outside the component
         if (e.clientY < rect.top || e.clientY > rect.bottom ||
             e.clientX < rect.left || e.clientX > rect.right) {
             props.setRealityImageBase64('');
-        } else {
-            const imageData = e.dataTransfer.getData('image/base64');
-            props.setRealityImageBase64(imageData);
+        }
+    };
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                if (event.target?.result) {
+                    props.setRealityImageBase64(event.target.result as string);
+                }
+            };
+            reader.readAsDataURL(file);
         }
     };
 
     return (
-        <div
+        <label
             style={{
                 width: '100%',
                 height: '15vh',
@@ -76,6 +86,12 @@ export default function ImageUploader(props: ImageUploaderProps) {
                 }
             }}
         >
+            <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                style={{ display: 'none' }}
+            />
             {props.realityImageBase64 ? (
                 <div style={{ width: '100%', height: '100%', position: 'relative' }}>
                     <img 
@@ -141,6 +157,6 @@ export default function ImageUploader(props: ImageUploaderProps) {
                     </span>
                 </>
             )}
-        </div>
+        </label>
     );
 }
