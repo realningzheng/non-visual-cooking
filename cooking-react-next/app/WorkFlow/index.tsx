@@ -180,24 +180,6 @@ export default function WorkFlow(props: WorkFlowProps) {
         setCanPushToTalk(value === 'none');
     };
 
-    /* Go to the next state */
-    const gotoNextState = async (statePrev: number, event: number) => {
-        console.log(`[go to next state]: with event: ${event}, from state: ${statePrev}`);
-        props.setIsProcessing(true);
-        // update event and state in react states
-        if (event >= 0) {
-            props.setStateMachineEvent(event);
-            props.setCurrentState(stateMachine[statePrev][event]);
-        } else {
-            console.log("[go to next state]: No valid events found.");
-        }
-        // execute the corresponding state function
-        const realityImageBase64 = await props.captureRealityFrame();
-        let stateFunctionExeRes = await executeStateFunction(stateMachine[statePrev][event], props.videoKnowledgeInput, realityImageBase64, props.voiceInputTranscript, memoryKv) as string;
-        props.setStateFunctionExeRes(stateFunctionExeRes);
-        props.setIsProcessing(false);
-    };
-
     /** Event handlers */
     /** Core RealtimeClient and audio capture setup */
     useEffect(() => {
@@ -379,7 +361,8 @@ export default function WorkFlow(props: WorkFlowProps) {
                 stateMachine[statePrev][event],
                 videoKnowledgeInput,
                 realityImageBase64,
-                voiceInputTranscript
+                voiceInputTranscript,
+                memoryKv
             ) as string;
             props.setStateFunctionExeRes(stateFunctionExeRes);
         }
