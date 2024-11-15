@@ -52,6 +52,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     const [isConnected, setIsConnected] = useState(false);
     const [items, setItems] = useState<ItemType[]>([]);
     const [memoryKv, setMemoryKv] = useState<{ [key: string]: any }>({});
+    const [voiceInputID, setVoiceInputID] = useState<number>(0);
     const [isRecording, setIsRecording] = useState(false);
     const [canPushToTalk, setCanPushToTalk] = useState(true);
     const [audioAgentDuty, setAudioAgentDuty] = useState<'chatbot' | 'detect'>('detect');
@@ -357,6 +358,15 @@ export default function WorkFlow(props: WorkFlowProps) {
         // update event and state in react states
         if (event >= 0 && (event in stateMachine[statePrev])) {
             const realityImageBase64 = await props.captureRealityFrame();
+            // add voice input to memory:
+            if (event != 20 && voiceInputTranscript.length > 0) {
+                setMemoryKv((memoryKv) => {
+                    const newKv = { ...memoryKv };
+                    newKv['voice_input_'+voiceInputID.toString()] = voiceInputTranscript;
+                    return newKv;
+                });
+            }
+            // execute state function
             let stateFunctionExeRes = await executeStateFunction(
                 stateMachine[statePrev][event],
                 videoKnowledgeInput,
@@ -365,6 +375,15 @@ export default function WorkFlow(props: WorkFlowProps) {
                 memoryKv
             ) as string;
             props.setStateFunctionExeRes(stateFunctionExeRes);
+            // add state function result to memory:
+            if (stateFunctionExeRes.length > 0 && !stateFunctionExeRes.startsWith("<")) {
+                setMemoryKv((memoryKv) => {
+                    const newKv = { ...memoryKv };
+                    newKv['agent_response_'+voiceInputID.toString()] = stateFunctionExeRes;
+                    return newKv;
+                });
+            }
+            setVoiceInputID (voiceInputID + 1);
         }
     };
 
