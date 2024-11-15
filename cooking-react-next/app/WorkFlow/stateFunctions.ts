@@ -211,15 +211,16 @@ export async function callChatGPT(prompt: string, imageUrls: string[] = []): Pro
         ];
 
         // Add any image URLs to the content array
-        imageUrls.forEach(url => {
-            content.push({
-                type: "image_url",
-                image_url: {
-                    url: url
-                }
+        if (imageUrls.length > 0) {
+            imageUrls.forEach(url => {
+                content.push({
+                    type: "image_url",
+                    image_url: {
+                        url: url
+                    }
+                });
             });
-        });
-
+        }
         const response = await openai.chat.completions.create({
             model: "gpt-4o-mini",
             messages: [
