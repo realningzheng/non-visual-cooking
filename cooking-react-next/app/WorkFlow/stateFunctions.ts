@@ -198,8 +198,26 @@ export const replayRelevantPartsFromVideos = async (	// state 6
     return JSON.stringify(response.gptResponse);
 };
 
-
-
+export const answerPreviousUserSteps = async (	// state 7
+    videoKnowledgeInput: string,
+    realityImageBase64: string,
+    voiceInputTranscript: string,
+    memoryKv: { [key: string]: any },
+    userStepMemory: { [key: string]: any }
+) => {
+    console.log(`[state 7: Answer user step related questions]: ${voiceInputTranscript}`);
+	const prompt = `
+		${basePrompt}
+		<VIDEO KNOWLEDGE>:
+		${videoKnowledgeInput}
+		<USER STEP MEMORY>:
+		${userStepMemory}
+		Please respond to the user's question related to his/her previous steps: "${voiceInputTranscript}".
+	`;
+    console.log(`[state 5: handling user disagreements prompt]: ${prompt}`);
+	const response = await callChatGPT(prompt);
+	return response.gptResponse;
+};
 
 /** Async GPT call */
 export async function callChatGPT(prompt: string, imageUrls: string[] = []): Promise<{ "gptResponse": string }> {

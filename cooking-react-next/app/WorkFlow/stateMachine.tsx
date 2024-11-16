@@ -7,6 +7,7 @@ States:
 4   : Agent: Freeform response
 5   : Handling user disagreements
 6   : Agent: Replay the relevant parts from videos
+7   : Agent: Answer user step related questions
 -----------------------------------------------------------------
 UserInput Categories:
 0   : User asks about step related questions
@@ -18,7 +19,7 @@ UserInput Categories:
 6   : User asks for replay
 7   : User asks for other types of questions
 8   : User asks evaluation type of question or questions regarding the current visual scene
-9   : User asks others
+9   : User asks about previous user steps
 
 10  : System automatically detects misalignment
 11  : System automatically detects a new action/step
@@ -70,6 +71,7 @@ import {
 	freeformResponse,
 	handlingUserDisagreements,
 	replayRelevantPartsFromVideos,
+	answerPreviousUserSteps,
 	callChatGPT
 } from './stateFunctions';
 
@@ -93,7 +95,8 @@ export const stateTranslator: StateMachineTranslator = {
 	3: "Agent: Respond with how to fix",
 	4: "Agent: Freeform response",
 	5: "Handling user disagreements",
-	6: "Agent: Replay the relevant parts from videos"
+	6: "Agent: Replay the relevant parts from videos",
+	7: "Agent: Answer user step related questions"
 }
 
 
@@ -106,6 +109,7 @@ export const eventTranslator: StateMachineTranslator = {
 	6: "User asks for replaying relevant parts from the video",
 	7: "User asks for other types of questions",
 	8: "User asks evaluation type of question or questions regarding the current visual scene",
+	9: "User asks about previous user steps",
 	10: "System automatically detects misalignment",
 	11: "System automatically detects a new action/step",
 	12: "System automatically detects missing previous steps",
@@ -185,6 +189,14 @@ export const eventDetailedExplanation: StateMachineTranslator = {
          * "Is this what it's supposed to look like?"
          * "Does this look done?"`,
 
+	9: `User asks about previous user steps
+       - Asking for recall of previous steps or actions
+       - Examples:
+         * "What's my last step?"
+	   	 * "What did I do before this?"
+		 * "What did I add last?"
+		 * "What are my last three steps?"`,
+
 	10: `System automatically detects misalignment
         - AI detects discrepancy between video and user's actions
         - Examples:
@@ -229,6 +241,7 @@ export const stateMachine: StateMachine = {
 		7: 4,  // Ask other types of questions
 		6: 6,  // Replay requested
 		20: 0, // Timeout, stay in current state
+		9: 7,  // Ask about previous user steps
 	},
 	1: {
 		3: 5,  // Disagreement
@@ -237,33 +250,45 @@ export const stateMachine: StateMachine = {
 		6: 6,  // Replay requested
 		7: 4,  // Other questions
 		4: 0,  // Agree/Satisfy
+		9: 7,  // Ask about previous user steps
 	},
 	2: {
 		4: 0,  // Agree/Satisfy
 		3: 5,  // Disagreement
 		2: 3,  // How to fix
 		5: 2,  // Repeat
+		9: 7,  // Ask about previous user steps
 	},
 	3: {
 		4: 0,  // Agree/Satisfy
 		5: 3,  // Repeat
 		3: 5,  // Disagreement
 		6: 6,  // Replay requested
+		9: 7,  // Ask about previous user steps
 	},
 	4: {
 		5: 4,  // Repeat
 		3: 5,  // Disagreement
 		6: 6,  // Replay requested
 		4: 0,  // Agree/Satisfy
+		9: 7,  // Ask about previous user steps
 	},
 	5: {
 		4: 0, // Problem solved
 		3: 5, // Problem unsolved, stay in disagreement
+		9: 7,  // Ask about previous user steps
 	},
 	6: {
 		3: 5,  // Disagreement
 		5: 6,  // Repeat
 		4: 0,  // Agree/Satisfy
+		9: 7,  // Ask about previous user steps
+	},
+	7: {
+		3: 5,  // Disagreement
+		5: 6,  // Repeat
+		4: 0,  // Agree/Satisfy
+		9: 7,  // Ask about previous user steps
 	},
 };
 
@@ -294,7 +319,8 @@ export const stateFunctions: {
 		videoKnowledgeInput: string,
 		realityImageBase64: string,
 		voiceInputTranscript: string,
-		memoryKv: { [key: string]: any }
+		memoryKv: { [key: string]: any },
+		userStepMemory: { [key: string]: any }
 	) => Promise<any>
 } = {
 	0: comparingVideoRealityAlignment,
@@ -304,6 +330,7 @@ export const stateFunctions: {
 	4: freeformResponse,
 	5: handlingUserDisagreements,
 	6: replayRelevantPartsFromVideos,
+	7: answerPreviousUserSteps,
 };
 
 
@@ -313,12 +340,13 @@ export const executeStateFunction = async (
 	videoKnowledgeInput: string,
 	realityImageBase64: string,
 	voiceInputTranscript: string,
-	memoryKv: { [key: string]: any }
+	memoryKv: { [key: string]: any },
+	userStepMemory: { [key: string]: any }
 ) => {
 	const stateFunction = stateFunctions[stateNumber];
 	if (stateFunction) {
 		console.log(`Executing function for state ${stateNumber}: ${stateTranslator[stateNumber]}`);
-		return await stateFunction(videoKnowledgeInput, realityImageBase64, voiceInputTranscript, memoryKv);
+		return await stateFunction(videoKnowledgeInput, realityImageBase64, voiceInputTranscript, memoryKv, userStepMemory);
 	} else {
 		console.error(`No function found for event ${stateNumber}`);
 		return `No function found for event ${stateNumber}`;

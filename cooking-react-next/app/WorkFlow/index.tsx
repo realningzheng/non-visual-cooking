@@ -52,7 +52,9 @@ export default function WorkFlow(props: WorkFlowProps) {
     const [isConnected, setIsConnected] = useState(false);
     const [items, setItems] = useState<ItemType[]>([]);
     const [memoryKv, setMemoryKv] = useState<{ [key: string]: any }>({});
+    const [userStepMemory, setUserStepMemory] = useState<{ [key: string]: any }>({});
     const [voiceInputID, setVoiceInputID] = useState<number>(0);
+    const [userStepMemoryID, setUserStepMemoryID] = useState<number>(0);
     const [isRecording, setIsRecording] = useState(false);
     const [canPushToTalk, setCanPushToTalk] = useState(true);
     const [audioAgentDuty, setAudioAgentDuty] = useState<'chatbot' | 'detect'>('detect');
@@ -372,7 +374,8 @@ export default function WorkFlow(props: WorkFlowProps) {
                 videoKnowledgeInput,
                 realityImageBase64,
                 voiceInputTranscript,
-                memoryKv
+                memoryKv,
+                userStepMemory,
             ) as string;
             props.setStateFunctionExeRes(stateFunctionExeRes);
             // add state function result to memory:
@@ -384,6 +387,15 @@ export default function WorkFlow(props: WorkFlowProps) {
                 });
             }
             setVoiceInputID (voiceInputID + 1);
+            // add user step memory to user step memory:
+            if (stateFunctionExeRes.length > 0 && stateFunctionExeRes.startsWith("<")) {
+                setUserStepMemory((userStepMemory) => {
+                    const newKv = { ...userStepMemory };
+                    newKv[userStepMemoryID.toString()] = stateFunctionExeRes;
+                    return newKv;
+                });
+            }
+            setUserStepMemoryID (userStepMemoryID + 1);
         }
     };
 
@@ -598,6 +610,10 @@ export default function WorkFlow(props: WorkFlowProps) {
                     <div className='text-lg font-bold content-block kv'>Memory</div>
                     <div className="content-block-body content-kv">
                         {props.currentState !== -1 && (JSON.stringify(memoryKv, null, 2))}
+                    </div>
+                    <div className='text-lg font-bold content-block kv'>User Step Memory</div>
+                    <div className="content-block-body content-kv">
+                        {props.currentState !== -1 && (JSON.stringify(userStepMemory, null, 2))}
                     </div>
                 </>
             )}
