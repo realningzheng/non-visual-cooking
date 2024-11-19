@@ -191,8 +191,8 @@ export default function WorkFlow(props: WorkFlowProps) {
 
     const playTTS = async (text: string, speed: number) => {
         try {
+            console.log('[TTS play]')
             const waveStreamPlayer = wavStreamPlayerRef.current;
-            await waveStreamPlayer.interrupt();
             const mp3Response = await openaiClient.audio.speech.create({
                 model: "tts-1",
                 voice: "alloy",
@@ -224,16 +224,12 @@ export default function WorkFlow(props: WorkFlowProps) {
             - The user has provided a video knowledge in JSON format which contains multimodal information on how to correctly cook in the kitchen.
             - Please help the user by answering their questions and guiding them through the cooking process based on the video knowledge.
             - Please make sure to respond with a helpful voice via audio
-            - Be kind, helpful, and courteous
-            - It is okay to ask the user questions
             - Use tools and functions you have available liberally, it is part of the training apparatus
+            - Go straight to your answer and make it very short and concise
 
             Personality:
             - Be upbeat and genuine
             - Try speaking quickly as if excited
-
-            Video Knowledge:
-            ${props.videoKnowledgeInput}
             `
         });
 
@@ -350,12 +346,14 @@ export default function WorkFlow(props: WorkFlowProps) {
                 await playTTS(props.stateFunctionExeRes, props.ttsSpeed);
             } else {
                 const realityImageBase64 = await props.captureRealityFrame();
+                props.setIsProcessing(true);
                 let stateFunctionExeRes = await executeStateFunction(
                     stateMachine[statePrev][event],
                     videoKnowledgeInput,
                     realityImageBase64,
                     voiceInputTranscript
                 ) as string;
+                props.setIsProcessing(false);
                 // Only play TTS if the new result is different
                 if (stateFunctionExeRes !== props.stateFunctionExeRes) {
                     props.setStateFunctionExeRes(stateFunctionExeRes);
@@ -364,46 +362,43 @@ export default function WorkFlow(props: WorkFlowProps) {
             }
             return;
         }
-    }, [props.ttsSpeed, playTTS, props.stateFunctionExeRes]);
+    }, [props.ttsSpeed, props.stateFunctionExeRes]);
 
 
     useEffect(() => {
         const executeNextState = async () => {
             if (props.stateMachineEvent >= 0) {
                 if (props.voiceInputTranscript.length > 0 && (props.stateMachineEvent in stateMachine[props.currentState])) {
-                    props.setIsProcessing(true);
                     await gotoNextState(props.currentState, props.stateMachineEvent, props.voiceInputTranscript, props.videoKnowledgeInput);
-                    props.setIsProcessing(false);
                     props.setCurrentState(stateMachine[props.currentState][props.stateMachineEvent]);
                 }
             }
         };
-        console.log(props.stateMachineEvent);
         executeNextState();
     }, [props.stateMachineEvent, props.currentState, props.voiceInputTranscript, props.videoKnowledgeInput]);
 
 
     // periodically trigger event 20 (comparingVideoRealityAlignment) 
     // when in state 0 (System automatically compares video-reality alignment)
-    useEffect(() => {
-        if (props.currentState === 0 && props.isProcessing === false) {
-            let isChecking = false;
-            const automaticCheck = async () => {
-                if (isChecking) return; // Skip if previous check is running or if event isn't 20
-                try {
-                    isChecking = true;
-                    await gotoNextState(0, 20, '', props.videoKnowledgeInput);
-                } finally {
-                    isChecking = false;
-                }
-            };
-            // Initial check
-            automaticCheck();
-            // Set up timer for subsequent checks
-            const timeoutId = setInterval(automaticCheck, 500);
-            return () => clearInterval(timeoutId);
-        }
-    }, [props.currentState, props.isProcessing, gotoNextState, props.videoKnowledgeInput]);
+    // useEffect(() => {
+    //     if (props.currentState === 0 && props.isProcessing === false) {
+    //         let isChecking = false;
+    //         const automaticCheck = async () => {
+    //             if (isChecking) return; // Skip if previous check is running or if event isn't 20
+    //             try {
+    //                 isChecking = true;
+    //                 await gotoNextState(0, 20, '', props.videoKnowledgeInput);
+    //             } finally {
+    //                 isChecking = false;
+    //             }
+    //         };
+    //         // Initial check
+    //         automaticCheck();
+    //         // Set up timer for subsequent checks
+    //         const timeoutId = setInterval(automaticCheck, 500);
+    //         return () => clearInterval(timeoutId);
+    //     }
+    // }, [props.currentState, props.isProcessing, gotoNextState, props.videoKnowledgeInput]);
 
 
     return (
