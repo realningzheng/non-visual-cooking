@@ -353,7 +353,9 @@ export default function WorkFlow(props: WorkFlowProps) {
                     stateMachine[statePrev][event],
                     videoKnowledgeInput,
                     realityImageBase64,
-                    voiceInputTranscript
+                    voiceInputTranscript,
+                    memoryKv,
+                    userStepMemory
                 ) as string;
                 props.setIsProcessing(false);
                 // Only play TTS if the new result is different
