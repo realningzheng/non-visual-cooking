@@ -252,9 +252,9 @@ export default function WorkFlow(props: WorkFlowProps) {
         // handle realtime events from client + server for event logging
         client.on('conversation.updated', async ({ item, delta }: any) => {
             const items = client.conversation.getItems();
-            if (delta?.audio) {
-                wavStreamPlayer.add16BitPCM(delta.audio, item.id);
-            }
+            // if (delta?.audio) {
+            //     wavStreamPlayer.add16BitPCM(delta.audio, item.id);
+            // }
             if (item.status === 'completed' && item.formatted.audio?.length) {
                 const wavFile = await WavRecorder.decode(
                     item.formatted.audio,
