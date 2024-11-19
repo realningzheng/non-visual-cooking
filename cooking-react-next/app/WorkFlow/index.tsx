@@ -21,9 +21,11 @@ import { ItemType } from "@openai/realtime-api-beta/dist/lib/client";
 import secret from '../../secret.json';
 import { FaUser } from "react-icons/fa";
 import { RiRobot2Fill } from "react-icons/ri";
+import OpenAI from "openai";
 
 
 interface WorkFlowProps {
+    captureRealityFrame: () => Promise<string>;
     setStateMachineEvent: (event: number) => void;
     setCurrentState: (state: number) => void;
     setVoiceInputTranscript: (input: string) => void;
@@ -31,6 +33,7 @@ interface WorkFlowProps {
     setRealityImageBase64: (input: string) => void;
     setStateFunctionExeRes: (input: string) => void;
     setIsProcessing: (input: boolean) => void;
+    setTtsSpeed: (input: number) => void;
     voiceInputTranscript: string;
     videoKnowledgeInput: string;
     currentState: number;
@@ -38,8 +41,11 @@ interface WorkFlowProps {
     realityImageBase64: string;
     stateFunctionExeRes: string;
     isProcessing: boolean;
-    captureRealityFrame: () => Promise<string>;
+    ttsSpeed: number;
 }
+
+
+const openaiClient = new OpenAI({ apiKey: secret.OPENAI_KEY, dangerouslyAllowBrowser: true });
 
 
 export default function WorkFlow(props: WorkFlowProps) {
@@ -128,9 +134,11 @@ export default function WorkFlow(props: WorkFlowProps) {
         const wavRecorder = wavRecorderRef.current;
         const wavStreamPlayer = wavStreamPlayerRef.current;
         const trackSampleOffset = await wavStreamPlayer.interrupt();
-        if (trackSampleOffset?.trackId) {
-            const { trackId, offset } = trackSampleOffset;
-            await client.cancelResponse(trackId, offset);
+        if (audioAgentDuty === 'chatbot') {
+            if (trackSampleOffset?.trackId) {
+                const { trackId, offset } = trackSampleOffset;
+                await client.cancelResponse(trackId, offset);
+            }
         }
         await wavRecorder.record((data) => client.appendInputAudio(data.mono));
     };
@@ -198,6 +206,25 @@ export default function WorkFlow(props: WorkFlowProps) {
         props.setIsProcessing(false);
     };
 
+    const playTTS = async (text: string, speed: number) => {
+        try {
+            console.log('[TTS play]')
+            const waveStreamPlayer = wavStreamPlayerRef.current;
+            const mp3Response = await openaiClient.audio.speech.create({
+                model: "tts-1",
+                voice: "alloy",
+                input: text,
+                response_format: 'pcm',
+                speed: speed,
+            });
+            const arrayBuffer = await mp3Response.arrayBuffer();
+            await waveStreamPlayer.add16BitPCM(arrayBuffer);
+        } catch (error) {
+            console.error("Error generating or playing TTS:", error);
+        }
+    };
+
+
     /** Event handlers */
     /** Core RealtimeClient and audio capture setup */
     useEffect(() => {
@@ -214,16 +241,12 @@ export default function WorkFlow(props: WorkFlowProps) {
             - The user has provided a video knowledge in JSON format which contains multimodal information on how to correctly cook in the kitchen.
             - Please help the user by answering their questions and guiding them through the cooking process based on the video knowledge.
             - Please make sure to respond with a helpful voice via audio
-            - Be kind, helpful, and courteous
-            - It is okay to ask the user questions
             - Use tools and functions you have available liberally, it is part of the training apparatus
+            - Go straight to your answer and make it very short and concise
 
             Personality:
             - Be upbeat and genuine
             - Try speaking quickly as if excited
-
-            Video Knowledge:
-            ${props.videoKnowledgeInput}
             `
         });
 
@@ -267,9 +290,9 @@ export default function WorkFlow(props: WorkFlowProps) {
         // handle realtime events from client + server for event logging
         client.on('conversation.updated', async ({ item, delta }: any) => {
             const items = client.conversation.getItems();
-            if (delta?.audio) {
-                wavStreamPlayer.add16BitPCM(delta.audio, item.id);
-            }
+            // if (delta?.audio) {
+            //     wavStreamPlayer.add16BitPCM(delta.audio, item.id);
+            // }
             if (item.status === 'completed' && item.formatted.audio?.length) {
                 const wavFile = await WavRecorder.decode(
                     item.formatted.audio,
@@ -332,63 +355,139 @@ export default function WorkFlow(props: WorkFlowProps) {
 
 
     // automatically execute the state function when user event changes
+    const gotoNextState = useCallback(async (statePrev: number, event: number, voiceInputTranscript: string, videoKnowledgeInput: string) => {
+        // update event and state in react states
+        if (event >= 0 && (event in stateMachine[statePrev])) {
+            if (event === 5) {
+                // For event 5, replay previous response
+                await playTTS(props.stateFunctionExeRes, props.ttsSpeed);
+            } else {
+                const realityImageBase64 = await props.captureRealityFrame();
+                props.setIsProcessing(true);
+                let stateFunctionExeRes = await executeStateFunction(
+                    stateMachine[statePrev][event],
+                    videoKnowledgeInput,
+                    realityImageBase64,
+                    voiceInputTranscript
+                ) as string;
+                props.setIsProcessing(false);
+                // Only play TTS if the new result is different
+                if (stateFunctionExeRes !== props.stateFunctionExeRes) {
+                    props.setStateFunctionExeRes(stateFunctionExeRes);
+                    await playTTS(stateFunctionExeRes, props.ttsSpeed);
+                }
+            }
+            return;
+        }
+    }, [props.ttsSpeed, props.stateFunctionExeRes]);
+
+
     useEffect(() => {
         const executeNextState = async () => {
             if (props.stateMachineEvent >= 0) {
                 if (props.voiceInputTranscript.length > 0 && (props.stateMachineEvent in stateMachine[props.currentState])) {
-                    props.setIsProcessing(true);
                     await gotoNextState(props.currentState, props.stateMachineEvent, props.voiceInputTranscript, props.videoKnowledgeInput);
-                    props.setIsProcessing(false);
                     props.setCurrentState(stateMachine[props.currentState][props.stateMachineEvent]);
                 }
             }
         };
         executeNextState();
-    }, [props.stateMachineEvent, props.voiceInputTranscript]);
+    }, [props.stateMachineEvent, props.currentState, props.voiceInputTranscript, props.videoKnowledgeInput]);
 
 
     // periodically trigger event 20 (comparingVideoRealityAlignment) 
     // when in state 0 (System automatically compares video-reality alignment)
-    useEffect(() => {
-        if (props.currentState === 0 && props.isProcessing === false) {
-            let isChecking = false;
-            const automaticCheck = async () => {
-                if (isChecking) return; // Skip if previous check is running or if event isn't 20
-                try {
-                    isChecking = true;
-                    await gotoNextState(0, 20, '', props.videoKnowledgeInput);
-                } finally {
-                    isChecking = false;
-                }
-            };
-            // Initial check
-            automaticCheck();
-            // Set up timer for subsequent checks
-            const timeoutId = setInterval(automaticCheck, 500);
-            return () => clearInterval(timeoutId);
-        }
-    }, [props.currentState, props.isProcessing]);
-
-
-    /* Go to the next state */
-    const gotoNextState = async (statePrev: number, event: number, voiceInputTranscript: string, videoKnowledgeInput: string) => {
-        // update event and state in react states
-        if (event >= 0 && (event in stateMachine[statePrev])) {
-            const realityImageBase64 = await props.captureRealityFrame();
-            let stateFunctionExeRes = await executeStateFunction(
-                stateMachine[statePrev][event],
-                videoKnowledgeInput,
-                realityImageBase64,
-                voiceInputTranscript
-            ) as string;
-            props.setStateFunctionExeRes(stateFunctionExeRes);
-        }
-    };
+    // useEffect(() => {
+    //     if (props.currentState === 0 && props.isProcessing === false) {
+    //         let isChecking = false;
+    //         const automaticCheck = async () => {
+    //             if (isChecking) return; // Skip if previous check is running or if event isn't 20
+    //             try {
+    //                 isChecking = true;
+    //                 await gotoNextState(0, 20, '', props.videoKnowledgeInput);
+    //             } finally {
+    //                 isChecking = false;
+    //             }
+    //         };
+    //         // Initial check
+    //         automaticCheck();
+    //         // Set up timer for subsequent checks
+    //         const timeoutId = setInterval(automaticCheck, 500);
+    //         return () => clearInterval(timeoutId);
+    //     }
+    // }, [props.currentState, props.isProcessing, gotoNextState, props.videoKnowledgeInput]);
 
 
     return (
         <Stack spacing={1}>
             <div className='text-xl font-bold gap-2 pt-1 flex items-center'>
+                <div className="dropdown dropdown-start">
+                    <label tabIndex={0} className="btn btn-xs btn-ghost bg-gray-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </label>
+                    <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+                        <li className="menu-title">Agent Mode</li>
+                        <li>
+                            <label className="label cursor-pointer">
+                                <span className="label-text">Detect</span>
+                                <input
+                                    type="radio"
+                                    name="audioAgent"
+                                    checked={audioAgentDuty === 'detect'}
+                                    onChange={() => setAudioAgentDuty('detect')}
+                                />
+                            </label>
+                        </li>
+                        <li>
+                            <label className="label cursor-pointer">
+                                <span className="label-text">Chatbot</span>
+                                <input
+                                    type="radio"
+                                    name="audioAgent"
+                                    checked={audioAgentDuty === 'chatbot'}
+                                    onChange={() => setAudioAgentDuty('chatbot')}
+                                />
+                            </label>
+                        </li>
+                        <li className="menu-title">Turn Detection</li>
+                        <li>
+                            <label className="label cursor-pointer">
+                                <span className="label-text">Manual</span>
+                                <input
+                                    type="radio"
+                                    name="mode"
+                                    checked={canPushToTalk}
+                                    onChange={() => changeTurnEndType('none')}
+                                />
+                            </label>
+                        </li>
+                        <li>
+                            <label className="label cursor-pointer">
+                                <span className="label-text">Auto vad</span>
+                                <input
+                                    type="radio"
+                                    name="mode"
+                                    checked={!canPushToTalk}
+                                    onChange={() => changeTurnEndType('server_vad')}
+                                />
+                            </label>
+                        </li>
+                        <li className="menu-title">TTS Speed</li>
+                        <li>
+                            <label className="label cursor-pointer">
+                                <input
+                                    type="range"
+                                    className="range range-xs w-full"
+                                    min="0.25" max="4" step="0.05"
+                                    value={props.ttsSpeed}
+                                    onChange={(e) => props.setTtsSpeed(Number(e.target.value))}
+                                />
+                            </label>
+                        </li>
+                    </ul>
+                </div>
                 CONTROL PANEL
                 <button
                     className={`btn btn-xs ${isConnected ? 'bg-success' : 'btn-outline'}`}
@@ -397,44 +496,6 @@ export default function WorkFlow(props: WorkFlowProps) {
                     {isConnected ? 'disconnect' : 'connect'}
                 </button>
                 <div className="flex-grow" />
-                {!isConnected && (
-                    <div className="join">
-                        <input
-                            type="radio"
-                            name="audioAgent"
-                            className="join-item btn btn-xs btn-outline"
-                            aria-label="detect"
-                            checked={audioAgentDuty === 'detect'}
-                            onChange={() => setAudioAgentDuty('detect')}
-                        />
-                        <input
-                            type="radio"
-                            name="audioAgent"
-                            className="join-item btn btn-xs btn-outline"
-                            aria-label="chatbot"
-                            checked={audioAgentDuty === 'chatbot'}
-                            onChange={() => setAudioAgentDuty('chatbot')}
-                        />
-                    </div>
-                )}
-                <div className="join">
-                    <input
-                        type="radio"
-                        name="mode"
-                        className="join-item btn btn-xs btn-outline"
-                        aria-label="manual"
-                        checked={canPushToTalk}
-                        onChange={() => changeTurnEndType('none')}
-                    />
-                    <input
-                        type="radio"
-                        name="mode"
-                        className="join-item btn btn-xs btn-outline"
-                        aria-label="auto vad"
-                        checked={!canPushToTalk}
-                        onChange={() => changeTurnEndType('server_vad')}
-                    />
-                </div>
             </div>
             <div>
                 <p><span className='text-lg font-bold'>Video knowledge:</span> ../data/rwYaDqXFH88_video_knowledge_brief.json</p>
@@ -591,7 +652,11 @@ export default function WorkFlow(props: WorkFlowProps) {
                         <div className='text-lg font-bold'>State function executed result</div>
                         {props.currentState !== -1 && (props.isProcessing && <span className="loading loading-dots loading-lg"></span>)}
                     </div>
-                    {props.currentState !== -1 && (<p>{props.stateFunctionExeRes}</p>)}
+                    {props.currentState !== -1 && (
+                        <p style={{ whiteSpace: 'pre-line' }}>
+                            {props.stateFunctionExeRes}
+                        </p>
+                    )}
                     <div className="divider"></div>
                     <div className='text-lg font-bold content-block kv'>Memory</div>
                     <div className="content-block-body content-kv">
