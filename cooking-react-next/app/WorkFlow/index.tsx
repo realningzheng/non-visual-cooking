@@ -191,6 +191,7 @@ export default function WorkFlow(props: WorkFlowProps) {
         setCanPushToTalk(value === 'none');
     };
 
+    
     const playTTS = async (text: string, speed: number) => {
         try {
             console.log('[TTS play]')
@@ -208,8 +209,8 @@ export default function WorkFlow(props: WorkFlowProps) {
             console.error("Error generating or playing TTS:", error);
         }
     };
-  
-  
+
+
     /** Event handlers */
     /** Core RealtimeClient and audio capture setup */
     useEffect(() => {
@@ -361,6 +362,31 @@ export default function WorkFlow(props: WorkFlowProps) {
                 // Only play TTS if the new result is different
                 if (stateFunctionExeRes !== props.stateFunctionExeRes) {
                     props.setStateFunctionExeRes(stateFunctionExeRes);
+                    if (event != 20 && voiceInputTranscript.length > 0) {
+                        setMemoryKv((memoryKv) => {
+                            const newKv = { ...memoryKv };
+                            newKv['voice_input_' + voiceInputID.toString()] = voiceInputTranscript;
+                            return newKv;
+                        });
+                    }
+                    // add state function result to memory:
+                    if (stateFunctionExeRes.length > 0 && !stateFunctionExeRes.startsWith("<")) {
+                        setMemoryKv((memoryKv) => {
+                            const newKv = { ...memoryKv };
+                            newKv['agent_response_' + voiceInputID.toString()] = stateFunctionExeRes;
+                            return newKv;
+                        });
+                    }
+                    setVoiceInputID(voiceInputID + 1);
+                    // add user step memory to user step memory:
+                    if (stateFunctionExeRes.length > 0 && stateFunctionExeRes.startsWith("<")) {
+                        setUserStepMemory((userStepMemory) => {
+                            const newKv = { ...userStepMemory };
+                            newKv[userStepMemoryID.toString()] = stateFunctionExeRes;
+                            return newKv;
+                        });
+                    }
+                    setUserStepMemoryID(userStepMemoryID + 1);
                     await playTTS(stateFunctionExeRes, props.ttsSpeed);
                 }
             }
