@@ -43,6 +43,7 @@ export default function MainLayout() {
     const [currentState, setCurrentState] = useState(-1);
     const [stateMachineEvent, setStateMachineEvent] = useState(-1);
     const [stateFunctionExeRes, setStateFunctionExeRes] = useState("");
+    const [ttsSpeed, setTtsSpeed] = useState(2);
 
     const [isClient, setIsClient] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -205,6 +206,7 @@ export default function MainLayout() {
                     setRealityImageBase64={setRealityImageBase64}
                     setStateFunctionExeRes={setStateFunctionExeRes}
                     captureRealityFrame={captureRealityFrame}
+                    setTtsSpeed={setTtsSpeed}
                     isProcessing={isProcessing}
                     voiceInputTranscript={voiceInputTranscript}
                     videoKnowledgeInput={videoKnowledgeInput}
@@ -212,6 +214,7 @@ export default function MainLayout() {
                     stateMachineEvent={stateMachineEvent}
                     realityImageBase64={realityImageBase64}
                     stateFunctionExeRes={stateFunctionExeRes}
+                    ttsSpeed={ttsSpeed}
                 />
             </Grid>
         </Grid>

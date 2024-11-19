@@ -24,6 +24,7 @@ import { RiRobot2Fill } from "react-icons/ri";
 
 
 interface WorkFlowProps {
+    captureRealityFrame: () => Promise<string>;
     setStateMachineEvent: (event: number) => void;
     setCurrentState: (state: number) => void;
     setVoiceInputTranscript: (input: string) => void;
@@ -31,6 +32,7 @@ interface WorkFlowProps {
     setRealityImageBase64: (input: string) => void;
     setStateFunctionExeRes: (input: string) => void;
     setIsProcessing: (input: boolean) => void;
+    setTtsSpeed: (input: number) => void;
     voiceInputTranscript: string;
     videoKnowledgeInput: string;
     currentState: number;
@@ -38,7 +40,7 @@ interface WorkFlowProps {
     realityImageBase64: string;
     stateFunctionExeRes: string;
     isProcessing: boolean;
-    captureRealityFrame: () => Promise<string>;
+    ttsSpeed: number;
 }
 
 
@@ -372,6 +374,73 @@ export default function WorkFlow(props: WorkFlowProps) {
     return (
         <Stack spacing={1}>
             <div className='text-xl font-bold gap-2 pt-1 flex items-center'>
+            <div className="dropdown dropdown-start">
+                    <label tabIndex={0} className="btn btn-xs btn-ghost bg-gray-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </label>
+                    <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+                        <li className="menu-title">Agent Mode</li>
+                        <li>
+                            <label className="label cursor-pointer">
+                                <span className="label-text">Detect</span>
+                                <input
+                                    type="radio"
+                                    name="audioAgent"
+                                    checked={audioAgentDuty === 'detect'}
+                                    onChange={() => setAudioAgentDuty('detect')}
+                                />
+                            </label>
+                        </li>
+                        <li>
+                            <label className="label cursor-pointer">
+                                <span className="label-text">Chatbot</span>
+                                <input
+                                    type="radio"
+                                    name="audioAgent"
+                                    checked={audioAgentDuty === 'chatbot'}
+                                    onChange={() => setAudioAgentDuty('chatbot')}
+                                />
+                            </label>
+                        </li>
+                        <li className="menu-title">Turn Detection</li>
+                        <li>
+                            <label className="label cursor-pointer">
+                                <span className="label-text">Manual</span>
+                                <input
+                                    type="radio"
+                                    name="mode"
+                                    checked={canPushToTalk}
+                                    onChange={() => changeTurnEndType('none')}
+                                />
+                            </label>
+                        </li>
+                        <li>
+                            <label className="label cursor-pointer">
+                                <span className="label-text">Auto vad</span>
+                                <input
+                                    type="radio"
+                                    name="mode"
+                                    checked={!canPushToTalk}
+                                    onChange={() => changeTurnEndType('server_vad')}
+                                />
+                            </label>
+                        </li>
+                        <li className="menu-title">TTS Speed</li>
+                        <li>
+                            <label className="label cursor-pointer">
+                                <input
+                                    type="range"
+                                    className="range range-xs w-full"
+                                    min="0.25" max="4" step="0.05"
+                                    value={props.ttsSpeed}
+                                    onChange={(e) => props.setTtsSpeed(Number(e.target.value))}
+                                />
+                            </label>
+                        </li>
+                    </ul>
+                </div>
                 CONTROL PANEL
                 <button
                     className={`btn btn-xs ${isConnected ? 'bg-success' : 'btn-outline'}`}
@@ -380,44 +449,6 @@ export default function WorkFlow(props: WorkFlowProps) {
                     {isConnected ? 'disconnect' : 'connect'}
                 </button>
                 <div className="flex-grow" />
-                {!isConnected && (
-                    <div className="join">
-                        <input
-                            type="radio"
-                            name="audioAgent"
-                            className="join-item btn btn-xs btn-outline"
-                            aria-label="detect"
-                            checked={audioAgentDuty === 'detect'}
-                            onChange={() => setAudioAgentDuty('detect')}
-                        />
-                        <input
-                            type="radio"
-                            name="audioAgent"
-                            className="join-item btn btn-xs btn-outline"
-                            aria-label="chatbot"
-                            checked={audioAgentDuty === 'chatbot'}
-                            onChange={() => setAudioAgentDuty('chatbot')}
-                        />
-                    </div>
-                )}
-                <div className="join">
-                    <input
-                        type="radio"
-                        name="mode"
-                        className="join-item btn btn-xs btn-outline"
-                        aria-label="manual"
-                        checked={canPushToTalk}
-                        onChange={() => changeTurnEndType('none')}
-                    />
-                    <input
-                        type="radio"
-                        name="mode"
-                        className="join-item btn btn-xs btn-outline"
-                        aria-label="auto vad"
-                        checked={!canPushToTalk}
-                        onChange={() => changeTurnEndType('server_vad')}
-                    />
-                </div>
             </div>
             <div>
                 <p><span className='text-lg font-bold'>Video knowledge:</span> ../data/rwYaDqXFH88_video_knowledge_brief.json</p>
