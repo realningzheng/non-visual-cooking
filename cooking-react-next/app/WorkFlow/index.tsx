@@ -58,6 +58,9 @@ export default function WorkFlow(props: WorkFlowProps) {
     const [isConnected, setIsConnected] = useState(false);
     const [items, setItems] = useState<ItemType[]>([]);
     const [memoryKv, setMemoryKv] = useState<{ [key: string]: any }>({});
+    const [userStepMemory, setUserStepMemory] = useState<{ [key: string]: any }>({});
+    const [voiceInputID, setVoiceInputID] = useState<number>(0);
+    const [userStepMemoryID, setUserStepMemoryID] = useState<number>(0);
     const [isRecording, setIsRecording] = useState(false);
     const [canPushToTalk, setCanPushToTalk] = useState(true);
     const [audioAgentDuty, setAudioAgentDuty] = useState<'chatbot' | 'detect'>('detect');
@@ -188,24 +191,6 @@ export default function WorkFlow(props: WorkFlowProps) {
         setCanPushToTalk(value === 'none');
     };
 
-    /* Go to the next state */
-    const gotoNextState = async (statePrev: number, event: number) => {
-        console.log(`[go to next state]: with event: ${event}, from state: ${statePrev}`);
-        props.setIsProcessing(true);
-        // update event and state in react states
-        if (event >= 0) {
-            props.setStateMachineEvent(event);
-            props.setCurrentState(stateMachine[statePrev][event]);
-        } else {
-            console.log("[go to next state]: No valid events found.");
-        }
-        // execute the corresponding state function
-        const realityImageBase64 = await props.captureRealityFrame();
-        let stateFunctionExeRes = await executeStateFunction(stateMachine[statePrev][event], props.videoKnowledgeInput, realityImageBase64, props.voiceInputTranscript, memoryKv) as string;
-        props.setStateFunctionExeRes(stateFunctionExeRes);
-        props.setIsProcessing(false);
-    };
-
     const playTTS = async (text: string, speed: number) => {
         try {
             console.log('[TTS play]')
@@ -223,8 +208,8 @@ export default function WorkFlow(props: WorkFlowProps) {
             console.error("Error generating or playing TTS:", error);
         }
     };
-
-
+  
+  
     /** Event handlers */
     /** Core RealtimeClient and audio capture setup */
     useEffect(() => {
@@ -416,7 +401,6 @@ export default function WorkFlow(props: WorkFlowProps) {
     //         return () => clearInterval(timeoutId);
     //     }
     // }, [props.currentState, props.isProcessing, gotoNextState, props.videoKnowledgeInput]);
-
 
     return (
         <Stack spacing={1}>
@@ -661,6 +645,10 @@ export default function WorkFlow(props: WorkFlowProps) {
                     <div className='text-lg font-bold content-block kv'>Memory</div>
                     <div className="content-block-body content-kv">
                         {props.currentState !== -1 && (JSON.stringify(memoryKv, null, 2))}
+                    </div>
+                    <div className='text-lg font-bold content-block kv'>User Step Memory</div>
+                    <div className="content-block-body content-kv">
+                        {props.currentState !== -1 && (JSON.stringify(userStepMemory, null, 2))}
                     </div>
                 </>
             )}
