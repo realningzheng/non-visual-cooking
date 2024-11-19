@@ -134,9 +134,11 @@ export default function WorkFlow(props: WorkFlowProps) {
         const wavRecorder = wavRecorderRef.current;
         const wavStreamPlayer = wavStreamPlayerRef.current;
         const trackSampleOffset = await wavStreamPlayer.interrupt();
-        if (trackSampleOffset?.trackId) {
-            const { trackId, offset } = trackSampleOffset;
-            await client.cancelResponse(trackId, offset);
+        if (audioAgentDuty === 'chatbot') {
+            if (trackSampleOffset?.trackId) {
+                const { trackId, offset } = trackSampleOffset;
+                await client.cancelResponse(trackId, offset);
+            }
         }
         await wavRecorder.record((data) => client.appendInputAudio(data.mono));
     };
@@ -190,6 +192,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     // Move playTTS to be a useCallback hook so it updates when ttsSpeed changes
     const playTTS = useCallback(async (text: string) => {
         try {
+            console.log('[playTTS]', text);
             const mp3Response = await openaiClient.audio.speech.create({
                 model: "tts-1",
                 voice: "alloy",
@@ -381,19 +384,27 @@ export default function WorkFlow(props: WorkFlowProps) {
 
     /* Go to the next state */
     const gotoNextState = async (statePrev: number, event: number, voiceInputTranscript: string, videoKnowledgeInput: string) => {
-        console.log('1', props.stateFunctionExeRes);
         // update event and state in react states
         if (event >= 0 && (event in stateMachine[statePrev])) {
-            const realityImageBase64 = await props.captureRealityFrame();
-            let stateFunctionExeRes = await executeStateFunction(
-                stateMachine[statePrev][event],
-                videoKnowledgeInput,
-                realityImageBase64,
-                voiceInputTranscript
-            ) as string;
-            console.log('2', stateFunctionExeRes);
-            props.setStateFunctionExeRes(stateFunctionExeRes);
-            await playTTS(stateFunctionExeRes);
+            if (event === 5) {
+                // For event 5, replay previous response
+                await playTTS(props.stateFunctionExeRes);
+            } else {
+                const realityImageBase64 = await props.captureRealityFrame();
+                let stateFunctionExeRes = await executeStateFunction(
+                    stateMachine[statePrev][event],
+                    videoKnowledgeInput,
+                    realityImageBase64,
+                    voiceInputTranscript
+                ) as string;
+                // Only play TTS if the new result is different
+                if (stateFunctionExeRes !== props.stateFunctionExeRes) {
+                    console.log('prev', props.stateFunctionExeRes);
+                    console.log('new', stateFunctionExeRes);
+                    props.setStateFunctionExeRes(stateFunctionExeRes);
+                    await playTTS(stateFunctionExeRes);
+                }
+            }
         }
     };
 
@@ -632,7 +643,11 @@ export default function WorkFlow(props: WorkFlowProps) {
                         <div className='text-lg font-bold'>State function executed result</div>
                         {props.currentState !== -1 && (props.isProcessing && <span className="loading loading-dots loading-lg"></span>)}
                     </div>
-                    {props.currentState !== -1 && (<p>{props.stateFunctionExeRes}</p>)}
+                    {props.currentState !== -1 && (
+                        <p style={{ whiteSpace: 'pre-line' }}>
+                            {props.stateFunctionExeRes}
+                        </p>
+                    )}
                     <div className="divider"></div>
                     <div className='text-lg font-bold content-block kv'>Memory</div>
                     <div className="content-block-body content-kv">
