@@ -21,6 +21,7 @@ import { ItemType } from "@openai/realtime-api-beta/dist/lib/client";
 import secret from '../../secret.json';
 import { FaUser } from "react-icons/fa";
 import { RiRobot2Fill } from "react-icons/ri";
+import OpenAI from "openai";
 
 
 interface WorkFlowProps {
@@ -42,6 +43,9 @@ interface WorkFlowProps {
     isProcessing: boolean;
     ttsSpeed: number;
 }
+
+
+const openaiClient = new OpenAI({ apiKey: secret.OPENAI_KEY, dangerouslyAllowBrowser: true });
 
 
 export default function WorkFlow(props: WorkFlowProps) {
@@ -181,6 +185,26 @@ export default function WorkFlow(props: WorkFlowProps) {
         }
         setCanPushToTalk(value === 'none');
     };
+
+
+    // Move playTTS to be a useCallback hook so it updates when ttsSpeed changes
+    const playTTS = useCallback(async (text: string) => {
+        try {
+            const mp3Response = await openaiClient.audio.speech.create({
+                model: "tts-1",
+                voice: "alloy",
+                input: text,
+                response_format: 'pcm',
+                speed: props.ttsSpeed,
+            });
+
+            const waveStreamPlayer = wavStreamPlayerRef.current;
+            const arrayBuffer = await mp3Response.arrayBuffer();
+            waveStreamPlayer.add16BitPCM(arrayBuffer);
+        } catch (error) {
+            console.error("Error generating or playing TTS:", error);
+        }
+    }, [props.ttsSpeed]);
 
 
     /** Event handlers */
@@ -357,6 +381,7 @@ export default function WorkFlow(props: WorkFlowProps) {
 
     /* Go to the next state */
     const gotoNextState = async (statePrev: number, event: number, voiceInputTranscript: string, videoKnowledgeInput: string) => {
+        console.log('1', props.stateFunctionExeRes);
         // update event and state in react states
         if (event >= 0 && (event in stateMachine[statePrev])) {
             const realityImageBase64 = await props.captureRealityFrame();
@@ -366,7 +391,9 @@ export default function WorkFlow(props: WorkFlowProps) {
                 realityImageBase64,
                 voiceInputTranscript
             ) as string;
+            console.log('2', stateFunctionExeRes);
             props.setStateFunctionExeRes(stateFunctionExeRes);
+            await playTTS(stateFunctionExeRes);
         }
     };
 
@@ -374,7 +401,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     return (
         <Stack spacing={1}>
             <div className='text-xl font-bold gap-2 pt-1 flex items-center'>
-            <div className="dropdown dropdown-start">
+                <div className="dropdown dropdown-start">
                     <label tabIndex={0} className="btn btn-xs btn-ghost bg-gray-200">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 12h16M4 18h16" />
