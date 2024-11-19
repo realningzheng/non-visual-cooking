@@ -43,6 +43,7 @@ export default function MainLayout() {
     const [currentState, setCurrentState] = useState(-1);
     const [stateMachineEvent, setStateMachineEvent] = useState(-1);
     const [stateFunctionExeRes, setStateFunctionExeRes] = useState("");
+    const [ttsSpeed, setTtsSpeed] = useState(2);
 
     const [isClient, setIsClient] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -60,7 +61,6 @@ export default function MainLayout() {
     }, [videoRef, debugMode]);
 
 
-    // Add these new effects
     useEffect(() => {
         if (currentState === 6) {
             try {
@@ -205,6 +205,7 @@ export default function MainLayout() {
                     setRealityImageBase64={setRealityImageBase64}
                     setStateFunctionExeRes={setStateFunctionExeRes}
                     captureRealityFrame={captureRealityFrame}
+                    ttsSpeed={ttsSpeed}
                     isProcessing={isProcessing}
                     voiceInputTranscript={voiceInputTranscript}
                     videoKnowledgeInput={videoKnowledgeInput}
@@ -212,6 +213,7 @@ export default function MainLayout() {
                     stateMachineEvent={stateMachineEvent}
                     realityImageBase64={realityImageBase64}
                     stateFunctionExeRes={stateFunctionExeRes}
+                    setTtsSpeed={setTtsSpeed}
                 />
             </Grid>
         </Grid>

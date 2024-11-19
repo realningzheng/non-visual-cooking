@@ -21,6 +21,7 @@ import { ItemType } from "@openai/realtime-api-beta/dist/lib/client";
 import secret from '../../secret.json';
 import { FaUser } from "react-icons/fa";
 import { RiRobot2Fill } from "react-icons/ri";
+import OpenAI from "openai";
 
 
 interface WorkFlowProps {
@@ -31,6 +32,7 @@ interface WorkFlowProps {
     setRealityImageBase64: (input: string) => void;
     setStateFunctionExeRes: (input: string) => void;
     setIsProcessing: (input: boolean) => void;
+    setTtsSpeed: (input: number) => void;
     voiceInputTranscript: string;
     videoKnowledgeInput: string;
     currentState: number;
@@ -39,7 +41,11 @@ interface WorkFlowProps {
     stateFunctionExeRes: string;
     isProcessing: boolean;
     captureRealityFrame: () => Promise<string>;
+    ttsSpeed: number;
 }
+
+
+const openaiClient = new OpenAI({ apiKey: secret.OPENAI_KEY, dangerouslyAllowBrowser: true });
 
 
 export default function WorkFlow(props: WorkFlowProps) {
@@ -83,14 +89,15 @@ export default function WorkFlow(props: WorkFlowProps) {
         startTimeRef.current = new Date().toISOString();
         setIsConnected(true);
         setItems(client.conversation.getItems());
-
         await wavRecorder.begin();
-        await wavStreamPlayer.connect();
+        if (audioAgentDuty === 'chatbot') {
+            await wavStreamPlayer.connect();
+        }
         await client.connect();
-        if (client.getTurnDetectionType() === 'server_vad') {
+        if (audioAgentDuty === 'chatbot' && client.getTurnDetectionType() === 'server_vad') {
             await wavRecorder.record((data) => client.appendInputAudio(data.mono));
         }
-    }, []);
+    }, [audioAgentDuty]);
 
     /* Disconnect and reset conversation state */
     const disconnectConversation = useCallback(async () => {
@@ -102,10 +109,8 @@ export default function WorkFlow(props: WorkFlowProps) {
 
         const client = clientRef.current;
         client.disconnect();
-
         const wavRecorder = wavRecorderRef.current;
         await wavRecorder.end();
-
         const wavStreamPlayer = wavStreamPlayerRef.current;
         await wavStreamPlayer.interrupt();
     }, []);
@@ -132,7 +137,9 @@ export default function WorkFlow(props: WorkFlowProps) {
             const { trackId, offset } = trackSampleOffset;
             await client.cancelResponse(trackId, offset);
         }
-        await wavRecorder.record((data) => client.appendInputAudio(data.mono));
+        if (audioAgentDuty === 'chatbot') {
+            await wavRecorder.record((data) => client.appendInputAudio(data.mono));
+        }
     };
 
     /**
@@ -142,7 +149,9 @@ export default function WorkFlow(props: WorkFlowProps) {
         setIsRecording(false);
         const client = clientRef.current;
         const wavRecorder = wavRecorderRef.current;
-        await wavRecorder.pause();
+        if (audioAgentDuty === 'chatbot') {
+            await wavRecorder.pause();
+        }
         if (audioAgentDuty === 'detect') {
             // @TODO: should be a better way to append this message at the beginning of the conversation
             client.sendUserMessageContent([
@@ -174,10 +183,29 @@ export default function WorkFlow(props: WorkFlowProps) {
         client.updateSession({
             turn_detection: value === 'none' ? null : { type: 'server_vad' },
         });
-        if (value === 'server_vad' && client.isConnected()) {
+        if (audioAgentDuty === 'chatbot' && value === 'server_vad' && client.isConnected()) {
             await wavRecorder.record((data) => client.appendInputAudio(data.mono));
         }
         setCanPushToTalk(value === 'none');
+    };
+
+
+    /** Helper function for TTS */
+    const playTTS = async (text: string) => {
+        try {
+            const mp3Response = await openaiClient.audio.speech.create({
+                model: "tts-1",
+                voice: "alloy",
+                input: text,
+                speed: props.ttsSpeed,
+            });
+
+            const waveStreamPlayer = wavStreamPlayerRef.current;
+            const arrayBuffer = await mp3Response.arrayBuffer();
+            waveStreamPlayer.add16BitPCM(arrayBuffer);
+        } catch (error) {
+            console.error("Error generating or playing TTS:", error);
+        }
     };
 
 
@@ -250,10 +278,10 @@ export default function WorkFlow(props: WorkFlowProps) {
         // handle realtime events from client + server for event logging
         client.on('conversation.updated', async ({ item, delta }: any) => {
             const items = client.conversation.getItems();
-            if (delta?.audio) {
+            if (audioAgentDuty === 'chatbot' && delta?.audio) {
                 wavStreamPlayer.add16BitPCM(delta.audio, item.id);
             }
-            if (item.status === 'completed' && item.formatted.audio?.length) {
+            if (audioAgentDuty === 'chatbot' && item.status === 'completed' && item.formatted.audio?.length) {
                 const wavFile = await WavRecorder.decode(
                     item.formatted.audio,
                     24000,
@@ -278,12 +306,13 @@ export default function WorkFlow(props: WorkFlowProps) {
             // cleanup; resets to defaults
             client.reset();
         };
-    }, []);
+    }, [audioAgentDuty]);
 
 
     // Handle user transcript update
     useEffect(() => {
         // scroll the conversation panel to the bottom
+        console.log('items', items);
         if (conversationRef.current) {
             conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
         }
@@ -355,16 +384,26 @@ export default function WorkFlow(props: WorkFlowProps) {
 
     /* Go to the next state */
     const gotoNextState = async (statePrev: number, event: number, voiceInputTranscript: string, videoKnowledgeInput: string) => {
-        // update event and state in react states
-        if (event >= 0 && (event in stateMachine[statePrev])) {
+        if (!(event >= 0 && (event in stateMachine[statePrev]))) return;
+        // Play TTS for event 5: repeat
+        if (event === 5 && props.stateFunctionExeRes.length > 0) {
+            await playTTS(props.stateFunctionExeRes);
+        } else {
+            // Process state transition
+            const nextState = stateMachine[statePrev][event];
             const realityImageBase64 = await props.captureRealityFrame();
             let stateFunctionExeRes = await executeStateFunction(
-                stateMachine[statePrev][event],
+                nextState,
                 videoKnowledgeInput,
                 realityImageBase64,
                 voiceInputTranscript
             ) as string;
             props.setStateFunctionExeRes(stateFunctionExeRes);
+
+            // // Play TTS for new state function result
+            if (nextState !== statePrev && stateFunctionExeRes.length > 0) {
+                await playTTS(stateFunctionExeRes);
+            }
         }
     };
 
@@ -372,6 +411,73 @@ export default function WorkFlow(props: WorkFlowProps) {
     return (
         <Stack spacing={1}>
             <div className='text-xl font-bold gap-2 pt-1 flex items-center'>
+                <div className="dropdown dropdown-start">
+                    <label tabIndex={0} className="btn btn-xs btn-ghost bg-gray-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </label>
+                    <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+                        <li className="menu-title">Agent Mode</li>
+                        <li>
+                            <label className="label cursor-pointer">
+                                <span className="label-text">Detect</span>
+                                <input
+                                    type="radio"
+                                    name="audioAgent"
+                                    checked={audioAgentDuty === 'detect'}
+                                    onChange={() => setAudioAgentDuty('detect')}
+                                />
+                            </label>
+                        </li>
+                        <li>
+                            <label className="label cursor-pointer">
+                                <span className="label-text">Chatbot</span>
+                                <input
+                                    type="radio"
+                                    name="audioAgent"
+                                    checked={audioAgentDuty === 'chatbot'}
+                                    onChange={() => setAudioAgentDuty('chatbot')}
+                                />
+                            </label>
+                        </li>
+                        <li className="menu-title">Turn Detection</li>
+                        <li>
+                            <label className="label cursor-pointer">
+                                <span className="label-text">Manual</span>
+                                <input
+                                    type="radio"
+                                    name="mode"
+                                    checked={canPushToTalk}
+                                    onChange={() => changeTurnEndType('none')}
+                                />
+                            </label>
+                        </li>
+                        <li>
+                            <label className="label cursor-pointer">
+                                <span className="label-text">Auto vad</span>
+                                <input
+                                    type="radio"
+                                    name="mode"
+                                    checked={!canPushToTalk}
+                                    onChange={() => changeTurnEndType('server_vad')}
+                                />
+                            </label>
+                        </li>
+                        <li className="menu-title">TTS Speed</li>
+                        <li>
+                            <label className="label cursor-pointer">
+                                <input
+                                    type="range"
+                                    className="range range-xs w-full"
+                                    min="0.25" max="4" step="0.05"
+                                    value={props.ttsSpeed}
+                                    onChange={(e) => props.setTtsSpeed(Number(e.target.value))}
+                                />
+                            </label>
+                        </li>
+                    </ul>
+                </div>
                 CONTROL PANEL
                 <button
                     className={`btn btn-xs ${isConnected ? 'bg-success' : 'btn-outline'}`}
@@ -379,45 +485,6 @@ export default function WorkFlow(props: WorkFlowProps) {
                 >
                     {isConnected ? 'disconnect' : 'connect'}
                 </button>
-                <div className="flex-grow" />
-                {!isConnected && (
-                    <div className="join">
-                        <input
-                            type="radio"
-                            name="audioAgent"
-                            className="join-item btn btn-xs btn-outline"
-                            aria-label="detect"
-                            checked={audioAgentDuty === 'detect'}
-                            onChange={() => setAudioAgentDuty('detect')}
-                        />
-                        <input
-                            type="radio"
-                            name="audioAgent"
-                            className="join-item btn btn-xs btn-outline"
-                            aria-label="chatbot"
-                            checked={audioAgentDuty === 'chatbot'}
-                            onChange={() => setAudioAgentDuty('chatbot')}
-                        />
-                    </div>
-                )}
-                <div className="join">
-                    <input
-                        type="radio"
-                        name="mode"
-                        className="join-item btn btn-xs btn-outline"
-                        aria-label="manual"
-                        checked={canPushToTalk}
-                        onChange={() => changeTurnEndType('none')}
-                    />
-                    <input
-                        type="radio"
-                        name="mode"
-                        className="join-item btn btn-xs btn-outline"
-                        aria-label="auto vad"
-                        checked={!canPushToTalk}
-                        onChange={() => changeTurnEndType('server_vad')}
-                    />
-                </div>
             </div>
             <div>
                 <p><span className='text-lg font-bold'>Video knowledge:</span> ../data/rwYaDqXFH88_video_knowledge_brief.json</p>
