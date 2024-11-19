@@ -189,25 +189,23 @@ export default function WorkFlow(props: WorkFlowProps) {
     };
 
 
-    // Move playTTS to be a useCallback hook so it updates when ttsSpeed changes
-    const playTTS = useCallback(async (text: string) => {
+    const playTTS = async (text: string, speed: number) => {
         try {
-            console.log('[playTTS]', text);
+            const waveStreamPlayer = wavStreamPlayerRef.current;
+            await waveStreamPlayer.interrupt();
             const mp3Response = await openaiClient.audio.speech.create({
                 model: "tts-1",
                 voice: "alloy",
                 input: text,
                 response_format: 'pcm',
-                speed: props.ttsSpeed,
+                speed: speed,
             });
-
-            const waveStreamPlayer = wavStreamPlayerRef.current;
             const arrayBuffer = await mp3Response.arrayBuffer();
-            waveStreamPlayer.add16BitPCM(arrayBuffer);
+            await waveStreamPlayer.add16BitPCM(arrayBuffer);
         } catch (error) {
             console.error("Error generating or playing TTS:", error);
         }
-    }, [props.ttsSpeed]);
+    };
 
 
     /** Event handlers */
@@ -344,6 +342,31 @@ export default function WorkFlow(props: WorkFlowProps) {
 
 
     // automatically execute the state function when user event changes
+    const gotoNextState = useCallback(async (statePrev: number, event: number, voiceInputTranscript: string, videoKnowledgeInput: string) => {
+        // update event and state in react states
+        if (event >= 0 && (event in stateMachine[statePrev])) {
+            if (event === 5) {
+                // For event 5, replay previous response
+                await playTTS(props.stateFunctionExeRes, props.ttsSpeed);
+            } else {
+                const realityImageBase64 = await props.captureRealityFrame();
+                let stateFunctionExeRes = await executeStateFunction(
+                    stateMachine[statePrev][event],
+                    videoKnowledgeInput,
+                    realityImageBase64,
+                    voiceInputTranscript
+                ) as string;
+                // Only play TTS if the new result is different
+                if (stateFunctionExeRes !== props.stateFunctionExeRes) {
+                    props.setStateFunctionExeRes(stateFunctionExeRes);
+                    await playTTS(stateFunctionExeRes, props.ttsSpeed);
+                }
+            }
+            return;
+        }
+    }, [props.ttsSpeed, playTTS, props.stateFunctionExeRes]);
+
+
     useEffect(() => {
         const executeNextState = async () => {
             if (props.stateMachineEvent >= 0) {
@@ -355,8 +378,9 @@ export default function WorkFlow(props: WorkFlowProps) {
                 }
             }
         };
+        console.log(props.stateMachineEvent);
         executeNextState();
-    }, [props.stateMachineEvent, props.voiceInputTranscript]);
+    }, [props.stateMachineEvent, props.currentState, props.voiceInputTranscript, props.videoKnowledgeInput]);
 
 
     // periodically trigger event 20 (comparingVideoRealityAlignment) 
@@ -379,34 +403,7 @@ export default function WorkFlow(props: WorkFlowProps) {
             const timeoutId = setInterval(automaticCheck, 500);
             return () => clearInterval(timeoutId);
         }
-    }, [props.currentState, props.isProcessing]);
-
-
-    /* Go to the next state */
-    const gotoNextState = async (statePrev: number, event: number, voiceInputTranscript: string, videoKnowledgeInput: string) => {
-        // update event and state in react states
-        if (event >= 0 && (event in stateMachine[statePrev])) {
-            if (event === 5) {
-                // For event 5, replay previous response
-                await playTTS(props.stateFunctionExeRes);
-            } else {
-                const realityImageBase64 = await props.captureRealityFrame();
-                let stateFunctionExeRes = await executeStateFunction(
-                    stateMachine[statePrev][event],
-                    videoKnowledgeInput,
-                    realityImageBase64,
-                    voiceInputTranscript
-                ) as string;
-                // Only play TTS if the new result is different
-                if (stateFunctionExeRes !== props.stateFunctionExeRes) {
-                    console.log('prev', props.stateFunctionExeRes);
-                    console.log('new', stateFunctionExeRes);
-                    props.setStateFunctionExeRes(stateFunctionExeRes);
-                    await playTTS(stateFunctionExeRes);
-                }
-            }
-        }
-    };
+    }, [props.currentState, props.isProcessing, gotoNextState, props.videoKnowledgeInput]);
 
 
     return (
