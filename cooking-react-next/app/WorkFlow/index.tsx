@@ -357,26 +357,20 @@ export default function WorkFlow(props: WorkFlowProps) {
                     autoAgentResponse
                 ) as string;
                 props.setIsProcessing(false);
-                
+
                 if (stateFunctionExeRes !== props.stateFunctionExeRes) {
                     props.setStateFunctionExeRes(stateFunctionExeRes);
-                    
-                    if (event != 20 && voiceInputTranscript.length > 0) {
+                    // store user input and agent response
+                    if (voiceInputTranscript.length > 0) {
                         setMemoryKv(prevKv => ({
                             ...prevKv,
-                            [`voice_input_${interactionID}`]: voiceInputTranscript
-                        }));
-                    }
-
-                    if (stateFunctionExeRes.length > 0 && !stateFunctionExeRes.startsWith("<")) {
-                        setMemoryKv(prevKv => ({
-                            ...prevKv,
+                            [`voice_input_${interactionID}`]: voiceInputTranscript,
                             [`agent_response_${interactionID}`]: stateFunctionExeRes
                         }));
+                        setInteractionID(prev => prev + 1);
                     }
-                    
-                    setInteractionID(prev => prev + 1);
 
+                    // store auto agent response
                     if (stateFunctionExeRes.length > 0 && stateFunctionExeRes.startsWith("<")) {
                         setAutoAgentResponse(prev => ({
                             ...prev,
@@ -412,6 +406,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     //     if (props.currentState === 0 && props.isProcessing === false) {
     //         const automaticCheck = async () => {
     //             try {
+    //                 if (!isConnected || props.currentState !== 0) return;
     //                 console.log('[automatic check]');
     //                 console.log(props.currentState);
     //                 await gotoNextState(0, 20, '', props.videoKnowledgeInput);
@@ -430,7 +425,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     //         // Cleanup function
     //         return () => { };
     //     }
-    // }, [props.currentState]);
+    // }, [props.currentState, isConnected]);
 
 
     return (
