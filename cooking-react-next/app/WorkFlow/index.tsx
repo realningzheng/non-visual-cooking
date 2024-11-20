@@ -194,8 +194,8 @@ export default function WorkFlow(props: WorkFlowProps) {
 
     const playTTS = async (text: string, speed: number) => {
         try {
-            console.log('[TTS play]')
-            const waveStreamPlayer = wavStreamPlayerRef.current;
+            console.log('[TTS play]', text);
+            const wavStreamPlayer = wavStreamPlayerRef.current;
             const mp3Response = await openaiClient.audio.speech.create({
                 model: "tts-1",
                 voice: "alloy",
@@ -204,7 +204,9 @@ export default function WorkFlow(props: WorkFlowProps) {
                 speed: speed,
             });
             const arrayBuffer = await mp3Response.arrayBuffer();
-            await waveStreamPlayer.add16BitPCM(arrayBuffer);
+            console.log(arrayBuffer);
+            await wavStreamPlayer.connect();
+            await wavStreamPlayer.add16BitPCM(arrayBuffer);
         } catch (error) {
             console.error("Error generating or playing TTS:", error);
         }
