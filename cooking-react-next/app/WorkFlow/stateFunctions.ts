@@ -31,8 +31,7 @@ export const comparingVideoRealityAlignment = async (	// state 0
 	voiceInputTranscript: string,
 	memoryKv: { [key: string]: any }
 ) => {
-	// await for 3 seconds
-	await new Promise(resolve => setTimeout(resolve, 2000));
+	await new Promise(resolve => setTimeout(resolve, 1000));
 
 	console.log("[executing]: Comparing video-reality alignment");
 	// TODO: compare video and reality
@@ -250,7 +249,7 @@ export async function callChatGPT(prompt: string, imageUrls: string[] = []): Pro
                     content: content as any[]
                 }
             ],
-            max_tokens: 1500,
+            max_tokens: 500,
         });
 
         if (response.choices[0]?.message?.content) {

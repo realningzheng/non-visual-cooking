@@ -1,7 +1,7 @@
 "use client";
 
 import { Stack, Box, TextField, IconButton } from "@mui/material";
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
     stateTranslator,
     eventTranslator,
@@ -58,9 +58,9 @@ export default function WorkFlow(props: WorkFlowProps) {
     const [isConnected, setIsConnected] = useState(false);
     const [items, setItems] = useState<ItemType[]>([]);
     const [memoryKv, setMemoryKv] = useState<{ [key: string]: any }>({});
-    const [userStepMemory, setUserStepMemory] = useState<{ [key: string]: any }>({});
-    const [voiceInputID, setVoiceInputID] = useState<number>(0);
-    const [userStepMemoryID, setUserStepMemoryID] = useState<number>(0);
+    const [autoAgentResponse, setAutoAgentResponse] = useState<{ [key: string]: any }>({});
+    const [interactionID, setInteractionID] = useState<number>(0);
+    const [autoAgentResponseID, setAutoAgentResponseID] = useState<number>(0);
     const [isRecording, setIsRecording] = useState(false);
     const [canPushToTalk, setCanPushToTalk] = useState(true);
     const [audioAgentDuty, setAudioAgentDuty] = useState<'chatbot' | 'detect'>('detect');
@@ -80,7 +80,7 @@ export default function WorkFlow(props: WorkFlowProps) {
 
     /** Bootstrap functions */
     /** Connect to conversation */
-    const connectConversation = useCallback(async () => {
+    const connectConversation = async () => {
         // initiate automatic checking for video-reality alignment
         props.setStateMachineEvent(20);
         props.setCurrentState(0);
@@ -99,10 +99,10 @@ export default function WorkFlow(props: WorkFlowProps) {
         if (client.getTurnDetectionType() === 'server_vad') {
             await wavRecorder.record((data) => client.appendInputAudio(data.mono));
         }
-    }, []);
+    };
 
     /* Disconnect and reset conversation state */
-    const disconnectConversation = useCallback(async () => {
+    const disconnectConversation = async () => {
         props.setStateMachineEvent(-1);
         props.setCurrentState(-1);
         setIsConnected(false);
@@ -117,14 +117,14 @@ export default function WorkFlow(props: WorkFlowProps) {
 
         const wavStreamPlayer = wavStreamPlayerRef.current;
         await wavStreamPlayer.interrupt();
-    }, []);
+    };
 
 
     /** Delete a conversation item */
-    const deleteConversationItem = useCallback(async (id: string) => {
+    const deleteConversationItem = async (id: string) => {
         const client = clientRef.current;
         client.deleteItem(id);
-    }, []);
+    };
 
 
     /**
@@ -191,7 +191,7 @@ export default function WorkFlow(props: WorkFlowProps) {
         setCanPushToTalk(value === 'none');
     };
 
-    
+
     const playTTS = async (text: string, speed: number) => {
         try {
             console.log('[TTS play]')
@@ -341,11 +341,9 @@ export default function WorkFlow(props: WorkFlowProps) {
 
 
     // automatically execute the state function when user event changes
-    const gotoNextState = useCallback(async (statePrev: number, event: number, voiceInputTranscript: string, videoKnowledgeInput: string) => {
-        // update event and state in react states
+    const gotoNextState = async (statePrev: number, event: number, voiceInputTranscript: string, videoKnowledgeInput: string) => {
         if (event >= 0 && (event in stateMachine[statePrev])) {
             if (event === 5) {
-                // For event 5, replay previous response
                 await playTTS(props.stateFunctionExeRes, props.ttsSpeed);
             } else {
                 const realityImageBase64 = await props.captureRealityFrame();
@@ -356,43 +354,43 @@ export default function WorkFlow(props: WorkFlowProps) {
                     realityImageBase64,
                     voiceInputTranscript,
                     memoryKv,
-                    userStepMemory
+                    autoAgentResponse
                 ) as string;
                 props.setIsProcessing(false);
-                // Only play TTS if the new result is different
+                
                 if (stateFunctionExeRes !== props.stateFunctionExeRes) {
                     props.setStateFunctionExeRes(stateFunctionExeRes);
+                    
                     if (event != 20 && voiceInputTranscript.length > 0) {
-                        setMemoryKv((memoryKv) => {
-                            const newKv = { ...memoryKv };
-                            newKv['voice_input_' + voiceInputID.toString()] = voiceInputTranscript;
-                            return newKv;
-                        });
+                        setMemoryKv(prevKv => ({
+                            ...prevKv,
+                            [`voice_input_${interactionID}`]: voiceInputTranscript
+                        }));
                     }
-                    // add state function result to memory:
+
                     if (stateFunctionExeRes.length > 0 && !stateFunctionExeRes.startsWith("<")) {
-                        setMemoryKv((memoryKv) => {
-                            const newKv = { ...memoryKv };
-                            newKv['agent_response_' + voiceInputID.toString()] = stateFunctionExeRes;
-                            return newKv;
-                        });
+                        setMemoryKv(prevKv => ({
+                            ...prevKv,
+                            [`agent_response_${interactionID}`]: stateFunctionExeRes
+                        }));
                     }
-                    setVoiceInputID(voiceInputID + 1);
-                    // add user step memory to user step memory:
+                    
+                    setInteractionID(prev => prev + 1);
+
                     if (stateFunctionExeRes.length > 0 && stateFunctionExeRes.startsWith("<")) {
-                        setUserStepMemory((userStepMemory) => {
-                            const newKv = { ...userStepMemory };
-                            newKv[userStepMemoryID.toString()] = stateFunctionExeRes;
-                            return newKv;
-                        });
+                        setAutoAgentResponse(prev => ({
+                            ...prev,
+                            [autoAgentResponseID.toString()]: stateFunctionExeRes
+                        }));
+                        setAutoAgentResponseID(prev => prev + 1);
                     }
-                    setUserStepMemoryID(userStepMemoryID + 1);
+
                     await playTTS(stateFunctionExeRes, props.ttsSpeed);
                 }
             }
             return;
         }
-    }, [props.ttsSpeed, props.stateFunctionExeRes]);
+    };
 
 
     useEffect(() => {
@@ -412,23 +410,28 @@ export default function WorkFlow(props: WorkFlowProps) {
     // when in state 0 (System automatically compares video-reality alignment)
     // useEffect(() => {
     //     if (props.currentState === 0 && props.isProcessing === false) {
-    //         let isChecking = false;
     //         const automaticCheck = async () => {
-    //             if (isChecking) return; // Skip if previous check is running or if event isn't 20
     //             try {
-    //                 isChecking = true;
+    //                 console.log('[automatic check]');
+    //                 console.log(props.currentState);
     //                 await gotoNextState(0, 20, '', props.videoKnowledgeInput);
-    //             } finally {
-    //                 isChecking = false;
+    //                 // Only schedule next check after current one completes
+    //                 setTimeout(automaticCheck, 3000);
+    //             } catch (error) {
+    //                 console.error('Error in automatic check:', error);
+    //                 // raise an error
+    //                 throw new Error('System automatically detects misalignment');
     //             }
     //         };
+
     //         // Initial check
     //         automaticCheck();
-    //         // Set up timer for subsequent checks
-    //         const timeoutId = setInterval(automaticCheck, 500);
-    //         return () => clearInterval(timeoutId);
+
+    //         // Cleanup function
+    //         return () => { };
     //     }
-    // }, [props.currentState, props.isProcessing, gotoNextState, props.videoKnowledgeInput]);
+    // }, [props.currentState]);
+
 
     return (
         <Stack spacing={1}>
@@ -670,13 +673,25 @@ export default function WorkFlow(props: WorkFlowProps) {
                         </p>
                     )}
                     <div className="divider"></div>
-                    <div className='text-lg font-bold content-block kv'>Memory</div>
+                    <div className='text-lg font-bold content-block kv'>Interaction history</div>
                     <div className="content-block-body content-kv">
-                        {props.currentState !== -1 && (JSON.stringify(memoryKv, null, 2))}
+                        {" { "}
+                        {props.currentState !== -1 && Object.entries(memoryKv).map(([key, value]) => (
+                            <div key={key} style={{ marginLeft: '20px' }}>
+                                {key}: {String(value).substring(0, 40)}{String(value).length > 40 ? '...' : ''} ,
+                            </div>
+                        ))}
+                        {" } "}
                     </div>
-                    <div className='text-lg font-bold content-block kv'>User Step Memory</div>
+                    <div className='text-lg font-bold content-block kv'>Agent initiated response memory</div>
                     <div className="content-block-body content-kv">
-                        {props.currentState !== -1 && (JSON.stringify(userStepMemory, null, 2))}
+                        {" { "}
+                        {props.currentState !== -1 && Object.entries(autoAgentResponse).map(([key, value]) => (
+                            <div key={key} style={{ marginLeft: '20px' }}>
+                                {key}: {String(value).substring(0, 40)}{String(value).length > 40 ? '...' : ''} ,
+                            </div>
+                        ))}
+                        {" } "}
                     </div>
                 </>
             )}
