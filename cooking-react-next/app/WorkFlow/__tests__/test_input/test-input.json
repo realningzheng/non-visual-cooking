@@ -1,0 +1,14 @@
+{
+    "videoKnowledgeInput": "Some text data for testing",
+    "realityImageBase64": "base64stringOfImage",
+    "voiceInputTranscript": "User's voice input text",
+    "memoryKv": {
+      "key1": "value1",
+      "key2": "value2"
+    },
+    "userStepMemory": {
+      "step1": "completed",
+      "step2": "pending"
+    }
+  }
+  
