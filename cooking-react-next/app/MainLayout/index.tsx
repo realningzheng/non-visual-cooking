@@ -180,7 +180,7 @@ export default function MainLayout() {
                         className={`btn btn-xs ${debugMode ? 'btn-primary' : 'btn-outline'}`}
                         onClick={() => setDebugMode(!debugMode)}
                     >
-                        Debug mode
+                        Test mode
                     </button>
                 </div>
                 {debugMode ?

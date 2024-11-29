@@ -65,13 +65,13 @@ State Transitions:
 -----------------------------------------------------------------*/
 import {
 	comparingVideoRealityAlignment,
-	explainCurrentState,
-	explainCurrentStep,
+	explainCurrentFoodState,
+	respondWithStepRelatedQuestions,
 	respondWithHowToFix,
 	freeformResponse,
 	handlingUserDisagreements,
 	replayRelevantPartsFromVideos,
-	answerPreviousUserSteps,
+	retrievePreviousStepsOrInteractions,
 	callChatGPT
 } from './stateFunctions';
 
@@ -90,13 +90,13 @@ type StateMachine = {
 
 export const stateTranslator: StateMachineTranslator = {
 	0: "Comparing video-reality alignment",
-	1: "Agent: Explain the current state*",
-	2: "Agent: Explain the current step/action",
+	1: "Agent: Explain the current state of the food",
+	2: "Agent: Respond with step related questions",
 	3: "Agent: Respond with how to fix",
 	4: "Agent: Freeform response",
-	5: "Handling user disagreements",
+	5: "Agent: Handling user disagreements",
 	6: "Agent: Replay the relevant parts from videos",
-	7: "Agent: Answer user step related questions"
+	7: "Agent: Retrieve previous steps or interactions"
 }
 
 
@@ -105,11 +105,11 @@ export const eventTranslator: StateMachineTranslator = {
 	2: "User asks how to fix something",
 	3: "User disagrees",
 	4: "User agrees/satisfies",
-	5: "User asks for a repeat",
+	5: "User asks for repeating the previous instruction or agent response",
 	6: "User asks for replaying relevant parts from the video",
-	7: "User asks for other types of questions",
+	7: "User asks for general questions",
 	8: "User asks evaluation type of question or questions regarding the current visual scene",
-	9: "User asks about previous user steps",
+	9: "User seeks to retrieve previous steps or interactions",
 	10: "System automatically detects misalignment",
 	11: "System automatically detects a new action/step",
 	12: "System automatically detects missing previous steps",
@@ -122,13 +122,9 @@ export const eventDetailedExplanation: StateMachineTranslator = {
        - Questions about current, previous, or future steps in the cooking process
        - Examples:
          * "What's the next step I should do?"
-         * "How many steps are still left?"
-         * "What did I do just now?"
          * "What steps did I miss?"
          * "What step am I on right now?"
-         * "How many steps are left?"
-         * "What should I do next?"
-         * "Can you explain this step again?"
+         * "What should I do next?" 
          * "Was I supposed to preheat the oven?"`,
 
 	2: `User asks how to fix something
@@ -154,7 +150,7 @@ export const eventDetailedExplanation: StateMachineTranslator = {
          * "I understand now"
          * "That worked, thank you"`,
 
-	5: `User asks for a repeat
+	5: `User asks for repeating the previous instruction or agent response
        - Requests for information to be repeated
        - Examples:
          * "Can you say that again?"
@@ -165,17 +161,18 @@ export const eventDetailedExplanation: StateMachineTranslator = {
 	6: `User asks for replaying relevant parts from the video
        - Request for replaying only a specific part from the video
        - Examples:
-         * "Can you show me how they did xxxxxx?"
+         * "Can you show me how they did xxx?"
          * "I need to see the kneading part again"
-		 * "I need to hear xxxxx again"
+		 * "I need to hear xxx again"
          * "Show me the video for this step"
          * "What does it look like in the video?"
          * "Show me the part from the video that mentions xxxx"`,
 
-	7: `User asks for other types of questions
-       - General cooking queries based on the video knowledge
+	7: `User asks for general questions
+       - General cooking queries based on the video knowledge except for a specific steps or evaluation type questions
        - Examples:
-         * "What other ingredients do we need?"`,
+         * "What other ingredients do we need?"
+		 * "How many steps are still left?"`,
 
 	8: `User asks evaluation type of question or questions regarding the current visual scene
        - Seeking verification or validation
@@ -189,7 +186,7 @@ export const eventDetailedExplanation: StateMachineTranslator = {
          * "Is this what it's supposed to look like?"
          * "Does this look done?"`,
 
-	9: `User asks about previous user steps
+	9: `User seeks to retrieve previous steps or interactions
        - Asking for recall of previous steps or actions
        - Examples:
          * "What's my last step?"
@@ -319,18 +316,18 @@ export const stateFunctions: {
 		videoKnowledgeInput: string,
 		realityImageBase64: string,
 		voiceInputTranscript: string,
-		memoryKv: { [key: string]: any },
-		userStepMemory: { [key: string]: any }
+		interactionMemoryKv: { [key: string]: any },
+		autoAgentResponseMemoryKv: { [key: string]: any }
 	) => Promise<any>
 } = {
 	0: comparingVideoRealityAlignment,
-	1: explainCurrentState,
-	2: explainCurrentStep,
+	1: explainCurrentFoodState,
+	2: respondWithStepRelatedQuestions,
 	3: respondWithHowToFix,
 	4: freeformResponse,
 	5: handlingUserDisagreements,
 	6: replayRelevantPartsFromVideos,
-	7: answerPreviousUserSteps,
+	7: retrievePreviousStepsOrInteractions,
 };
 
 
@@ -340,13 +337,13 @@ export const executeStateFunction = async (
 	videoKnowledgeInput: string,
 	realityImageBase64: string,
 	voiceInputTranscript: string,
-	memoryKv: { [key: string]: any },
-	userStepMemory: { [key: string]: any }
+	interactionMemoryKv: { [key: string]: any },
+	autoAgentResponseMemoryKv: { [key: string]: any }
 ) => {
 	const stateFunction = stateFunctions[stateNumber];
 	if (stateFunction) {
 		console.log(`Executing function for state ${stateNumber}: ${stateTranslator[stateNumber]}`);
-		return await stateFunction(videoKnowledgeInput, realityImageBase64, voiceInputTranscript, memoryKv, userStepMemory);
+		return await stateFunction(videoKnowledgeInput, realityImageBase64, voiceInputTranscript, interactionMemoryKv, autoAgentResponseMemoryKv);
 	} else {
 		console.error(`No function found for event ${stateNumber}`);
 		return `No function found for event ${stateNumber}`;

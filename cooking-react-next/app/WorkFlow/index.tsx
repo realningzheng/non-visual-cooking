@@ -57,18 +57,20 @@ export default function WorkFlow(props: WorkFlowProps) {
 
     const [isConnected, setIsConnected] = useState(false);
     const [items, setItems] = useState<ItemType[]>([]);
-    const [memoryKv, setMemoryKv] = useState<{ [key: string]: any }>({});
-    const [autoAgentResponse, setAutoAgentResponse] = useState<{ [key: string]: any }>({});
+    const [interactionMemoryKv, setInteractionMemoryKv] = useState<{ [key: string]: any }>({});
+    const [autoAgentResponseMemoryKv, setAutoAgentResponseMemoryKv] = useState<{ [key: string]: any }>({});
     const [interactionID, setInteractionID] = useState<number>(0);
     const [autoAgentResponseID, setAutoAgentResponseID] = useState<number>(0);
     const [isRecording, setIsRecording] = useState(false);
     const [canPushToTalk, setCanPushToTalk] = useState(true);
     const [audioAgentDuty, setAudioAgentDuty] = useState<'chatbot' | 'detect'>('detect');
-    const possibleNextEvents: string[] = useMemo(() => {
+    const possibleNextUserEvents: string[] = useMemo(() => {
         if (props.currentState === -1) return [];
         try {
             return Object.keys(stateMachine[props.currentState] || {}).map(event => {
                 const eventNumber = Number(event);
+                // exclude those automatic system events, specifically, 10, 11, 12, 20
+                if (eventNumber >= 10 && eventNumber <= 20) return '';
                 const eventExplanation = eventDetailedExplanation[eventNumber];
                 return `${eventNumber}: ${eventExplanation}`;
             });
@@ -107,7 +109,7 @@ export default function WorkFlow(props: WorkFlowProps) {
         props.setCurrentState(-1);
         setIsConnected(false);
         setItems([]);
-        setMemoryKv({});
+        setInteractionMemoryKv({});
 
         const client = clientRef.current;
         client.disconnect();
@@ -160,7 +162,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                 {
                     type: `input_text`,
                     text: `Please decide the sentence I just said falls under which type of the following categories:\n\n
-                    ${possibleNextEvents.join("\n")}\n
+                    ${possibleNextUserEvents.join("\n")}\n
 
                     Please reply ONLY the index of the most appropriate category.`
                 }
@@ -204,7 +206,6 @@ export default function WorkFlow(props: WorkFlowProps) {
                 speed: speed,
             });
             const arrayBuffer = await mp3Response.arrayBuffer();
-            console.log(arrayBuffer);
             await wavStreamPlayer.connect();
             await wavStreamPlayer.add16BitPCM(arrayBuffer);
         } catch (error) {
@@ -223,18 +224,6 @@ export default function WorkFlow(props: WorkFlowProps) {
         client.updateSession({
             instructions: `System settings:
             Tool use: enabled.
-
-            Instructions:
-            - You are an artificial intelligence agent responsible for helping low-vision users cook in the kitchen.
-            - The user has provided a video knowledge in JSON format which contains multimodal information on how to correctly cook in the kitchen.
-            - Please help the user by answering their questions and guiding them through the cooking process based on the video knowledge.
-            - Please make sure to respond with a helpful voice via audio
-            - Use tools and functions you have available liberally, it is part of the training apparatus
-            - Go straight to your answer and make it very short and concise
-
-            Personality:
-            - Be upbeat and genuine
-            - Try speaking quickly as if excited
             `
         });
 
@@ -266,8 +255,8 @@ export default function WorkFlow(props: WorkFlowProps) {
                 },
             },
             async ({ key, value }: { [key: string]: any }) => {
-                setMemoryKv((memoryKv) => {
-                    const newKv = { ...memoryKv };
+                setInteractionMemoryKv((interactionMemoryKv) => {
+                    const newKv = { ...interactionMemoryKv };
                     newKv[key] = value;
                     return newKv;
                 });
@@ -355,8 +344,8 @@ export default function WorkFlow(props: WorkFlowProps) {
                     videoKnowledgeInput,
                     realityImageBase64,
                     voiceInputTranscript,
-                    memoryKv,
-                    autoAgentResponse
+                    interactionMemoryKv,
+                    autoAgentResponseMemoryKv
                 ) as string;
                 props.setIsProcessing(false);
 
@@ -364,7 +353,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                     props.setStateFunctionExeRes(stateFunctionExeRes);
                     // store user input and agent response
                     if (voiceInputTranscript.length > 0) {
-                        setMemoryKv(prevKv => ({
+                        setInteractionMemoryKv(prevKv => ({
                             ...prevKv,
                             [`voice_input_${interactionID}`]: voiceInputTranscript,
                             [`agent_response_${interactionID}`]: stateFunctionExeRes
@@ -374,7 +363,7 @@ export default function WorkFlow(props: WorkFlowProps) {
 
                     // store auto agent response
                     if (stateFunctionExeRes.length > 0 && stateFunctionExeRes.startsWith("<")) {
-                        setAutoAgentResponse(prev => ({
+                        setAutoAgentResponseMemoryKv(prev => ({
                             ...prev,
                             [autoAgentResponseID.toString()]: stateFunctionExeRes
                         }));
@@ -673,7 +662,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                     <div className='text-lg font-bold content-block kv'>Interaction history</div>
                     <div className="content-block-body content-kv">
                         {" { "}
-                        {props.currentState !== -1 && Object.entries(memoryKv).map(([key, value]) => (
+                        {props.currentState !== -1 && Object.entries(interactionMemoryKv).map(([key, value]) => (
                             <div key={key} style={{ marginLeft: '20px' }}>
                                 {key}: {String(value).substring(0, 40)}{String(value).length > 40 ? '...' : ''} ,
                             </div>
@@ -683,7 +672,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                     <div className='text-lg font-bold content-block kv'>Agent initiated response memory</div>
                     <div className="content-block-body content-kv">
                         {" { "}
-                        {props.currentState !== -1 && Object.entries(autoAgentResponse).map(([key, value]) => (
+                        {props.currentState !== -1 && Object.entries(autoAgentResponseMemoryKv).map(([key, value]) => (
                             <div key={key} style={{ marginLeft: '20px' }}>
                                 {key}: {String(value).substring(0, 40)}{String(value).length > 40 ? '...' : ''} ,
                             </div>
