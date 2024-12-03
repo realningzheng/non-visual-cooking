@@ -215,23 +215,40 @@ def get_object_list(startTime, endTime):
 
 
 # @TODO: determine the sound type
-def determine_sound_type(startTime, endTime, original_audio_path):
+def get_environment_sound_description(startTime, endTime, original_audio_path):
+    transcript_start_seconds = float(startTime) / 1000
+    transcript_end_seconds = float(endTime) / 1000
+    # if length is less than 10 seconds, increase the start and end time to 10 seconds in total
+    # Make clip exactly 10 seconds by extending equally on both sides
+    if transcript_end_seconds - transcript_start_seconds < 10:
+        time_to_add = (10 - (transcript_end_seconds - transcript_start_seconds)) / 2
+        audio_clip_start_seconds = transcript_start_seconds - time_to_add
+        audio_clip_end_seconds = transcript_end_seconds + time_to_add
+    else:
+        audio_clip_start_seconds = transcript_start_seconds
+        audio_clip_end_seconds = transcript_end_seconds
     audio_clip_path = os.path.join(
-        audio_output_dir, f"{VIDEO_ID}_clip_{startTime}_{endTime}.wav"
+        audio_output_dir,
+        f"{VIDEO_ID}_clip_{transcript_start_seconds}_{transcript_end_seconds}.wav",
     )
-    start_seconds = int(startTime) / 1000
-    end_seconds = int(endTime) / 1000
     os.system(
-        f"ffmpeg -i {original_audio_path} -ss {start_seconds:.3f} -to {end_seconds:.3f} -c copy {audio_clip_path} -loglevel quiet"
+        f"ffmpeg -i {original_audio_path} -ss {max(0, audio_clip_start_seconds):.3f} -to {audio_clip_end_seconds:.3f} -c copy {audio_clip_path} -loglevel quiet"
     )
 
-    # audio_file_description, audio_description = gamaClient.predict(
-    #     audio_path=handle_file(audio_clip_path),
-    #     question="Describe the audio.",
-    #     api_name="/predict",
-    # )
-    # return audio_description
-    return "PALCE_HOLDER_SOUND_TYPE"
+    _, audio_description = gamaClient.predict(
+        audio_path=handle_file(audio_clip_path),
+        question="Describe the audio precisely.\
+            You should focus on the non-speech part of the audio. \
+            Go straight to the description without any introductory words such as: \
+            'Audio caption:...', 'Audio description:...', etc.",
+        api_name="/predict",
+    )
+    # save audio_description to a txt file
+    with open(os.path.join(audio_output_dir, "audio_description.txt"), "a") as f:
+        f.write(
+            f"Time {transcript_start_seconds:.1f}-{transcript_end_seconds:.1f}s: {audio_description}\n"
+        )
+    return audio_description
 
 
 #####################################
@@ -298,8 +315,10 @@ if __name__ == "__main__":
                 startTime, endTime
             )
         if "environment_sound_description" in REQUIRED_KEY:
-            _info_piece["environment_sound_description"] = determine_sound_type(
-                startTime, endTime, original_audio_path
+            _info_piece["environment_sound_description"] = (
+                get_environment_sound_description(
+                    startTime, endTime, original_audio_path
+                )
             )
         if "object_list" in REQUIRED_KEY:
             _info_piece["object_list"] = get_object_list(startTime, endTime)
