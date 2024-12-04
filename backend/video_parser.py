@@ -90,7 +90,11 @@ with open(
 ) as f:
     secret = json.load(f)
     OPENAI_API_KEY = secret["OPENAI_KEY"]
-gamaClient = Client("sonalkum/GAMA")
+    HF_TOKEN = secret["HF_TOKEN"]
+
+# gamaClient = Client("sonalkum/GAMA")
+gamaClient = Client("sonalkum/GAMA-IT")
+# gamaClient = Client.duplicate("sonalkum/GAMA", hardware='a10g-small', hf_token=HF_TOKEN)
 print("Done.")
 
 
@@ -244,10 +248,10 @@ def get_environment_sound_description(startTime, endTime, original_audio_path):
         api_name="/predict",
     )
     # save audio_description to a txt file
-    with open(os.path.join(audio_output_dir, "audio_description.txt"), "a") as f:
-        f.write(
-            f"Time {transcript_start_seconds:.1f}-{transcript_end_seconds:.1f}s: {audio_description}\n"
-        )
+    # with open(os.path.join(audio_output_dir, "audio_description.txt"), "a") as f:
+    #     f.write(
+    #         f"Time {transcript_start_seconds:.1f}-{transcript_end_seconds:.1f}s: {audio_description}\n"
+    #     )
     return audio_description
 
 
@@ -259,14 +263,14 @@ if __name__ == "__main__":
         "index",
         "segment",
         "video_transcript",
-        "procedure_description",
+        # "procedure_description",
         # "action_type",
         # "action_description",
         # "object_list",
         # "visual_scene_base64",
         # "visual_scene_path",
-        "video_clip_description",
-        # "environment_sound_description",
+        # "video_clip_description",
+        "environment_sound_description",
     ]
     print("\n--> Getting audio track...")
     # extract audio track from the video
@@ -281,7 +285,7 @@ if __name__ == "__main__":
     last_end_time = 0
 
     # sample a few sentences for testing
-    # transcript_sentence = transcript_sentence[0:5]
+    transcript_sentence = transcript_sentence[119:]
     total_sentences = len(transcript_sentence)
     for sentenceInfo in tqdm(
         transcript_sentence,
