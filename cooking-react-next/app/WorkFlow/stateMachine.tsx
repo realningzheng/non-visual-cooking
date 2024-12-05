@@ -72,8 +72,12 @@ import {
 	handlingUserDisagreements,
 	replayRelevantPartsFromVideos,
 	retrievePreviousStepsOrInteractions,
-	callChatGPT
 } from './stateFunctions';
+import { callChatGPT } from './utils';
+import {
+	systemPromptEventDetection,
+	systemPromptStateFunctions
+} from '../prompt';
 
 // define states and transitions
 type StateMachineTranslator = {
@@ -161,12 +165,11 @@ export const eventDetailedExplanation: StateMachineTranslator = {
 	6: `User asks for replaying relevant parts from the video
        - Request for replaying only a specific part from the video
        - Examples:
-         * "Can you show me how they did xxx?"
+         * "Replay xxx from the video"
+         * "Can you show me how they did xxx from the video?"
          * "I need to see the kneading part again"
 		 * "I need to hear xxx again"
-         * "Show me the video for this step"
-         * "What does it look like in the video?"
-         * "Show me the part from the video that mentions xxxx"`,
+         * "Replay the video for this step"`,
 
 	7: `User asks for general questions
        - General cooking queries based on the video knowledge except for a specific steps or evaluation type questions
@@ -289,27 +292,6 @@ export const stateMachine: StateMachine = {
 	},
 };
 
-const basePrompt = `
-	System settings:
-	Tool use: enabled.
-
-	Instructions:
-	- You are an artificial intelligence agent responsible for helping low-vision users cook in the kitchen.
-	- The user has provided a video knowledge in JSON format which contains multimodal information on how to correctly cook in the kitchen.
-	- Please help the user by answering their questions and guiding them through the cooking process based on the video knowledge.
-	- Video knowledge is provided in JSON format, after the tag <VIDEO KNOWLEDGE>.
-	- User's request is provided after the tag <USER REQUEST>.
-	- Please make sure to respond with a helpful voice via audio
-	- Be kind, helpful, and courteous
-	- It is okay to ask the user questions
-	- Use tools and functions you have available liberally, it is part of the training apparatus
-	- Be open to exploration and conversation
-
-	Personality:
-	- Be upbeat and genuine
-	- Try speaking quickly as if excited
-`
-
 
 export const stateFunctions: {
 	[key: number]: (
@@ -354,7 +336,6 @@ export const executeStateFunction = async (
 // This function is used by possible next event bottons
 export const asyncNextEventChooser = async (
 	voiceInput: string,
-	videoKnowledgeInput: string,
 	currentState: number
 ): Promise<number> => {
 	// 1. Get all possible next events based on currentState and state machine
@@ -362,21 +343,23 @@ export const asyncNextEventChooser = async (
 
 	const possibleNextEvents: string[] = Object.keys(possibleNextEventsObj).map(event => {
 		const eventNumber = Number(event); // Convert event key to number
+		if (eventNumber >= 10 && eventNumber <= 20) return '';
 		const eventExplanation = eventDetailedExplanation[eventNumber]; // Get explanation from eventTranslator
 		return `${eventNumber}: ${eventExplanation}`;
 	});
 	// 2. (openai_api) Select the category of the next event based on user inputs (stream and voice)
-	const prompt = `Here is the information from the video in the format of json:
-					${videoKnowledgeInput}\n
-					User request is: "${voiceInput}", 
-					which of the following categories is most appropriate:\n 
-					${possibleNextEvents.join("\n")}\n
-					Please reply ONLY the index of the most appropriate category`;
-	const response = await callChatGPT(prompt);
-	// @TODO: should either use functionCall or whatever to make sure the response is returned from a list of indices
+	const prompt = `<USER REQUEST>: 
+					${voiceInput}
+					<CATEGORY>:
+					${possibleNextEvents.join("\n")}
+					Please decide which category my request belongs to.
+					Please reply ONLY the index of the most appropriate category
+					`;
+	const response = await callChatGPT(systemPromptEventDetection, prompt);
 	if (response) {
-		const nextState = Number(response.response);
-		return nextState;
+		const eventNumber = Number(response.response[0]);
+		return eventNumber;
 	}
+
 	return -1;
 }

@@ -23,7 +23,7 @@ export default function SegVideoPlayerComp(props: SegmentedVideoPlayerAndListDis
     return (
         <div className={`${props.verticalCaptions ? 'h-[50vh] flex flex-col gap-2' : 'h-[20vh] flex flex-row gap-2'}`}>
             <div className={props.verticalCaptions ? 'w-[60%] mx-auto' : 'h-full w-[58%] mx-auto'}>
-                {props.videoSegments.length > 0 && props.currentState === 6 ?
+                {props.videoSegments.length > 0 ?
                     <VideoSegmentPlayer
                         sourceUrl={props.sourceUrl}
                         segments={props.videoSegments.map(
@@ -55,7 +55,7 @@ export default function SegVideoPlayerComp(props: SegmentedVideoPlayerAndListDis
                 }
             </div>
             <div className={props.verticalCaptions ? 'w-full' : 'h-full w-[42%]'}>
-                {props.videoSegments.length > 0 && props.currentState === 6 ?
+                {props.videoSegments.length > 0 ?
                     <VideoSegmentList
                         videoSegments={props.videoSegments}
                         currentSentenceIndex={props.currentSentenceIndex}

@@ -64,32 +64,30 @@ export default function MainLayout() {
 
 
     useEffect(() => {
-        if (currentState === 6) {
-            try {
-                let parsedRes = JSON.parse(stateFunctionExeRes);
-                setVideoSegments(parsedRes.map((item: number) => {
+        try {
+            let parsedRes = JSON.parse(stateFunctionExeRes);
+            let videoSegments = parsedRes.video_segment_index
+                .sort((a: number, b: number) => a - b)
+                .map((item: number) => {
                     let clip = JSON.parse(videoKnowledgeInput).find((s: any) => s.index === item);
                     let text = clip.video_transcript;
                     let startTime = clip.segment[0];
                     let endTime = clip.segment[1];
-                    return {
-                        sentenceIndex: item,
-                        text: text,
-                        startTime: startTime,
-                        endTime: endTime
-                    };
-                }));
-                setPlaySeconds(0);  
-            } catch (error) {
-                setVideoSegments([]);
-                setPlaySeconds(0);
-            }
+                    return { sentenceIndex: item, text: text, startTime: startTime, endTime: endTime };
+                });
+            console.log('[set video segments]');
+            console.log(videoSegments);
+            setVideoSegments(videoSegments);
+            setPlaySeconds(0);
+        } catch (error) {
+            setVideoSegments([]);
+            setPlaySeconds(0);
         }
     }, [stateFunctionExeRes, currentState]);
 
 
     useEffect(() => {
-        if (currentState === 6 && videoSegments.length > 0) {
+        if (videoSegments.length > 0) {
             const currentSentence = videoSegments.find((item: TransriptSentenceItemProps) => {
                 return item &&
                     playSeconds >= Number(item.startTime) / 1000 &&

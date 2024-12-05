@@ -338,7 +338,12 @@ export default function WorkFlow(props: WorkFlowProps) {
     const gotoNextState = async (statePrev: number, event: number, voiceInputTranscript: string, videoKnowledgeInput: string) => {
         if (event >= 0 && (event in stateMachine[statePrev])) {
             if (event === 5) {
-                await playTTS(props.stateFunctionExeRes, props.ttsSpeed);
+                try {
+                    const parsed = JSON.parse(props.stateFunctionExeRes);
+                    await playTTS(parsed.response, props.ttsSpeed);
+                } catch {
+                    // do nothing
+                }
             } else {
                 const realityImageBase64 = await props.captureRealityFrame();
                 props.setIsProcessing(true);
@@ -349,31 +354,40 @@ export default function WorkFlow(props: WorkFlowProps) {
                     voiceInputTranscript,
                     interactionMemoryKv,
                     autoAgentResponseMemoryKv
-                ) as string;
+                );
                 props.setIsProcessing(false);
 
-                if (stateFunctionExeRes !== props.stateFunctionExeRes) {
-                    props.setStateFunctionExeRes(stateFunctionExeRes);
+                // Convert object response to string if necessary
+                const formattedResponse = typeof stateFunctionExeRes === 'object' 
+                    ? JSON.stringify(stateFunctionExeRes, null, 2)
+                    : String(stateFunctionExeRes);
+
+                if (formattedResponse !== props.stateFunctionExeRes) {
+                    props.setStateFunctionExeRes(formattedResponse);
                     // store user input and agent response
                     if (voiceInputTranscript.length > 0) {
                         setInteractionMemoryKv(prevKv => ({
                             ...prevKv,
                             [`voice_input_${interactionID}`]: voiceInputTranscript,
-                            [`agent_response_${interactionID}`]: stateFunctionExeRes
+                            [`agent_response_${interactionID}`]: formattedResponse
                         }));
                         setInteractionID(prev => prev + 1);
                     }
 
                     // store auto agent response
-                    if (stateFunctionExeRes.length > 0 && stateFunctionExeRes.startsWith("<")) {
+                    if (formattedResponse.length > 0 && formattedResponse.startsWith("<")) {
                         setAutoAgentResponseMemoryKv(prev => ({
                             ...prev,
-                            [autoAgentResponseID.toString()]: stateFunctionExeRes
+                            [autoAgentResponseID.toString()]: formattedResponse
                         }));
                         setAutoAgentResponseID(prev => prev + 1);
                     }
-
-                    await playTTS(stateFunctionExeRes, props.ttsSpeed);
+                    try {
+                        const parsed = JSON.parse(formattedResponse);
+                        await playTTS(parsed.response, props.ttsSpeed);
+                    } catch {
+                        // do nothing
+                    }
                 }
             }
             return;
@@ -535,134 +549,138 @@ export default function WorkFlow(props: WorkFlowProps) {
                     </label>
                     {selectedFileName || ''}
                 </p>
-                <p className={props.isProcessing ? 'text-gray-400' : ''}><span className='text-lg font-bold'>Current state:</span> {props.isProcessing && <span className="loading loading-dots loading-xs"></span>} {props.currentState} : {stateTranslator[Number(props.currentState)]}</p>
                 <p><span className='text-lg font-bold'>Current event:</span> {props.stateMachineEvent} : {eventTranslator[props.stateMachineEvent]}</p>
+                <p className={props.isProcessing ? 'text-gray-400' : ''}><span className='text-lg font-bold'>Current state:</span> {props.isProcessing && <span className="loading loading-dots loading-xs"></span>} {props.currentState} : {stateTranslator[Number(props.currentState)]}</p>
             </div>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: '20px', pt: '15px', gap: '10px' }}>
-                {isConnected && canPushToTalk && (
-                    <button
-                        className={`btn btn-m ${isRecording ? 'btn-error' : 'btn-active'} 
+            {/* display the things below only when selected file name is not empty */}
+            {selectedFileName && (
+                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: '20px', pt: '15px', gap: '10px' }}>
+                    {isConnected && canPushToTalk && (
+                        <button
+                            className={`btn btn-m ${isRecording ? 'btn-error' : 'btn-active'} 
                                 ${(!isConnected || !canPushToTalk) ? 'btn-disabled' : ''}`}
-                        onMouseDown={startRecording}
-                        onMouseUp={stopRecording}
-                        disabled={!isConnected || !canPushToTalk}
+                            onMouseDown={startRecording}
+                            onMouseUp={stopRecording}
+                            disabled={!isConnected || !canPushToTalk}
+                        >
+                            {isRecording ? 'release to send' : 'push to talk'}
+                        </button>
+                    )}
+                    <input
+                        type="text"
+                        placeholder="Latest user command"
+                        className="input input-bordered w-full"
+                        onChange={(e) => props.setVoiceInputTranscript(e.target.value)}
+                        value={props.voiceInputTranscript}
+                    />
+                    <IconButton
+                        color="inherit"
+                        onClick={async () => {
+                            let event = await asyncNextEventChooser(props.voiceInputTranscript, props.currentState);
+                            if (event >= 0 && (event in stateMachine[props.currentState])) {
+                                props.setStateMachineEvent(event);
+                                props.setStateTransitionToggle(!props.stateTransitionToggle);
+                            }
+                        }}
+                        sx={{ marginRight: 1 }}
                     >
-                        {isRecording ? 'release to send' : 'push to talk'}
-                    </button>
-                )}
-                <input
-                    type="text"
-                    placeholder="Latest user command"
-                    className="input input-bordered w-full"
-                    onChange={(e) => props.setVoiceInputTranscript(e.target.value)}
-                    value={props.voiceInputTranscript}
-                />
-                <IconButton
-                    color="inherit"
-                    onClick={async () => {
-                        let event = await asyncNextEventChooser(props.voiceInputTranscript, props.videoKnowledgeInput, props.currentState);
-                        if (event >= 0 && (event in stateMachine[props.currentState])) {
-                            props.setStateMachineEvent(event);
-                            props.setStateTransitionToggle(!props.stateTransitionToggle);
-                        }
+                        <SendIcon />
+                    </IconButton>
+                </Box>
+            )}
+
+            {selectedFileName && (
+                <div
+                    className="content-block-body"
+                    data-conversation-content
+                    ref={conversationRef}
+                    style={{
+                        maxHeight: `${audioAgentDuty === 'chatbot' ? '50vh' : '200px'}`,
+                        overflowY: 'auto',
+                        border: '1px solid #ccc',
+                        borderRadius: '5px',
+                        padding: '10px',
+                        marginBottom: '20px'
                     }}
-                    sx={{ marginRight: 1 }}
                 >
-                    <SendIcon />
-                </IconButton>
-            </Box>
-
-            <div
-                className="content-block-body"
-                data-conversation-content
-                ref={conversationRef}
-                style={{
-                    maxHeight: `${audioAgentDuty === 'chatbot' ? '50vh' : '200px'}`,
-                    overflowY: 'auto',
-                    border: '1px solid #ccc',
-                    borderRadius: '5px',
-                    padding: '10px',
-                    marginBottom: '20px'
-                }}
-            >
-                {!items.length && !isConnected && `awaiting connection...`}
-                {items.map((conversationItem, i) => {
-                    return (
-                        <div className="conversation-item" key={conversationItem.id}>
-                            <div className={`speaker-content`}>
-                                {/* tool response */}
-                                {conversationItem.type === 'function_call_output' && (
-                                    <div>{conversationItem.formatted.output}</div>
-                                )}
-                                {/* tool call */}
-                                {!!conversationItem.formatted.tool && (
-                                    <div>
-                                        {conversationItem.formatted.tool.name}(
-                                        {conversationItem.formatted.tool.arguments})
-                                    </div>
-                                )}
-
-                                {/* Transcript from the user */}
-                                {!conversationItem.formatted.tool &&
-                                    conversationItem.role === 'user' && (
+                    {!items.length && !isConnected && `awaiting connection...`}
+                    {items.map((conversationItem, i) => {
+                        return (
+                            <div className="conversation-item" key={conversationItem.id}>
+                                <div className={`speaker-content`}>
+                                    {/* tool response */}
+                                    {conversationItem.type === 'function_call_output' && (
+                                        <div>{conversationItem.formatted.output}</div>
+                                    )}
+                                    {/* tool call */}
+                                    {!!conversationItem.formatted.tool && (
                                         <div>
-                                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-                                                <FaUser /> <h5 style={{ marginLeft: '10px' }}>
-                                                    {conversationItem.formatted.transcript ||
-                                                        (conversationItem.formatted.audio?.length
-                                                            ? '(awaiting transcript)'
-                                                            : conversationItem.formatted.text ||
-                                                            '(item sent)')
-                                                    }
-                                                </h5>
-                                                <div style={{ flexGrow: 1 }} />
-                                                <div
-                                                    className="close"
-                                                    style={{ cursor: 'pointer' }}
-                                                    onClick={() =>
-                                                        deleteConversationItem(conversationItem.id)
-                                                    }
-                                                >
-                                                    < XCircle />
+                                            {conversationItem.formatted.tool.name}(
+                                            {conversationItem.formatted.tool.arguments})
+                                        </div>
+                                    )}
+
+                                    {/* Transcript from the user */}
+                                    {!conversationItem.formatted.tool &&
+                                        conversationItem.role === 'user' && (
+                                            <div>
+                                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                                                    <FaUser /> <h5 style={{ marginLeft: '10px' }}>
+                                                        {conversationItem.formatted.transcript ||
+                                                            (conversationItem.formatted.audio?.length
+                                                                ? '(awaiting transcript)'
+                                                                : conversationItem.formatted.text ||
+                                                                '(item sent)')
+                                                        }
+                                                    </h5>
+                                                    <div style={{ flexGrow: 1 }} />
+                                                    <div
+                                                        className="close"
+                                                        style={{ cursor: 'pointer' }}
+                                                        onClick={() =>
+                                                            deleteConversationItem(conversationItem.id)
+                                                        }
+                                                    >
+                                                        < XCircle />
+                                                    </div>
+                                                </div>
+
+                                            </div>
+                                        )
+                                    }
+                                    {!conversationItem.formatted.tool && audioAgentDuty === 'chatbot' &&
+                                        conversationItem.role === 'assistant' && (
+                                            <div>
+                                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                                                    <RiRobot2Fill /> <h5 style={{ marginLeft: '10px' }}>
+                                                        {conversationItem.formatted.transcript ||
+                                                            conversationItem.formatted.text ||
+                                                            '(truncated)'
+                                                        }
+                                                    </h5>
+                                                    {/* div flexgrow */}
+                                                    <div style={{ flexGrow: 1 }} />
+                                                    <div
+                                                        className="close"
+                                                        style={{ cursor: 'pointer' }}
+                                                        onClick={() =>
+                                                            deleteConversationItem(conversationItem.id)
+                                                        }
+                                                    >
+                                                        < XCircle />
+                                                    </div>
                                                 </div>
                                             </div>
-
-                                        </div>
-                                    )
-                                }
-                                {!conversationItem.formatted.tool && audioAgentDuty === 'chatbot' &&
-                                    conversationItem.role === 'assistant' && (
-                                        <div>
-                                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-                                                <RiRobot2Fill /> <h5 style={{ marginLeft: '10px' }}>
-                                                    {conversationItem.formatted.transcript ||
-                                                        conversationItem.formatted.text ||
-                                                        '(truncated)'
-                                                    }
-                                                </h5>
-                                                {/* div flexgrow */}
-                                                <div style={{ flexGrow: 1 }} />
-                                                <div
-                                                    className="close"
-                                                    style={{ cursor: 'pointer' }}
-                                                    onClick={() =>
-                                                        deleteConversationItem(conversationItem.id)
-                                                    }
-                                                >
-                                                    < XCircle />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )
-                                }
+                                        )
+                                    }
+                                </div>
                             </div>
-                        </div>
-                    );
-                })}
-            </div>
+                        );
+                    })}
+                </div>
+            )}
 
-            {audioAgentDuty === 'detect' && (
+            {selectedFileName && audioAgentDuty === 'detect' && (
                 <>
                     <div className='text-lg font-bold'>Possible next events</div>
                     {props.currentState !== -1 && (
@@ -691,7 +709,16 @@ export default function WorkFlow(props: WorkFlowProps) {
                     </div>
                     {props.currentState !== -1 && (
                         <p style={{ whiteSpace: 'pre-line' }}>
-                            {props.stateFunctionExeRes}
+                            {(() => {
+                                try {
+                                    const parsed = typeof props.stateFunctionExeRes === 'string' 
+                                        ? JSON.parse(props.stateFunctionExeRes)
+                                        : props.stateFunctionExeRes;
+                                    return parsed.response || props.stateFunctionExeRes;
+                                } catch {
+                                    return props.stateFunctionExeRes;
+                                }
+                            })()}
                         </p>
                     )}
                     <div className="divider"></div>
