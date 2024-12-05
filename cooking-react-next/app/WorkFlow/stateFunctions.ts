@@ -3,18 +3,19 @@ import axios from "axios";
 import credential from '../../secret.json';
 // hardcoded segmented sentence list
 import transcriptSentenceList from '../data/rwYaDqXFH88_sentence.json';
+import { systemPrompt } from '../prompt';
 
 const apiKey = credential.OPENAI_KEY;
 const openai = new OpenAI({ apiKey: apiKey, dangerouslyAllowBrowser: true });
 
 
-export const basePrompt = `
-	- You are an AI agent responsible for helping low-vision users cook in the kitchen.
-	- Please help the user by answering their questions and guiding them through the cooking process based on the video knowledge.
-	- 'User\'s request is provided after the tag <USER REQUEST>.'
-	- Be kind and helpful.
-	- You answer should be as precise as possible, as blind people need to grasp the KEY information as quickly as possible.
-`
+// export const basePrompt = `
+// 	- You are an AI agent responsible for helping low-vision users cook in the kitchen.
+// 	- Please help the user by answering their questions and guiding them through the cooking process based on the video knowledge.
+// 	- 'User\'s request is provided after the tag <USER REQUEST>.'
+// 	- Be kind and helpful.
+// 	- You answer should be as precise as possible, as blind people need to grasp the KEY information as quickly as possible.
+// `
 
 // State functions
 export const comparingVideoRealityAlignment = async (	// state 0
@@ -65,9 +66,6 @@ export const explainCurrentFoodState = async (				// state 1
 	const useVideoAndMemoryCtx = false;
 
 	const prompt = `
-		${basePrompt}
-		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? 'The user has provided knowledge about the right cooking process in JSON format. The knowledge comes from a tutorial video. The JSON contains multimodal information (e.g. description to visuals, sound, actions, etc.) on how to correctly cook in the kitchen.' : ''}
-		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? 'Video knowledge is provided after the tag <VIDEO KNOWLEDGE>.' : ''}
 		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? '<VIDEO KNOWLEDGE>:' : ''}
 		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? videoKnowledgeInput : ''}
 		${useInteractionMemoryFlag && useVideoAndMemoryCtx ? 'Interaction memory is the previous user-agent interaction memory, it is useful for some of the requests given by the user but not all of them. Use it as needed.' : ''}
@@ -86,7 +84,7 @@ export const explainCurrentFoodState = async (				// state 1
 	`;
 	console.log(`[state 1: explain current state prompt]: ${prompt}`);
 	const response = await callChatGPT(prompt, [realityImageBase64]);
-	return response.gptResponse;
+	return response.response;
 };
 
 
@@ -97,35 +95,37 @@ export const respondWithStepRelatedQuestions = async (		// state 2
 	interactionMemoryKv: { [key: string]: any },
 	autoAgentResponseMemoryKv: { [key: string]: any }
 ) => {
-	const useVideoKnowledgeFlag = false;
+	const useVideoKnowledgeFlag = true;
 	const useInteractionMemoryFlag = false;
 	const useAutoAgentResponseMemoryFlag = false;
-	const useVideoAndMemoryCtx = false;
 
 	const prompt = `
-		${basePrompt}
-		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? 'The user has provided knowledge about the right cooking process in JSON format. The knowledge comes from a tutorial video. The JSON contains multimodal information (e.g. description to visuals, sound, actions, etc.) on how to correctly cook in the kitchen.' : ''}
-		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? 'Video knowledge is provided after the tag <VIDEO KNOWLEDGE>.' : ''}
-		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? '<VIDEO KNOWLEDGE>:' : ''}
-		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? videoKnowledgeInput : ''}
-		${useInteractionMemoryFlag && useVideoAndMemoryCtx ? 'Interaction memory is the previous user-agent interaction memory, it is useful for some of the requests given by the user but not all of them. Use it as needed.' : ''}
-		${useInteractionMemoryFlag && useVideoAndMemoryCtx ? 'User\'s memory is provided after the tag <INTERACTION MEMORY>.' : ''}
-		${useInteractionMemoryFlag && useVideoAndMemoryCtx ? '<INTERACTION MEMORY>:' : ''}
-		${useInteractionMemoryFlag && useVideoAndMemoryCtx ? interactionMemoryKv : ''}
-		${useAutoAgentResponseMemoryFlag && useVideoAndMemoryCtx ? 'Auto Agent response memory is the store of previous automatic agent response.' : ''}
-		${useAutoAgentResponseMemoryFlag && useVideoAndMemoryCtx ? 'Auto Agent response memory is provided after the tag <AUTO AGENT RESPONSE MEMORY>.' : ''}
-		${useAutoAgentResponseMemoryFlag && useVideoAndMemoryCtx ? '<AUTO AGENT RESPONSE MEMORY>:' : ''}
-		${useAutoAgentResponseMemoryFlag && useVideoAndMemoryCtx ? autoAgentResponseMemoryKv : ''}
+		${useVideoKnowledgeFlag ? '<VIDEO KNOWLEDGE>:' : ''}
+		${useVideoKnowledgeFlag ? videoKnowledgeInput : ''}
+		${useInteractionMemoryFlag ? 'Interaction memory is the previous user-agent interaction memory, it is useful for some of the requests given by the user but not all of them. Use it as needed.' : ''}
+		${useInteractionMemoryFlag ? 'User\'s memory is provided after the tag <INTERACTION MEMORY>.' : ''}
+		${useInteractionMemoryFlag ? '<INTERACTION MEMORY>:' : ''}
+		${useInteractionMemoryFlag ? interactionMemoryKv : ''}
+		${useAutoAgentResponseMemoryFlag ? 'Auto Agent response memory is the store of previous automatic agent response.' : ''}
+		${useAutoAgentResponseMemoryFlag ? 'Auto Agent response memory is provided after the tag <AUTO AGENT RESPONSE MEMORY>.' : ''}
+		${useAutoAgentResponseMemoryFlag ? '<AUTO AGENT RESPONSE MEMORY>:' : ''}
+		${useAutoAgentResponseMemoryFlag ? autoAgentResponseMemoryKv : ''}
 		<USER REQUEST>
 		${voiceInputTranscript}
-		Please describe the corresponding step in the following aspects:
+		To help me answer this question, you first revisit the video knowledge and find out which segments are relevant to this question.
+		Picking up segments evenly from the beginning, middle and end of the video knowledge.
+		Remember and return the indices of all relevant segments.
+		Only return the <Index> of the segments.
+		Then, please use natural languaguage to respond to my question regarding the step in the following aspects:
 		1. The name to step (e.g. "Cutting the onion")
 		2. An expected duration of the step in seconds or minutes from the video knowledge
 		3. How the step will influence the outcome of the dish.
+		However, do not explicitly say 'step name ...; expected duration...; influence on the outcome...',
 	`;
-	console.log(`[state 2: explain current step prompt]: ${prompt}`);
+	console.log(`[state 2: step related questions prompt]: ${prompt}`);
 	const response = await callChatGPT(prompt, [realityImageBase64]);
-	return response.gptResponse;
+	console.log(response);
+	return response.response;
 };
 
 
@@ -142,9 +142,6 @@ export const respondWithHowToFix = async (				// state 3
 	const useVideoAndMemoryCtx = false;
 
 	const prompt = `
-		${basePrompt}
-		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? 'The user has provided knowledge about the right cooking process in JSON format. The knowledge comes from a tutorial video. The JSON contains multimodal information (e.g. description to visuals, sound, actions, etc.) on how to correctly cook in the kitchen.' : ''}
-		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? 'Video knowledge is provided after the tag <VIDEO KNOWLEDGE>.' : ''}
 		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? '<VIDEO KNOWLEDGE>:' : ''}
 		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? videoKnowledgeInput : ''}
 		${useInteractionMemoryFlag && useVideoAndMemoryCtx ? 'Interaction memory is the previous user-agent interaction memory, it is useful for some of the requests given by the user but not all of them. Use it as needed.' : ''}
@@ -164,7 +161,7 @@ export const respondWithHowToFix = async (				// state 3
 	`;
 	console.log(`[state 3: respond with how to fix prompt]: ${prompt}`);
 	const response = await callChatGPT(prompt);
-	return response.gptResponse;
+	return response.response;
 };
 
 
@@ -181,9 +178,6 @@ export const freeformResponse = async (				// state 4
 	const useVideoAndMemoryCtx = false;
 
 	const prompt = `
-		${basePrompt}
-		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? 'The user has provided knowledge about the right cooking process in JSON format. The knowledge comes from a tutorial video. The JSON contains multimodal information (e.g. description to visuals, sound, actions, etc.) on how to correctly cook in the kitchen.' : ''}
-		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? 'Video knowledge is provided after the tag <VIDEO KNOWLEDGE>.' : ''}
 		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? '<VIDEO KNOWLEDGE>:' : ''}
 		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? videoKnowledgeInput : ''}
 		${useInteractionMemoryFlag && useVideoAndMemoryCtx ? 'Interaction memory is the previous user-agent interaction memory, it is useful for some of the requests given by the user but not all of them. Use it as needed.' : ''}
@@ -199,7 +193,7 @@ export const freeformResponse = async (				// state 4
 	`;
 	console.log(`[state 4: freeform response prompt]: ${prompt}`);
 	const response = await callChatGPT(prompt);
-	return response.gptResponse;
+	return response.response;
 };
 
 
@@ -216,9 +210,6 @@ export const handlingUserDisagreements = async (		// state 5
 	const useVideoAndMemoryCtx = false;
 
 	const prompt = `
-		${basePrompt}
-		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? 'The user has provided knowledge about the right cooking process in JSON format. The knowledge comes from a tutorial video. The JSON contains multimodal information (e.g. description to visuals, sound, actions, etc.) on how to correctly cook in the kitchen.' : ''}
-		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? 'Video knowledge is provided after the tag <VIDEO KNOWLEDGE>.' : ''}
 		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? '<VIDEO KNOWLEDGE>:' : ''}
 		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? videoKnowledgeInput : ''}
 		${useInteractionMemoryFlag && useVideoAndMemoryCtx ? 'Interaction memory is the previous user-agent interaction memory, it is useful for some of the requests given by the user but not all of them. Use it as needed.' : ''}
@@ -234,7 +225,7 @@ export const handlingUserDisagreements = async (		// state 5
 	`;
 	console.log(`[state 5: handling user disagreements prompt]: ${prompt}`);
 	const response = await callChatGPT(prompt);
-	return response.gptResponse;
+	return response.response;
 };
 
 
@@ -245,9 +236,16 @@ export const replayRelevantPartsFromVideos = async (	// state 6
 	interactionMemoryKv: { [key: string]: any },
 	autoAgentResponseMemoryKv: { [key: string]: any }
 ) => {
-	console.log(`[state 6: replay relevant parts from videos prompt]: ${voiceInputTranscript}`);
-	const response = await findSentenceFromTranscript(voiceInputTranscript);
-	return JSON.stringify(response.gptResponse);
+	const prompt = `
+		<VIDEO KNOWLEDGE>
+		${videoKnowledgeInput}
+		<USER REQUEST>
+		${voiceInputTranscript}
+		Please replay the relevant parts from the video knowledge that are related to the user's request.
+	`;
+	console.log(`[state 6: replay relevant parts from videos prompt]: ${prompt}`);
+	const response = await findSentenceFromTranscript(prompt);
+	return JSON.stringify(response.video_segment_index);
 };
 
 
@@ -260,7 +258,6 @@ export const retrievePreviousStepsOrInteractions = async (	// state 7
 ) => {
 	console.log(`[state 7: retrieve previous steps or interactions]: ${voiceInputTranscript}`);
 	const prompt = `
-		${basePrompt}
 		Interaction memory:
 		${interactionMemoryKv}
 		Agent initiated response memory:
@@ -269,13 +266,13 @@ export const retrievePreviousStepsOrInteractions = async (	// state 7
 	`;
 	console.log(`[state 7: retrieve previous steps or interactions prompt]: ${prompt}`);
 	const response = await callChatGPT(prompt);
-	return response.gptResponse;
+	return response.response;
 };
 
 
 /** Async GPT call */
-export async function callChatGPT(prompt: string, imageUrls: string[] = []): Promise<{ "gptResponse": string }> {
-	let gptResponse = "";
+export async function callChatGPT(prompt: string, imageUrls: string[] = []): Promise<{ response: string, video_segment_index: number[] }> {
+	let gptResponse = { response: "", video_segment_index: [] };
 	try {
 		// Construct content array with text prompt and any provided images
 		const content: Array<{ type: string } & Record<string, any>> = [
@@ -298,7 +295,34 @@ export async function callChatGPT(prompt: string, imageUrls: string[] = []): Pro
 
 		const response = await openai.chat.completions.create({
 			model: "gpt-4o-mini",
+			tools: [{
+				type: "function",
+				function: {
+					name: "respond_to_step_related_questions_and_provide_video_clip_index",
+					description: "Respond with step related questions and provide video clip index from the video knowledge",
+					parameters: {
+						type: "object",
+						properties: {
+							response: {
+								type: "string",
+								description: "The response text"
+							},
+							video_segment_index: {
+								type: "array",
+								items: { type: "number" },
+								description: "Array of sentence IDs that are relevant"
+							}
+						},
+						required: ["response", "video_segment_index"]
+					}
+				}
+			}],
+			tool_choice: 'auto',
 			messages: [
+				{
+					role: "system",
+					content: systemPrompt
+				},
 				{
 					role: "user",
 					content: content as any[]
@@ -307,8 +331,11 @@ export async function callChatGPT(prompt: string, imageUrls: string[] = []): Pro
 			max_tokens: 500,
 		});
 
-		if (response.choices[0]?.message?.content) {
-			gptResponse = response.choices[0].message.content;
+		// Handle both tool_calls and direct content responses
+		if (response.choices[0]?.message?.tool_calls?.[0]?.function?.arguments) {
+			return JSON.parse(response.choices[0].message.tool_calls[0].function.arguments);
+		} else {
+			gptResponse.response = response.choices[0].message.content || "";
 		}
 	} catch (error) {
 		if (axios.isAxiosError(error)) {
@@ -317,7 +344,7 @@ export async function callChatGPT(prompt: string, imageUrls: string[] = []): Pro
 			console.error("Unknown error:", error);
 		}
 	}
-	return { "gptResponse": gptResponse };
+	return gptResponse;
 }
 
 
@@ -348,13 +375,17 @@ export async function findSentenceFromTranscript(prompt: string) {
 					parameters: {
 						type: "object",
 						properties: {
-							gptResponse: {
+							response: {
+								type: "string",
+								description: "The response text"
+							},
+							video_segment_index: {
 								type: "array",
 								items: { type: "number" },
 								description: "Array of sentence IDs that are relevant"
 							}
 						},
-						required: ["gptResponse"]
+						required: ["response", "video_segment_index"]
 					}
 				}
 			}],

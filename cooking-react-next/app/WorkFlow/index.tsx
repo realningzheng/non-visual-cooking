@@ -25,6 +25,7 @@ import OpenAI from "openai";
 
 
 interface WorkFlowProps {
+    setStateTransitionToggle: (input: boolean) => void;
     captureRealityFrame: () => Promise<string>;
     setStateMachineEvent: (event: number) => void;
     setCurrentState: (state: number) => void;
@@ -34,6 +35,7 @@ interface WorkFlowProps {
     setStateFunctionExeRes: (input: string) => void;
     setIsProcessing: (input: boolean) => void;
     setTtsSpeed: (input: number) => void;
+    stateTransitionToggle: boolean;
     voiceInputTranscript: string;
     videoKnowledgeInput: string;
     currentState: number;
@@ -54,7 +56,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     const clientRef = useRef<RealtimeClient>(new RealtimeClient({ apiKey: secret.OPENAI_KEY, dangerouslyAllowAPIKeyInBrowser: true }));
     const startTimeRef = useRef<string>(new Date().toISOString());
     const conversationRef = useRef<HTMLDivElement>(null);
-
+    const [selectedFileName, setSelectedFileName] = useState<string>('');
     const [isConnected, setIsConnected] = useState(false);
     const [items, setItems] = useState<ItemType[]>([]);
     const [interactionMemoryKv, setInteractionMemoryKv] = useState<{ [key: string]: any }>({});
@@ -309,6 +311,7 @@ export default function WorkFlow(props: WorkFlowProps) {
             for (let i = items.length - 1; i >= 0; i--) {
                 if (items[i].role === 'user' && items[i].formatted.transcript) {
                     props.setVoiceInputTranscript(items[i].formatted.transcript || '');
+                    props.setStateTransitionToggle(!props.stateTransitionToggle);
                     break;
                 }
             }
@@ -388,7 +391,7 @@ export default function WorkFlow(props: WorkFlowProps) {
             }
         };
         executeNextState();
-    }, [props.stateMachineEvent, props.currentState, props.voiceInputTranscript, props.videoKnowledgeInput]);
+    }, [props.stateTransitionToggle, props.videoKnowledgeInput]);
 
 
     // periodically trigger event 20 (comparingVideoRealityAlignment) 
@@ -419,12 +422,39 @@ export default function WorkFlow(props: WorkFlowProps) {
     // }, [props.currentState, isConnected]);
 
 
+    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const jsonData = JSON.parse(e.target?.result as string);
+                    props.setVideoKnowledgeInput(JSON.stringify(jsonData));
+                    setSelectedFileName(file.name);
+                } catch (error) {
+                    console.error("Error parsing JSON file:", error);
+                    alert("Invalid JSON file");
+                }
+            };
+            reader.readAsText(file);
+        }
+    };
+
+
     return (
         <Stack spacing={1}>
             <div className='text-xl font-bold gap-2 pt-1 flex items-center'>
-                <div className="dropdown dropdown-start">
-                    <label tabIndex={0} className="btn btn-xs btn-ghost bg-gray-200">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                CONTROL PANEL
+                <button
+                    className={`btn btn-xs ${isConnected ? 'bg-success' : 'btn-outline'}`}
+                    onClick={isConnected ? disconnectConversation : connectConversation}
+                >
+                    {isConnected ? 'disconnect' : 'connect'}
+                </button>
+                <div className="flex-grow" />
+                <div className="dropdown dropdown-end mr-2">
+                    <label tabIndex={0} className="btn btn-xs btn-ghost bg-gray-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                     </label>
@@ -489,17 +519,22 @@ export default function WorkFlow(props: WorkFlowProps) {
                         </li>
                     </ul>
                 </div>
-                CONTROL PANEL
-                <button
-                    className={`btn btn-xs ${isConnected ? 'bg-success' : 'btn-outline'}`}
-                    onClick={isConnected ? disconnectConversation : connectConversation}
-                >
-                    {isConnected ? 'disconnect' : 'connect'}
-                </button>
-                <div className="flex-grow" />
             </div>
             <div>
-                <p><span className='text-lg font-bold'>Video knowledge:</span> ../data/rwYaDqXFH88_video_knowledge_brief.json</p>
+                <p>
+                    <span className='text-lg font-bold'>Video knowledge:</span>
+                    <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleFileUpload}
+                        style={{ display: 'none' }}
+                        id="video-knowledge-upload"
+                    />
+                    <label htmlFor="video-knowledge-upload" className="btn btn-xs btn-outline ml-2 mr-2">
+                        Upload
+                    </label>
+                    {selectedFileName || ''}
+                </p>
                 <p className={props.isProcessing ? 'text-gray-400' : ''}><span className='text-lg font-bold'>Current state:</span> {props.isProcessing && <span className="loading loading-dots loading-xs"></span>} {props.currentState} : {stateTranslator[Number(props.currentState)]}</p>
                 <p><span className='text-lg font-bold'>Current event:</span> {props.stateMachineEvent} : {eventTranslator[props.stateMachineEvent]}</p>
             </div>
@@ -529,6 +564,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                         let event = await asyncNextEventChooser(props.voiceInputTranscript, props.videoKnowledgeInput, props.currentState);
                         if (event >= 0 && (event in stateMachine[props.currentState])) {
                             props.setStateMachineEvent(event);
+                            props.setStateTransitionToggle(!props.stateTransitionToggle);
                         }
                     }}
                     sx={{ marginRight: 1 }}

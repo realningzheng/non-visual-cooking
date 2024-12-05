@@ -375,7 +375,7 @@ export const asyncNextEventChooser = async (
 	const response = await callChatGPT(prompt);
 	// @TODO: should either use functionCall or whatever to make sure the response is returned from a list of indices
 	if (response) {
-		const nextState = Number(response.gptResponse);
+		const nextState = Number(response.response);
 		return nextState;
 	}
 	return -1;

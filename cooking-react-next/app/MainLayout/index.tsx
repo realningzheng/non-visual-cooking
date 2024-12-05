@@ -6,10 +6,9 @@ import { Button, Stack, Box, TextField } from "@mui/material";
 import Grid from '@mui/material/Grid2';
 import VideoPreview from '../VideoPreview';
 import WorkFlow from '../WorkFlow';
-// hardcoded video knowledge data
-import videoKnowledgeData from "../data/rwYaDqXFH88_video_knowledge_brief.json";
 import ImageUploader from '../RealityPreview/ImageUploader';
 import RealityPreview from '../RealityPreview/RealityPreview';
+import EvalResVis from '../EvalResVis';
 
 
 import transriptSentenceList from '../data/rwYaDqXFH88_sentence.json';
@@ -23,6 +22,7 @@ interface TransriptSentenceItemProps {
 }
 
 export default function MainLayout() {
+    const [evalMode, setEvalMode] = useState(false);
     // original video states
     const [videoUrl, setVideoUrl] = useState('rwYaDqXFH88.mp4');
     const [videoSegments, setVideoSegments] = useState<TransriptSentenceItemProps[]>([]);
@@ -34,9 +34,10 @@ export default function MainLayout() {
     // Reality preview states
     const [isVideoPlaying, setIsVideoPlaying] = useState(false);
     const [realityImageBase64, setRealityImageBase64] = useState('');
-    const [debugMode, setDebugMode] = useState(true);
+    const [enableWebCam, setEnableWebCam] = useState(false);
 
     // Workflow states
+    const [stateTransitionToggle, setStateTransitionToggle] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [voiceInputTranscript, setVoiceInputTranscript] = useState("");
     const [videoKnowledgeInput, setVideoKnowledgeInput] = useState("");
@@ -51,26 +52,34 @@ export default function MainLayout() {
 
 
     useEffect(() => {
-        if (typeof window !== 'undefined') setIsClient(true);
-        setVideoKnowledgeInput(JSON.stringify(videoKnowledgeData, null, 2));
+        if (typeof window !== 'undefined') {
+            setIsClient(true);
+        }
     }, []);
 
 
     useEffect(() => {
         getVideo();
-    }, [videoRef, debugMode]);
+    }, [videoRef, !enableWebCam]);
 
 
-    // Add these new effects
     useEffect(() => {
         if (currentState === 6) {
             try {
                 let parsedRes = JSON.parse(stateFunctionExeRes);
                 setVideoSegments(parsedRes.map((item: number) => {
-                    let sentence = transriptSentenceList.find(s => s.sentenceIndex === item);
-                    return sentence;
+                    let clip = JSON.parse(videoKnowledgeInput).find((s: any) => s.index === item);
+                    let text = clip.video_transcript;
+                    let startTime = clip.segment[0];
+                    let endTime = clip.segment[1];
+                    return {
+                        sentenceIndex: item,
+                        text: text,
+                        startTime: startTime,
+                        endTime: endTime
+                    };
                 }));
-                setPlaySeconds(0);
+                setPlaySeconds(0);  
             } catch (error) {
                 setVideoSegments([]);
                 setPlaySeconds(0);
@@ -114,7 +123,7 @@ export default function MainLayout() {
 
 
     const captureRealityFrame = async (): Promise<string> => {
-        if (debugMode) {
+        if (!enableWebCam) {
             return realityImageBase64;
         } else {
             const canvas = canvasRef.current;
@@ -177,13 +186,19 @@ export default function MainLayout() {
                 <div className='text-xl font-bold flex items-center gap-2 p-1'>
                     REALITY PREVIEW
                     <button
-                        className={`btn btn-xs ${debugMode ? 'btn-primary' : 'btn-outline'}`}
-                        onClick={() => setDebugMode(!debugMode)}
+                        className={`btn btn-xs ${enableWebCam ? 'btn-primary' : 'btn-outline'}`}
+                        onClick={() => setEnableWebCam(!enableWebCam)}
                     >
-                        Test mode
+                        web cam
+                    </button>
+                    <button
+                        className={`btn btn-xs ${evalMode ? 'btn-error' : 'btn-outline'}`}
+                        onClick={() => setEvalMode(!evalMode)}
+                    >
+                        eval mode
                     </button>
                 </div>
-                {debugMode ?
+                {!enableWebCam ?
                     <ImageUploader
                         realityImageBase64={realityImageBase64}
                         setRealityImageBase64={setRealityImageBase64}
@@ -197,25 +212,30 @@ export default function MainLayout() {
                 }
             </Grid>
             <Grid size={7} style={{ height: '100vh', overflow: 'scroll' }}>
-                <WorkFlow
-                    setIsProcessing={setIsProcessing}
-                    setStateMachineEvent={setStateMachineEvent}
-                    setCurrentState={setCurrentState}
-                    setVoiceInputTranscript={setVoiceInputTranscript}
-                    setVideoKnowledgeInput={setVideoKnowledgeInput}
-                    setRealityImageBase64={setRealityImageBase64}
-                    setStateFunctionExeRes={setStateFunctionExeRes}
-                    captureRealityFrame={captureRealityFrame}
-                    setTtsSpeed={setTtsSpeed}
-                    isProcessing={isProcessing}
-                    voiceInputTranscript={voiceInputTranscript}
-                    videoKnowledgeInput={videoKnowledgeInput}
-                    currentState={currentState}
-                    stateMachineEvent={stateMachineEvent}
-                    realityImageBase64={realityImageBase64}
-                    stateFunctionExeRes={stateFunctionExeRes}
-                    ttsSpeed={ttsSpeed}
-                />
+                {evalMode ?
+                    <EvalResVis /> :
+                    <WorkFlow
+                        setStateTransitionToggle={setStateTransitionToggle}
+                        setIsProcessing={setIsProcessing}
+                        setStateMachineEvent={setStateMachineEvent}
+                        setCurrentState={setCurrentState}
+                        setVoiceInputTranscript={setVoiceInputTranscript}
+                        setVideoKnowledgeInput={setVideoKnowledgeInput}
+                        setRealityImageBase64={setRealityImageBase64}
+                        setStateFunctionExeRes={setStateFunctionExeRes}
+                        captureRealityFrame={captureRealityFrame}
+                        setTtsSpeed={setTtsSpeed}
+                        stateTransitionToggle={stateTransitionToggle}
+                        isProcessing={isProcessing}
+                        voiceInputTranscript={voiceInputTranscript}
+                        videoKnowledgeInput={videoKnowledgeInput}
+                        currentState={currentState}
+                        stateMachineEvent={stateMachineEvent}
+                        realityImageBase64={realityImageBase64}
+                        stateFunctionExeRes={stateFunctionExeRes}
+                        ttsSpeed={ttsSpeed}
+                    />
+                }
             </Grid>
         </Grid>
     )
