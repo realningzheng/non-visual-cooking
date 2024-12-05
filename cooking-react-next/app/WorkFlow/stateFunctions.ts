@@ -121,6 +121,7 @@ export const respondWithStepRelatedQuestions = async (		// state 2
 		2. An expected duration of the step in seconds or minutes from the video knowledge
 		3. How the step will influence the outcome of the dish.
 		However, do not explicitly say 'step name ...; expected duration...; influence on the outcome...',
+		Make your response precise and avoid extensive elaboration.
 	`;
 	console.log(`[state 2: step related questions prompt]: ${prompt}`);
 	const response = await callChatGPT(prompt, [realityImageBase64]);
