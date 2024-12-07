@@ -159,13 +159,12 @@ export const freeformResponse = async (				// state 4
 	interactionMemoryKv: { [key: string]: any },
 	autoAgentResponseMemoryKv: { [key: string]: any }
 ) => {
-	const useVideoKnowledgeFlag = false;
 	const useInteractionMemoryFlag = false;
 	const useAutoAgentResponseMemoryFlag = false;
 
 	const prompt = `
-		${useVideoKnowledgeFlag ? '<VIDEO KNOWLEDGE>:' : ''}
-		${useVideoKnowledgeFlag ? videoKnowledgeInput : ''}
+		'<VIDEO KNOWLEDGE>' 
+		${videoKnowledgeInput}
 		<USER REQUEST>
 		${voiceInputTranscript}
 		${useInteractionMemoryFlag && useAutoAgentResponseMemoryFlag ? 'I also provide you with some previous steps and interactions, please use them as needed.' : ''}

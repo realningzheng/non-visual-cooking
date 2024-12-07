@@ -48,8 +48,8 @@ export async function callChatGPT(
                 {
                     type: "function",
                     function: {
-                        name: "respond_to_step_related_questions_and_provide_video_clip_index",
-                        description: "Respond with step related questions and provide video clip index from the video knowledge",
+                        name: "respond_to_specific_questions_and_provide_video_clip_index",
+                        description: "For responding to a specific user request and provide video clip index from the video knowledge",
                         parameters: {
                             type: "object",
                             properties: {
@@ -71,7 +71,7 @@ export async function callChatGPT(
                     type: "function",
                     function: {
                         name: "decide_category_from_user_request",
-                        description: "Decide category from user request",
+                        description: "Decide category from user request. In this case, the user should give 1. a command, 2. a list of command categories and their explanations, and examples, 3. a list of command categories and their explanations, and examples, and 4. a list of command categories, their explanations, and examples.",
                         parameters: {
                             type: "object",
                             properties: {

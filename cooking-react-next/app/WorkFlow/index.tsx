@@ -14,6 +14,7 @@ import {
 import { WavRecorder, WavStreamPlayer } from '../wavtools/index.js';
 import { XCircle } from 'react-feather';
 import SendIcon from '@mui/icons-material/Send';
+import DeleteIcon from '@mui/icons-material/Delete';
 // @ts-ignore
 import { RealtimeClient } from '@openai/realtime-api-beta';
 // @ts-ignore
@@ -358,7 +359,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                 props.setIsProcessing(false);
 
                 // Convert object response to string if necessary
-                const formattedResponse = typeof stateFunctionExeRes === 'object' 
+                const formattedResponse = typeof stateFunctionExeRes === 'object'
                     ? JSON.stringify(stateFunctionExeRes, null, 2)
                     : String(stateFunctionExeRes);
 
@@ -454,6 +455,8 @@ export default function WorkFlow(props: WorkFlowProps) {
         }
     };
 
+    // Add a reference to the file input
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     return (
         <Stack spacing={1}>
@@ -535,19 +538,38 @@ export default function WorkFlow(props: WorkFlowProps) {
                 </div>
             </div>
             <div>
-                <p>
-                    <span className='text-lg font-bold'>Video knowledge:</span>
+                <p className="flex items-end gap-2">
+                    <span className='text-lg font-bold'>Video knowledge</span>
                     <input
                         type="file"
                         accept=".json"
                         onChange={handleFileUpload}
                         style={{ display: 'none' }}
                         id="video-knowledge-upload"
+                        ref={fileInputRef}
                     />
-                    <label htmlFor="video-knowledge-upload" className="btn btn-xs btn-outline ml-2 mr-2">
+                    <label
+                        htmlFor="video-knowledge-upload"
+                        className={`btn btn-xs ${props.videoKnowledgeInput ? 'btn-success' : 'btn-outline'}`}
+                        onClick={() => fileInputRef.current?.click()}
+                    >
                         Upload
                     </label>
-                    {selectedFileName || ''}
+                    <span>{selectedFileName || ''}</span>
+                    {props.videoKnowledgeInput.length > 0 &&
+                        <button
+                            className="btn btn-xs btn-ghost"
+                            onClick={() => {
+                                props.setVideoKnowledgeInput('');
+                                setSelectedFileName('');
+                                if (fileInputRef.current) {
+                                    fileInputRef.current.value = '';
+                                }
+                            }}
+                        >
+                            <DeleteIcon sx={{ fontSize: 16 }} />
+                        </button>
+                    }
                 </p>
                 <p><span className='text-lg font-bold'>Current event:</span> {props.stateMachineEvent} : {eventTranslator[props.stateMachineEvent]}</p>
                 <p className={props.isProcessing ? 'text-gray-400' : ''}><span className='text-lg font-bold'>Current state:</span> {props.isProcessing && <span className="loading loading-dots loading-xs"></span>} {props.currentState} : {stateTranslator[Number(props.currentState)]}</p>
@@ -572,6 +594,15 @@ export default function WorkFlow(props: WorkFlowProps) {
                         className="input input-bordered w-full"
                         onChange={(e) => props.setVoiceInputTranscript(e.target.value)}
                         value={props.voiceInputTranscript}
+                        onKeyDown={async (e) => {
+                            if (e.key === 'Enter') {
+                                let event = await asyncNextEventChooser(props.voiceInputTranscript, props.currentState);
+                                if (event >= 0 && (event in stateMachine[props.currentState])) {
+                                    props.setStateMachineEvent(event);
+                                    props.setStateTransitionToggle(!props.stateTransitionToggle);
+                                }
+                            }
+                        }}
                     />
                     <IconButton
                         color="inherit"
@@ -711,7 +742,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                         <p style={{ whiteSpace: 'pre-line' }}>
                             {(() => {
                                 try {
-                                    const parsed = typeof props.stateFunctionExeRes === 'string' 
+                                    const parsed = typeof props.stateFunctionExeRes === 'string'
                                         ? JSON.parse(props.stateFunctionExeRes)
                                         : props.stateFunctionExeRes;
                                     return parsed.response || props.stateFunctionExeRes;
