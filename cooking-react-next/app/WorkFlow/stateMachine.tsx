@@ -1,68 +1,3 @@
-/* --------------------------------------------------------------
-States:
-0   : Comparing video-reality alignment
-1   : Agent: Explain the current state*
-2   : Agent: Explain the current step/action
-3   : Agent: Respond with how to fix
-4   : Agent: Freeform response
-5   : Handling user disagreements
-6   : Agent: Replay the relevant parts from videos
-7   : Agent: Answer user step related questions
------------------------------------------------------------------
-UserInput Categories:
-0   : User asks about step related questions
-1   : User asks about the current state (not used)
-2   : User asks how to fix something
-3   : User disagrees
-4   : User agrees/satisfies 
-5   : User asks for a repeat
-6   : User asks for replay
-7   : User asks for other types of questions
-8   : User asks evaluation type of question or questions regarding the current visual scene
-9   : User asks about previous user steps
-
-10  : System automatically detects misalignment
-11  : System automatically detects a new action/step
-12  : System automatically detects missing previous steps
-13  : Problem solved
-14  : Problem unsolved
-
-20  : System evaluates reality image
------------------------------------------------------------------
-State Transitions:
-| state | category | next state |
-|-------|----------|------------|
-| 0     | 0        | 2          |
-| 0     | 11       | 2          |
-| 0     | 8        | 1          |
-| 0     | 10       | 1          |
-| 0     | 12       | 4          |
-| 0     | 7        | 4          |
-| 0     | 6        | 6          |
-| 0     | 20       | 0          |
-| 1     | 3        | 5          |
-| 1     | 5        | 1          |
-| 1     | 2        | 3          |
-| 1     | 6        | 6          |
-| 1     | 9        | 4          |
-| 1     | 4        | 0          |
-| 2     | 3        | 5          |
-| 2     | 2        | 3          |
-| 2     | 5        | 2          |
-| 3     | 4        | 0          |
-| 3     | 5        | 3          |
-| 3     | 3        | 5          |
-| 3     | 6        | 6          |
-| 4     | 5        | 4          |
-| 4     | 3        | 5          |
-| 4     | 6        | 6          |
-| 4     | 4        | 0          |
-| 5     | 13       | 0          |
-| 5     | 14       | 5          |
-| 6     | 3        | 5          |
-| 6     | 5        | 6          |
-| 6     | 4        | 0          |
------------------------------------------------------------------*/
 import {
 	comparingVideoRealityAlignment,
 	explainCurrentFoodState,
@@ -72,6 +7,7 @@ import {
 	handlingUserDisagreements,
 	replayRelevantPartsFromVideos,
 	retrievePreviousStepsOrInteractions,
+	followUpWithDetails,
 } from './stateFunctions';
 import { callChatGPT } from './utils';
 import {
@@ -99,24 +35,26 @@ export const stateTranslator: StateMachineTranslator = {
 	3: "Agent: Respond with how to fix",
 	4: "Agent: Freeform response",
 	5: "Agent: Handling user disagreements",
-	6: "Agent: Replay the relevant parts from videos",
-	7: "Agent: Retrieve previous steps or interactions"
+	6: "Agent: Replay the relevant parts from videos (add-on state)",
+	7: "Agent: Retrieve previous interaction results (add-on state)",
+	8: "Agent: Follows up (with details) from the previous interaction",
 }
 
 
 export const eventTranslator: StateMachineTranslator = {
 	0: "User asks about step related questions",
-	2: "User asks how to fix something",
+	1: "User asks follow-up questions",
+	2: "User perceives a problem and asks how to fix something",
 	3: "User disagrees",
-	4: "User agrees/satisfies",
-	5: "User asks for repeating the previous instruction or agent response",
-	6: "User asks for replaying relevant parts from the video",
-	7: "User asks for general questions",
-	8: "User asks evaluation type of question or questions regarding the current visual scene",
-	9: "User seeks to retrieve previous steps or interactions",
-	10: "System automatically detects misalignment",
-	11: "System automatically detects a new action/step",
-	12: "System automatically detects missing previous steps",
+	4: "User agrees",
+	5: "User asks for repeating a previous interaction",
+	6: "User asks for playing the segmented video",
+	7: "User asks for general type of questions",
+	8: "User asks about food state related questions",
+	// 9: "User seeks to retrieve previous steps or interactions",
+	10: "System automatically detects food state misalignment",
+	// 11: "System automatically detects a new action/step",
+	12: "System automatically detects dependent steps missing",
 	20: "System automatically evaluates reality"
 }
 
@@ -130,14 +68,21 @@ export const eventDetailedExplanation: StateMachineTranslator = {
          * "What step am I on right now?"
          * "What should I do next?" 
          * "Was I supposed to preheat the oven?"`,
-
-	2: `User asks how to fix something
+	
+	1: `User asks follow-up questions
+       - User in general agrees, or explicitly showing disagreement from the last interaction, but seeks more details
+       - Examples:
+         * "Tell me more about it."
+         * "I mean the the actual ingredients needed."
+         * "I also hear sizzling sound, is it normal?"`,
+	
+	2: `User perceives a problem and asks how to fix something
        - Requests for correction or problem-solving
        - Examples:
          * "The sauce is too thick, how do I fix it?"
          * "I added too much salt, what should I do?"
          * "The dough isn't rising, how can I fix this?"
-         * "I burned the bottom, can this be saved?"`,
+         * "I burned the steak, can this be saved?"`,
 
 	3: `User disagrees
        - Expressions of disagreement with instructions or feedback
@@ -146,7 +91,7 @@ export const eventDetailedExplanation: StateMachineTranslator = {
          * "No, I already added the eggs"
          * "I don't think that's correct"`,
 
-	4: `User agrees/satisfies
+	4: `User agrees
        - Confirmations and positive acknowledgments
        - Examples:
          * "Ok, got it"
@@ -154,64 +99,55 @@ export const eventDetailedExplanation: StateMachineTranslator = {
          * "I understand now"
          * "That worked, thank you"`,
 
-	5: `User asks for repeating the previous instruction or agent response
+	5: `User asks for repeating a previous interaction
        - Requests for information to be repeated
        - Examples:
          * "Can you say that again?"
-         * "I didn't catch that"
          * "Please repeat the last instruction"
-         * "What was that last part?"`,
+         * "How did you say about the ingredients for making the sauce?"`,
 
-	6: `User asks for replaying relevant parts from the video
-       - Request for replaying only a specific part from the video
+	6: `User asks for playing the segmented video
+       - Request for playing the video
        - Examples:
+	   	 * "Play the video for this step"
          * "Replay xxx from the video"
          * "Can you show me how they did xxx from the video?"
-         * "I need to see the kneading part again"
-		 * "I need to hear xxx again"
-         * "Replay the video for this step"`,
+         * "I need to see the kneading part again"`,
 
 	7: `User asks for general questions
-       - General cooking queries based on the video knowledge except for a specific steps or evaluation type questions
+       - General cooking queries based on the video knowledge except for a specific steps or food states
        - Examples:
          * "What other ingredients do we need?"
 		 * "How many steps are still left?"`,
 
-	8: `User asks evaluation type of question or questions regarding the current visual scene
-       - Seeking verification or validation
+	8: `User asks about food state related questions
+       - Seeking visual description and verification of food states
        - Examples:
          * "Can you explain the current scene for me?"
          * "What are things around me now?"
          * "Where is the pan?"
-         * "How does my steak look like now?"
-         * "Should it be this color?"
-         * "Am I stirring fast enough?"
-         * "Is this what it's supposed to look like?"
-         * "Does this look done?"`,
+         * "How does my steak look like now?"`,
 
-	9: `User seeks to retrieve previous steps or interactions
-       - Asking for recall of previous steps or actions
-       - Examples:
-         * "What's my last step?"
-	   	 * "What did I do before this?"
-		 * "What did I add last?"
-		 * "What are my last three steps?"`,
+	// 9: `User seeks to retrieve previous steps or interactions
+    //    - Asking for recall of previous steps or actions
+    //    - Examples:
+    //      * "What's my last step?"
+	//    	 * "What did I do before this?"
+	// 	 * "What did I add last?"
+	// 	 * "What are my last three steps?"`,
 
-	10: `System automatically detects misalignment
+	10: `System automatically detects food state misalignment
         - AI detects discrepancy between video and user's actions
         - Examples:
-          * Detecting wrong ingredient usage
-          * Noticing incorrect cooking temperature
-          * Identifying wrong sequence of steps
-          * Spotting incorrect technique`,
+          * Detecting a wrong food state`,
 
-	11: `System automatically detects a new action/step
-        - AI recognizes transition to new cooking phase
-        - Examples:
-          * Detecting user has started mixing ingredients
-          * Noticing transition to cooking phase
-          * Identifying completion of preparation
-          * Recognizing start of new recipe section`,
+	// 11: `System automatically detects a new action/step
+    //     - AI recognizes transition to new cooking phase
+    //     - Examples:
+    //       * Detecting user has started mixing ingredients
+    //       * Noticing transition to cooking phase
+    //       * Identifying completion of preparation
+    //       * Recognizing start of new recipe section`,
 
 	12: `System automatically detects missing previous steps
         - AI identifies skipped or incomplete steps
@@ -233,62 +169,54 @@ export const eventDetailedExplanation: StateMachineTranslator = {
 
 export const stateMachine: StateMachine = {
 	0: {
-		0: 2,  // Ask how to do a step
-		11: 2, // New action detected
-		8: 1,  // Confirmation-type questions
-		10: 1, // Misalignment detected
-		12: 4, // Missing previous steps
-		7: 4,  // Ask other types of questions
-		6: 6,  // Replay requested
+		0: 2,  // 0: User asks about step related questions; 2: Agent: Respond with step related questions
+		2: 3,  // 2: User asks how to fix something; 3: Agent: Respond with how to fix
+		7: 4,  // 7: User asks for general type of questions; 4: Agent: Respond with how to fix
+		8: 1,  // 8: User asks about food state related questions; 1: Agent: Explain the current state of the food
+		10: 3, // 10: System automatically detects food state misalignment; 3: Agent: Respond with how to fix
+		12: 3, // 12: System automatically detects missing previous steps; 3: Agent: Respond with how to fix
+		5: 7,  // 5: User asks for repeating a previous interaction; 7: Agent: Retrieve previous interaction results (add-on state)
+		6: 6,  // 6: User asks for playing the segmented video; 6: Agent: Replay the relevant parts from videos (add-on state)
 		20: 0, // Timeout, stay in current state
-		9: 7,  // Ask about previous user steps
 	},
 	1: {
-		3: 5,  // Disagreement
-		5: 1,  // Repeat
-		2: 3,  // How to fix
-		6: 6,  // Replay requested
-		7: 4,  // Other questions
-		4: 0,  // Agree/Satisfy
-		9: 7,  // Ask about previous user steps
+		3: 5,  // 3: User disagrees; 5: Handling user disagreements
+		1: 8,  // 1: User asks follow-up questions; 8: Agent: Follows up (with details) from the previous interaction
+		4: 0,  // 4: User agrees; 0: Comparing video-reality alignment	
+		5: 7,  // 5: User asks for repeating a previous interaction; 7: Agent: Retrieve previous interaction results (add-on state)
+		6: 6,  // 6: User asks for playing the segmented video; 6: Agent: Replay the relevant parts from videos (add-on state)
 	},
 	2: {
-		4: 0,  // Agree/Satisfy
-		3: 5,  // Disagreement
-		2: 3,  // How to fix
-		5: 2,  // Repeat
-		9: 7,  // Ask about previous user steps
+		3: 5,  // 3: User disagrees; 5: Handling user disagreements
+		1: 8,  // 1: User asks follow-up questions; 8: Agent: Follows up (with details) from the previous interaction
+		4: 0,  // 4: User agrees; 0: Comparing video-reality alignment
+		5: 7,  // 5: User asks for repeating a previous interaction; 7: Agent: Retrieve previous interaction results (add-on state)
+		6: 6,  // 6: User asks for playing the segmented video; 6: Agent: Replay the relevant parts from videos (add-on state)
 	},
 	3: {
-		4: 0,  // Agree/Satisfy
-		5: 3,  // Repeat
-		3: 5,  // Disagreement
-		6: 6,  // Replay requested
-		9: 7,  // Ask about previous user steps
+		3: 5,  // 3: User disagrees; 5: Handling user disagreements
+		1: 8,  // 1: User asks follow-up questions; 8: Agent: Follows up (with details) from the previous interaction
+		4: 0,  // 4: User agrees; 0: Comparing video-reality alignment
+		5: 7,  // 5: User asks for repeating a previous interaction; 7: Agent: Retrieve previous interaction results (add-on state)
+		6: 6,  // 6: User asks for playing the segmented video; 6: Agent: Replay the relevant parts from videos (add-on state)
 	},
 	4: {
-		5: 4,  // Repeat
-		3: 5,  // Disagreement
-		6: 6,  // Replay requested
-		4: 0,  // Agree/Satisfy
-		9: 7,  // Ask about previous user steps
+		3: 5,  // 3: User disagrees; 5: Handling user disagreements
+		1: 8,  // 1: User asks follow-up questions; 8: Agent: Follows up (with details) from the previous interaction
+		4: 0,  // 4: User agrees; 0: Comparing video-reality alignment
+		5: 7,  // 5: User asks for repeating a previous interaction; 7: Agent: Retrieve previous interaction results (add-on state)
+		6: 6,  // 6: User asks for playing the segmented video; 6: Agent: Replay the relevant parts from videos (add-on state)teps
 	},
 	5: {
-		4: 0, // Problem solved
-		3: 5, // Problem unsolved, stay in disagreement
-		9: 7,  // Ask about previous user steps
+		4: 0, // 4: User agrees; 0: Comparing video-reality alignment
+		3: 5, // 3: User disagrees; 5: Handling user disagreements
+		5: 7, // 5: User asks for repeating a previous interaction; 7: Agent: Retrieve previous interaction results (add-on state)
+		6: 6, // 6: User asks for playing the segmented video; 6: Agent: Replay the relevant parts from videos (add-on state)
 	},
-	6: {
-		3: 5,  // Disagreement
-		5: 6,  // Repeat
-		4: 0,  // Agree/Satisfy
-		9: 7,  // Ask about previous user steps
-	},
-	7: {
-		3: 5,  // Disagreement
-		5: 6,  // Repeat
-		4: 0,  // Agree/Satisfy
-		9: 7,  // Ask about previous user steps
+	8: {
+		4: 0, // 4: User agrees; 0: Comparing video-reality alignment
+		3: 5, // 3: User disagrees; 5: Handling user disagreements
+		1: 8, // 1: User asks follow-up questions; 8: Agent: Follows up (with details) from the previous interaction
 	},
 };
 
@@ -310,6 +238,7 @@ export const stateFunctions: {
 	5: handlingUserDisagreements,
 	6: replayRelevantPartsFromVideos,
 	7: retrievePreviousStepsOrInteractions,
+	8: followUpWithDetails,
 };
 
 

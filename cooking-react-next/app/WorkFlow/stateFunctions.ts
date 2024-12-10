@@ -261,3 +261,20 @@ export const retrievePreviousStepsOrInteractions = async (	// state 7
 	const response = await callChatGPT(systemPromptStateFunctions, prompt);
 	return response;
 };
+
+
+export const followUpWithDetails = async (   // state 8
+	videoKnowledgeInput: string,
+	realityImageBase64: string,
+	voiceInputTranscript: string,
+	interactionMemoryKv: { [key: string]: any },
+	autoAgentResponseMemoryKv: { [key: string]: any }
+) => {
+	const prompt = `
+		<USER REQUEST>
+		${voiceInputTranscript}
+	`;
+	console.log(`[state 8: follow up with details prompt]`);
+	const response = await callChatGPT(systemPromptStateFunctions, prompt);
+	return response;
+};
