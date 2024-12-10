@@ -758,7 +758,9 @@ export default function WorkFlow(props: WorkFlowProps) {
                         {" { "}
                         {props.currentState !== -1 && Object.entries(interactionMemoryKv).map(([key, value]) => (
                             <div key={key} style={{ marginLeft: '20px' }}>
-                                {key}: {String(value).substring(0, 40)}{String(value).length > 40 ? '...' : ''} ,
+                                {key}: {String(value).length > 70 ?
+                                    `${String(value).substring(0, 40)}...${String(value).slice(-30)}` :
+                                    String(value)} ,
                             </div>
                         ))}
                         {" } "}
@@ -768,7 +770,9 @@ export default function WorkFlow(props: WorkFlowProps) {
                         {" { "}
                         {props.currentState !== -1 && Object.entries(autoAgentResponseMemoryKv).map(([key, value]) => (
                             <div key={key} style={{ marginLeft: '20px' }}>
-                                {key}: {String(value).substring(0, 40)}{String(value).length > 40 ? '...' : ''} ,
+                                {key}: {String(value).length > 70 ?
+                                    `${String(value).substring(0, 40)}...${String(value).slice(-30)}` :
+                                    String(value)} ,
                             </div>
                         ))}
                         {" } "}

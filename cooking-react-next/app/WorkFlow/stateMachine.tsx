@@ -52,9 +52,9 @@ export const eventTranslator: StateMachineTranslator = {
 	7: "User asks for general type of questions",
 	8: "User asks about food state related questions",
 	// 9: "User seeks to retrieve previous steps or interactions",
-	10: "System automatically detects food state misalignment",
+	10: "System detects food state misalignment",
 	// 11: "System automatically detects a new action/step",
-	12: "System automatically detects dependent steps missing",
+	12: "System detects dependent steps missing",
 	20: "System automatically evaluates reality"
 }
 
@@ -136,7 +136,7 @@ export const eventDetailedExplanation: StateMachineTranslator = {
 	// 	 * "What did I add last?"
 	// 	 * "What are my last three steps?"`,
 
-	10: `System automatically detects food state misalignment
+	10: `System detects food state misalignment
         - AI detects discrepancy between video and user's actions
         - Examples:
           * Detecting a wrong food state`,
@@ -149,7 +149,7 @@ export const eventDetailedExplanation: StateMachineTranslator = {
     //       * Identifying completion of preparation
     //       * Recognizing start of new recipe section`,
 
-	12: `System automatically detects missing previous steps
+	12: `System detects missing previous steps
         - AI identifies skipped or incomplete steps
         - Examples:
           * Noticing missing ingredient preparation
@@ -175,48 +175,50 @@ export const stateMachine: StateMachine = {
 		8: 1,  // 8: User asks about food state related questions; 1: Agent: Explain the current state of the food
 		10: 3, // 10: System automatically detects food state misalignment; 3: Agent: Respond with how to fix
 		12: 3, // 12: System automatically detects missing previous steps; 3: Agent: Respond with how to fix
-		5: 7,  // 5: User asks for repeating a previous interaction; 7: Agent: Retrieve previous interaction results (add-on state)
-		6: 6,  // 6: User asks for playing the segmented video; 6: Agent: Replay the relevant parts from videos (add-on state)
+		5: 0,  // 5: User asks for repeating a previous interaction; add-on state, stay where it is
+		6: 0,  // 6: User asks for playing the segmented video; add-on state, stay where it is
 		20: 0, // Timeout, stay in current state
 	},
 	1: {
 		3: 5,  // 3: User disagrees; 5: Handling user disagreements
 		1: 8,  // 1: User asks follow-up questions; 8: Agent: Follows up (with details) from the previous interaction
 		4: 0,  // 4: User agrees; 0: Comparing video-reality alignment	
-		5: 7,  // 5: User asks for repeating a previous interaction; 7: Agent: Retrieve previous interaction results (add-on state)
-		6: 6,  // 6: User asks for playing the segmented video; 6: Agent: Replay the relevant parts from videos (add-on state)
+		5: 1,  // 5: User asks for repeating a previous interaction; add-on state, stay where it is
+		6: 1,  // 6: User asks for playing the segmented video; add-on state, stay where it is
 	},
 	2: {
 		3: 5,  // 3: User disagrees; 5: Handling user disagreements
 		1: 8,  // 1: User asks follow-up questions; 8: Agent: Follows up (with details) from the previous interaction
 		4: 0,  // 4: User agrees; 0: Comparing video-reality alignment
-		5: 7,  // 5: User asks for repeating a previous interaction; 7: Agent: Retrieve previous interaction results (add-on state)
-		6: 6,  // 6: User asks for playing the segmented video; 6: Agent: Replay the relevant parts from videos (add-on state)
+		5: 2,  // 5: User asks for repeating a previous interaction; add-on state, stay where it is
+		6: 2,  // 6: User asks for playing the segmented video; add-on state, stay where it is
 	},
 	3: {
 		3: 5,  // 3: User disagrees; 5: Handling user disagreements
 		1: 8,  // 1: User asks follow-up questions; 8: Agent: Follows up (with details) from the previous interaction
 		4: 0,  // 4: User agrees; 0: Comparing video-reality alignment
-		5: 7,  // 5: User asks for repeating a previous interaction; 7: Agent: Retrieve previous interaction results (add-on state)
-		6: 6,  // 6: User asks for playing the segmented video; 6: Agent: Replay the relevant parts from videos (add-on state)
+		5: 3,  // 5: User asks for repeating a previous interaction; add-on state, stay where it is
+		6: 3,  // 6: User asks for playing the segmented video; add-on state, stay where it is
 	},
 	4: {
 		3: 5,  // 3: User disagrees; 5: Handling user disagreements
 		1: 8,  // 1: User asks follow-up questions; 8: Agent: Follows up (with details) from the previous interaction
 		4: 0,  // 4: User agrees; 0: Comparing video-reality alignment
-		5: 7,  // 5: User asks for repeating a previous interaction; 7: Agent: Retrieve previous interaction results (add-on state)
-		6: 6,  // 6: User asks for playing the segmented video; 6: Agent: Replay the relevant parts from videos (add-on state)teps
+		5: 4,  // 5: User asks for repeating a previous interaction; add-on state, stay where it is
+		6: 4,  // 6: User asks for playing the segmented video; add-on state, stay where it is
 	},
 	5: {
 		4: 0, // 4: User agrees; 0: Comparing video-reality alignment
 		3: 5, // 3: User disagrees; 5: Handling user disagreements
-		5: 7, // 5: User asks for repeating a previous interaction; 7: Agent: Retrieve previous interaction results (add-on state)
-		6: 6, // 6: User asks for playing the segmented video; 6: Agent: Replay the relevant parts from videos (add-on state)
+		5: 5, // 5: User asks for repeating a previous interaction; add-on state, stay where it is
+		6: 5, // 6: User asks for playing the segmented video; add-on state, stay where it is
 	},
 	8: {
 		4: 0, // 4: User agrees; 0: Comparing video-reality alignment
 		3: 5, // 3: User disagrees; 5: Handling user disagreements
 		1: 8, // 1: User asks follow-up questions; 8: Agent: Follows up (with details) from the previous interaction
+		5: 8, // 5: User asks for repeating a previous interaction; add-on state, stay where it is
+		6: 8, // 6: User asks for playing the segmented video; add-on state, stay where it is
 	},
 };
 
