@@ -5,15 +5,10 @@ import {
 	respondWithHowToFix,
 	freeformResponse,
 	handlingUserDisagreements,
-	replayRelevantPartsFromVideos,
-	retrievePreviousStepsOrInteractions,
 	followUpWithDetails,
 } from './eventStateFunctions';
-import { callChatGPT } from './utils';
-import {
-	systemPromptEventDetection,
-	systemPromptStateFunctions
-} from '../prompt';
+import { decideCategoryFromUserRequest } from './utils';
+import { systemPromptEventDetection } from '../prompt';
 
 // define states and transitions
 type StateMachineTranslator = {
@@ -68,14 +63,14 @@ export const eventDetailedExplanation: StateMachineTranslator = {
          * "What step am I on right now?"
          * "What should I do next?" 
          * "Was I supposed to preheat the oven?"`,
-	
+
 	1: `User asks follow-up questions
        - User in general agrees, or explicitly showing disagreement from the last interaction, but seeks more details
        - Examples:
          * "Tell me more about it."
          * "I mean the the actual ingredients needed."
          * "I also hear sizzling sound, is it normal?"`,
-	
+
 	2: `User perceives a problem and asks how to fix something
        - Requests for correction or problem-solving
        - Examples:
@@ -100,9 +95,11 @@ export const eventDetailedExplanation: StateMachineTranslator = {
          * "That worked, thank you"`,
 
 	5: `User asks for repeating a previous interaction
-       - Requests for information to be repeated
+       - User seeks to recall the agent's response from the previous interaction.
        - Examples:
          * "Can you say that again?"
+	   	 * "I didn't catch you."
+		 * "What did you say about XXXX?"
          * "Please repeat the last instruction"
          * "How did you say about the ingredients for making the sauce?"`,
 
@@ -132,9 +129,9 @@ export const eventDetailedExplanation: StateMachineTranslator = {
          * "How does my steak look like now?"`,
 
 	// 9: `User seeks to retrieve previous steps or interactions
-    //    - Asking for recall of previous steps or actions
-    //    - Examples:
-    //      * "What's my last step?"
+	//    - Asking for recall of previous steps or actions
+	//    - Examples:
+	//      * "What's my last step?"
 	//    	 * "What did I do before this?"
 	// 	 * "What did I add last?"
 	// 	 * "What are my last three steps?"`,
@@ -145,12 +142,12 @@ export const eventDetailedExplanation: StateMachineTranslator = {
           * Detecting a wrong food state`,
 
 	// 11: `System automatically detects a new action/step
-    //     - AI recognizes transition to new cooking phase
-    //     - Examples:
-    //       * Detecting user has started mixing ingredients
-    //       * Noticing transition to cooking phase
-    //       * Identifying completion of preparation
-    //       * Recognizing start of new recipe section`,
+	//     - AI recognizes transition to new cooking phase
+	//     - Examples:
+	//       * Detecting user has started mixing ingredients
+	//       * Noticing transition to cooking phase
+	//       * Identifying completion of preparation
+	//       * Recognizing start of new recipe section`,
 
 	12: `System detects missing previous steps
         - AI identifies skipped or incomplete steps
@@ -233,7 +230,7 @@ export const stateFunctions: {
 		voiceInputTranscript: string,
 		interactionMemoryKv: { [key: string]: any },
 		autoAgentResponseMemoryKv: { [key: string]: any }
-	) => Promise<any>
+	) => Promise<string | { response: string; video_segment_index: number[] }>
 } = {
 	0: comparingVideoRealityAlignment,
 	1: explainCurrentFoodState,
@@ -241,8 +238,8 @@ export const stateFunctions: {
 	3: respondWithHowToFix,
 	4: freeformResponse,
 	5: handlingUserDisagreements,
-	6: replayRelevantPartsFromVideos,
-	7: retrievePreviousStepsOrInteractions,
+	// 6: replayRelevantPartsFromVideos,
+	// 7: retrievePreviousStepsOrInteractions,
 	8: followUpWithDetails,
 };
 
@@ -289,9 +286,9 @@ export const asyncNextEventChooser = async (
 					Please decide which category my request belongs to.
 					Please reply ONLY the index of the most appropriate category
 					`;
-	const response = await callChatGPT(systemPromptEventDetection, prompt);
+	const response = await decideCategoryFromUserRequest(systemPromptEventDetection, prompt);
 	if (response) {
-		const eventNumber = Number(response.response[0]);
+		const eventNumber = Number(response.response);
 		return eventNumber;
 	}
 

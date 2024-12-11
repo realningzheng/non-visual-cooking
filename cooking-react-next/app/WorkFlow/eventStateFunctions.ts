@@ -1,5 +1,5 @@
-import { callChatGPT, retrievePreviousInteraction, determinePlaySegmentedVideo } from './utils';
-import { systemPromptRetrievePreviousInteraction, systemPromptStateFunctions } from '../prompt';
+import { respondAndProvideVideoSegmentIndex, retrievePreviousInteraction, determinePlaySegmentedVideo } from './utils';
+import { systemPromptRetrievePreviousInteraction, systemPromptDefault, systemPromptCtxFollowUp } from '../prompt';
 
 
 /** State functions */
@@ -68,8 +68,8 @@ export const explainCurrentFoodState = async (				// state 1
 		2. the size, color, and relative location of the main food item
 	`;
 	console.log(`[state 1: explain current state prompt]`);
-	const response = await callChatGPT(systemPromptStateFunctions, prompt, [realityImageBase64]);
-	return response.response;
+	const response = await respondAndProvideVideoSegmentIndex(systemPromptDefault, prompt, [realityImageBase64]);
+	return response;
 };
 
 
@@ -109,7 +109,7 @@ export const respondWithStepRelatedQuestions = async (		// state 2
 		Make your response precise and avoid extensive elaboration.
 	`;
 	console.log(`[state 2: step related questions prompt]`);
-	const response = await callChatGPT(systemPromptStateFunctions, prompt, [realityImageBase64]);
+	const response = await respondAndProvideVideoSegmentIndex(systemPromptDefault, prompt, [realityImageBase64]);
 	return response;
 };
 
@@ -148,7 +148,7 @@ export const respondWithHowToFix = async (				// state 3
 		2. Tell me about the immediate next step to fix this problem
 	`;
 	console.log(`[state 3: respond with how to fix prompt]`);
-	const response = await callChatGPT(systemPromptStateFunctions, prompt, [realityImageBase64]);
+	const response = await respondAndProvideVideoSegmentIndex(systemPromptDefault, prompt, [realityImageBase64]);
 	return response;
 };
 
@@ -184,7 +184,7 @@ export const freeformResponse = async (				// state 4
 		Make your response precise and avoid extensive elaboration.
 	`;
 	console.log(`[state 4: freeform response prompt]`);
-	const response = await callChatGPT(systemPromptStateFunctions, prompt, [realityImageBase64]);
+	const response = await respondAndProvideVideoSegmentIndex(systemPromptDefault, prompt, [realityImageBase64]);
 	return response;
 };
 
@@ -216,50 +216,7 @@ export const handlingUserDisagreements = async (		// state 5
 		${voiceInputTranscript}
 	`;
 	console.log(`[state 5: handling user disagreements prompt]`);
-	const response = await callChatGPT(systemPromptStateFunctions, prompt);
-	return response;
-};
-
-
-export const replayRelevantPartsFromVideos = async (	// state 6
-	videoKnowledgeInput: string,
-	realityImageBase64: string,
-	voiceInputTranscript: string,
-	interactionMemoryKv: { [key: string]: any },
-	autoAgentResponseMemoryKv: { [key: string]: any }
-) => {
-	const prompt = `
-		<VIDEO KNOWLEDGE>
-		${videoKnowledgeInput}
-		<USER REQUEST>
-		${voiceInputTranscript}
-		Please replay the relevant parts from the video knowledge that are related to my request.
-		You should pick up segments evenly from the beginning, middle and end of the video knowledge.
-		Respond with only the index(es) of those segments.
-	`;
-	console.log(`[state 6: replay relevant parts from videos prompt]`);
-	const response = await callChatGPT(systemPromptStateFunctions, prompt);
-
-	return response;
-};
-
-
-export const retrievePreviousStepsOrInteractions = async (	// state 7
-	videoKnowledgeInput: string,
-	realityImageBase64: string,
-	voiceInputTranscript: string,
-	interactionMemoryKv: { [key: string]: any },
-	autoAgentResponseMemoryKv: { [key: string]: any }
-) => {
-	const prompt = `
-		Interaction memory:
-		${interactionMemoryKv}
-		Agent initiated response memory:
-		${autoAgentResponseMemoryKv}
-		Please respond to the user's question related to his/her previous steps: "${voiceInputTranscript}".
-	`;
-	console.log(`[state 7: retrieve previous steps or interactions prompt]`);
-	const response = await callChatGPT(systemPromptStateFunctions, prompt);
+	const response = await respondAndProvideVideoSegmentIndex(systemPromptDefault, prompt, [realityImageBase64]);
 	return response;
 };
 
@@ -276,7 +233,7 @@ export const followUpWithDetails = async (   // state 8
 		${voiceInputTranscript}
 	`;
 	console.log(`[state 8: follow up with details prompt]`);
-	const response = await callChatGPT(systemPromptStateFunctions, prompt);
+	const response = await respondAndProvideVideoSegmentIndex(systemPromptCtxFollowUp, prompt, [realityImageBase64]);
 	return response;
 };
 
@@ -285,7 +242,7 @@ export const followUpWithDetails = async (   // state 8
  * event 5: repeat previous interaction
  * event 6: play segmented video
 */
-export const repeatPreviousInteraction = async (
+export const repeatPreviousInteraction = async (			// event 5: retrieve previous interactions
 	voiceInputTranscript: string,
 	interactionMemoryKv: { [key: string]: any },
 ) => {
@@ -305,7 +262,7 @@ export const repeatPreviousInteraction = async (
 }
 
 
-export const playSegmentedVideoFlag = async (
+export const getPlaySegmentedVideoFlag = async (				// event 6: control segmented video playback
 	voiceInputTranscript: string,
 ) => {
 	const prompt = `

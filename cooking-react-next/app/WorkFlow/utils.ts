@@ -9,13 +9,12 @@ const openai = new OpenAI({ apiKey: apiKey, dangerouslyAllowBrowser: true });
 
 
 /** Async GPT call */
-export async function callChatGPT(
+export async function respondAndProvideVideoSegmentIndex(
     systemPrompt: string,
     prompt: string,
     imageUrls: string[] = [],
 ): Promise<
-    { response: string, video_segment_index: number[] } |
-    { response: string[] }
+    { response: string, video_segment_index: number[] }
 > {
 
     try {
@@ -66,27 +65,9 @@ export async function callChatGPT(
                             required: ["response", "video_segment_index"]
                         }
                     }
-                },
-                {
-                    type: "function",
-                    function: {
-                        name: "decide_category_from_user_request",
-                        description: "Decide category from user request. In this case, the user should give 1. a command, 2. a list of command categories and their explanations, and examples, 3. a list of command categories and their explanations, and examples, and 4. a list of command categories, their explanations, and examples.",
-                        parameters: {
-                            type: "object",
-                            properties: {
-                                response: {
-                                    type: "array",
-                                    items: { type: "number" },
-                                    description: "the category index of the user request"
-                                },
-                            },
-                            required: ["response"]
-                        }
-                    }
-                },
+                }
             ],
-            tool_choice: 'auto',
+            tool_choice: { type: "function", function: { name: "respond_to_specific_questions_and_provide_video_clip_index" } },
             messages: [
                 {
                     role: "system",
@@ -107,10 +88,10 @@ export async function callChatGPT(
             return JSON.parse(response.choices[0].message.tool_calls[0].function.arguments);
         } else if (response.choices[0]?.message?.content) {
             console.log(`[gpt direct content response]: ${response.choices[0].message.content}`);
-            return { response: [response.choices[0].message.content] };
+            return { response: response.choices[0].message.content, video_segment_index: [] };
         } else {
             console.log(`[gpt has no valid response content]`);
-            return { response: ["GPT FAILED! Please retry."] };
+            return { response: "GPT FAILED! Please retry.", video_segment_index: [] };
         }
     } catch (error) {
         if (axios.isAxiosError(error)) {
@@ -120,7 +101,7 @@ export async function callChatGPT(
         }
     }
 
-    return { response: ["GPT FAILED! Please retry."] };
+    return { response: "GPT FAILED! Please retry.", video_segment_index: [] };
 }
 
 
@@ -271,4 +252,71 @@ export async function determinePlaySegmentedVideo(
     }
 
     return { response: -1 };
+}
+
+
+export async function decideCategoryFromUserRequest(
+    systemPrompt: string,
+    prompt: string,
+): Promise<{ response: number }> {
+    try {
+        prompt = prompt.replace(/\n\s*\n/g, '\n');
+        console.log(`[decide category from user request system prompt]: ${systemPrompt}`);
+        console.log(`[decide category from user request user prompt]: ${prompt}`);
+
+        const content: Array<{ type: string } & Record<string, any>> = [
+            { type: "text", text: prompt }
+        ];
+
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            tools: [
+                {
+                    type: "function",
+                    function: {
+                        name: "decide_category_from_user_request",
+                        description: "Decide category from user request. In this case, the user should give 1. a command, 2. a list of command categories and their explanations, and examples, 3. a list of command categories and their explanations, and examples, and 4. a list of command categories, their explanations, and examples.",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                response: {
+                                    type: "array",
+                                    items: { type: "number" },
+                                    description: "the category index of the user request"
+                                },
+                            },
+                            required: ["response"]
+                        }
+                    }
+                }
+            ],
+            tool_choice: { type: "function", function: { name: "decide_category_from_user_request" } },
+            messages: [
+                {
+                    role: "system",
+                    content: systemPrompt
+                },
+                {
+                    role: "user",
+                    content: content as any[]
+                }
+            ],
+            max_tokens: 500,
+        });
+
+        if (response.choices[0]?.message?.tool_calls?.[0]?.function?.arguments) {
+            console.log(`[gpt tool call]: ${response.choices[0].message.tool_calls[0].function.name}`);
+            console.log(response.choices[0].message.tool_calls[0].function.arguments);
+            return JSON.parse(response.choices[0].message.tool_calls[0].function.arguments);
+        }
+
+        return { response: -1 };
+    } catch (error) {
+        if (axios.isAxiosError(error)) {
+            console.error("Error calling GPT-4 API:", error.response?.data);
+        } else {
+            console.error("Unknown error:", error);
+        }
+        return { response: -1 };
+    }
 }

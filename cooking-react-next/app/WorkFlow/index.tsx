@@ -23,7 +23,7 @@ import secret from '../../secret.json';
 import { FaUser } from "react-icons/fa";
 import { RiRobot2Fill } from "react-icons/ri";
 import OpenAI from "openai";
-import { repeatPreviousInteraction, playSegmentedVideoFlag } from "./eventStateFunctions";
+import { repeatPreviousInteraction, getPlaySegmentedVideoFlag } from "./eventStateFunctions";
 
 
 interface WorkFlowProps {
@@ -60,6 +60,7 @@ interface InteractionMemoryItem {
     index: number;
     user_query?: string;
     agent_response?: string;
+    video_segment_index?: number[];
     memorized_item_key?: string;
     memorized_item_value?: string;
 }
@@ -360,7 +361,12 @@ export default function WorkFlow(props: WorkFlowProps) {
 
 
     /** Handle state transition */
-    const gotoNextState = async (statePrev: number, event: number, voiceInputTranscript: string, videoKnowledgeInput: string) => {
+    const gotoNextState = async (
+        statePrev: number,
+        event: number,
+        voiceInputTranscript: string,
+        videoKnowledgeInput: string
+    ) => {
         if (event >= 0 && (event in stateMachine[statePrev])) {
             if (event === 5) {              // handle replay previous interaction 
                 let retrievedResponse = await repeatPreviousInteraction(
@@ -370,18 +376,11 @@ export default function WorkFlow(props: WorkFlowProps) {
                 let retrievedIndex = Number(retrievedResponse.response);
                 let retrievedInfo = interactionMemoryKv[retrievedIndex];
                 let agentResponse = retrievedInfo.agent_response;
-                try {
-                    if (agentResponse) {
-                        const parsed = JSON.parse(agentResponse);
-                        console.log('[parsed]');
-                        console.log(parsed);
-                        await playTTS(String(parsed.response), props.ttsSpeed);
-                    }
-                } catch {
-                    // do nothing
+                if (agentResponse) {
+                    await playTTS(agentResponse, props.ttsSpeed);
                 }
             } else if (event === 6) {       // handle replay segmented video
-                let response = await playSegmentedVideoFlag(voiceInputTranscript);
+                let response = await getPlaySegmentedVideoFlag(voiceInputTranscript);
                 if (response.response === 0) {
                     props.setSegmentedVideoPlaying(false);
                 } else if (response.response === 1) {
@@ -405,47 +404,51 @@ export default function WorkFlow(props: WorkFlowProps) {
                 props.setIsProcessing(false);
 
                 // Convert object response to string if necessary
-                const formattedResponse = typeof stateFunctionExeRes === 'object'
+                const stringifiedResponse = typeof stateFunctionExeRes === 'object'
                     ? JSON.stringify(stateFunctionExeRes, null, 2)
                     : String(stateFunctionExeRes);
 
-                if (formattedResponse !== props.stateFunctionExeRes) {
-                    props.setStateFunctionExeRes(formattedResponse);
+                if (stringifiedResponse !== props.stateFunctionExeRes) {
+                    props.setStateFunctionExeRes(stringifiedResponse);
                     // store user input and agent response
                     if (voiceInputTranscript.length > 0) {
-                        setInteractionMemoryKv(prevList => [
-                            ...prevList,
-                            {
-                                index: interactionID,
-                                user_query: voiceInputTranscript,
-                                agent_response: formattedResponse
-                            }
-                        ]);
-                        setInteractionID(prev => prev + 1);
-                    }
+                        if (typeof stateFunctionExeRes === 'object') {
+                            setInteractionMemoryKv(prevList => [
+                                ...prevList,
+                                {
+                                    index: interactionID,
+                                    user_query: voiceInputTranscript,
+                                    agent_response: stateFunctionExeRes.response,
+                                    video_segment_index: stateFunctionExeRes.video_segment_index
+                                }
+                            ]);
+                            setInteractionID(prev => prev + 1);
+                        }
 
-                    // store auto agent response
-                    if (formattedResponse.length > 0 && formattedResponse.startsWith("<")) {
-                        setAutoAgentResponseMemoryKv(prevList => [
-                            ...prevList,
-                            {
-                                index: autoAgentResponseID,
-                                response: formattedResponse
-                            }
-                        ]);
-                        setAutoAgentResponseID(prev => prev + 1);
-                    }
-                    try {
-                        const parsed = JSON.parse(formattedResponse);
-                        await playTTS(String(parsed.response), props.ttsSpeed);
-                    } catch {
-                        // do nothing
+                        // store auto agent response
+                        if (typeof stateFunctionExeRes !== 'object') {
+                            setAutoAgentResponseMemoryKv(prevList => [
+                                ...prevList,
+                                {
+                                    index: autoAgentResponseID,
+                                    response: stringifiedResponse
+                                }
+                            ]);
+                            setAutoAgentResponseID(prev => prev + 1);
+                        }
+
+                        // play the natural language response from the agent
+                        if (typeof stateFunctionExeRes === 'object') {
+                            await playTTS(String(stateFunctionExeRes.response), props.ttsSpeed);
+                        } else {
+                            await playTTS(stringifiedResponse, props.ttsSpeed);
+                        }
                     }
                 }
+                return;
             }
-            return;
-        }
-    };
+        };
+    }
 
 
     /** Handle state transition */
@@ -819,6 +822,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                                 &nbsp;&nbsp;&nbsp;&nbsp;agent_response: {String(item.agent_response).length > 70
                                     ? `${String(item.agent_response).substring(0, 40)}...${String(item.agent_response).slice(-30)}`
                                     : String(item.agent_response)}<br />
+                                &nbsp;&nbsp;&nbsp;&nbsp;video_segment_index: {String(item.video_segment_index)}<br />
                                 {"}"},
                             </div>
                         ))}
