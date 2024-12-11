@@ -1,7 +1,8 @@
-import { callChatGPT } from './utils';
-import { systemPromptStateFunctions } from '../prompt';
+import { callChatGPT, retrievePreviousInteraction, determinePlaySegmentedVideo } from './utils';
+import { systemPromptRetrievePreviousInteraction, systemPromptStateFunctions } from '../prompt';
 
 
+/** State functions */
 export const comparingVideoRealityAlignment = async (	// state 0
 	videoKnowledgeInput: string,
 	realityImageBase64: string,
@@ -238,7 +239,7 @@ export const replayRelevantPartsFromVideos = async (	// state 6
 	`;
 	console.log(`[state 6: replay relevant parts from videos prompt]`);
 	const response = await callChatGPT(systemPromptStateFunctions, prompt);
-	
+
 	return response;
 };
 
@@ -278,3 +279,47 @@ export const followUpWithDetails = async (   // state 8
 	const response = await callChatGPT(systemPromptStateFunctions, prompt);
 	return response;
 };
+
+
+/** Event functions specifically for:
+ * event 5: repeat previous interaction
+ * event 6: play segmented video
+*/
+export const repeatPreviousInteraction = async (
+	voiceInputTranscript: string,
+	interactionMemoryKv: { [key: string]: any },
+) => {
+	const prompt = `
+		Retrieve the one, and only one, of the most relevant part from previous interactions based on user request:
+		<PREVIOUS INTERACTION>
+		${JSON.stringify(interactionMemoryKv)}
+		<USER REQUEST>
+		${voiceInputTranscript}
+	`;
+	console.log(`[event 5: repeat previous interaction prompt]`);
+	const response = await retrievePreviousInteraction(
+		systemPromptRetrievePreviousInteraction,
+		prompt
+	);
+	return response;
+}
+
+
+export const playSegmentedVideoFlag = async (
+	voiceInputTranscript: string,
+) => {
+	const prompt = `
+		<USER REQUEST>
+		Determine if the following request is to play the video, pause the video, or replay from the beginning of the video:
+		${voiceInputTranscript}
+	`;
+	console.log(`[event 6: play segmented video flag prompt]`);
+	const response = await determinePlaySegmentedVideo(
+		`You are a helpful assistant to determine if the user request is to play the video, pause the video, or replay from the beginning of the video.
+		return 0 if they want to pause the video, 1 if they want to play the video, 2 if they want to replay from the beginning of the video.
+		user request is given after the tag <USER REQUEST>
+		`,
+		prompt
+	);
+	return response;
+}

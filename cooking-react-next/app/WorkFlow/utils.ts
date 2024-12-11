@@ -84,7 +84,7 @@ export async function callChatGPT(
                             required: ["response"]
                         }
                     }
-                }
+                },
             ],
             tool_choice: 'auto',
             messages: [
@@ -121,4 +121,154 @@ export async function callChatGPT(
     }
 
     return { response: ["GPT FAILED! Please retry."] };
+}
+
+
+export async function retrievePreviousInteraction(
+    systemPrompt: string,
+    prompt: string,
+): Promise<
+    { response: number }
+> {
+
+    try {
+        // delete empty lines in prompt
+        prompt = prompt.replace(/\n\s*\n/g, '\n');
+        console.log(`[retrieve interaction system prompt]: ${systemPrompt}`);
+        console.log(`[retrieve interaction user prompt]: ${prompt}`);
+        // Construct content array with text prompt and any provided images
+        const content: Array<{ type: string } & Record<string, any>> = [
+            { type: "text", text: prompt }
+        ];
+
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            tools: [
+                {
+                    type: "function",
+                    function: {
+                        name: "retrieve_previous_interaction",
+                        description: "Retrieve the one, and only one, of the most relevant part from previous interactions based on user request",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                response: {
+                                    type: "number",
+                                    description: "the index of the most relevant part from previous interactions based on user request"
+                                },
+                            },
+                            required: ["response"]
+                        }
+                    }
+                }
+            ],
+            tool_choice: { type: "function", function: { name: "retrieve_previous_interaction" } },
+            messages: [
+                {
+                    role: "system",
+                    content: systemPrompt
+                },
+                {
+                    role: "user",
+                    content: content as any[]
+                }
+            ],
+            max_tokens: 1500,
+        });
+
+        // Handle both tool_calls and direct content responses
+        if (response.choices[0]?.message?.tool_calls?.[0]?.function?.arguments) {
+            console.log(`[gpt tool call]: ${response.choices[0].message.tool_calls[0].function.name}`);
+            console.log(response.choices[0].message.tool_calls[0].function.arguments);
+            return JSON.parse(response.choices[0].message.tool_calls[0].function.arguments);
+        } else if (response.choices[0]?.message?.content) {
+            console.log(`[gpt direct content response]: ${response.choices[0].message.content}`);
+            return { response: Number(response.choices[0].message.content) };
+        } else {
+            console.log(`[gpt has no valid response content]`);
+            return { response: -1 };
+        }
+    } catch (error) {
+        if (axios.isAxiosError(error)) {
+            console.error("Error calling GPT-4 API:", error.response?.data);
+        } else {
+            console.error("Unknown error:", error);
+        }
+    }
+
+    return { response: -1 };
+}
+
+
+export async function determinePlaySegmentedVideo(
+    systemPrompt: string,
+    prompt: string,
+): Promise<{ response: number }> {
+  
+    try {
+        // delete empty lines in prompt
+        prompt = prompt.replace(/\n\s*\n/g, '\n');
+        console.log(`[retrieve interaction system prompt]: ${systemPrompt}`);
+        console.log(`[retrieve interaction user prompt]: ${prompt}`);
+        // Construct content array with text prompt and any provided images
+        const content: Array<{ type: string } & Record<string, any>> = [
+            { type: "text", text: prompt }
+        ];
+
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            tools: [
+                {
+                    type: "function",
+                    function: {
+                        name: "video_play_pause_replay_determine",
+                        description: "determine if the user request is about playing the video, pause the video, or replay from the beginning of the video",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                response: {
+                                    type: "number",
+                                    description: "0 if the user request is about playing the video, 1 if they want to pause the video, 2 if they want to replay from the beginning of the video"
+                                },
+                            },
+                            required: ["response"]
+                        }
+                    }
+                }
+            ],
+            tool_choice: { type: "function", function: { name: "video_play_pause_replay_determine" } },
+            messages: [
+                {
+                    role: "system",
+                    content: systemPrompt
+                },
+                {
+                    role: "user",
+                    content: content as any[]
+                }
+            ],
+            max_tokens: 1500,
+        });
+
+        // Handle both tool_calls and direct content responses
+        if (response.choices[0]?.message?.tool_calls?.[0]?.function?.arguments) {
+            console.log(`[gpt tool call]: ${response.choices[0].message.tool_calls[0].function.name}`);
+            console.log(response.choices[0].message.tool_calls[0].function.arguments);
+            return JSON.parse(response.choices[0].message.tool_calls[0].function.arguments);
+        } else if (response.choices[0]?.message?.content) {
+            console.log(`[gpt direct content response]: ${response.choices[0].message.content}`);
+            return { response: Number(response.choices[0].message.content) };
+        } else {
+            console.log(`[gpt has no valid response content]`);
+            return { response: -1 };
+        }
+    } catch (error) {
+        if (axios.isAxiosError(error)) {
+            console.error("Error calling GPT-4 API:", error.response?.data);
+        } else {
+            console.error("Unknown error:", error);
+        }
+    }
+
+    return { response: -1 };
 }

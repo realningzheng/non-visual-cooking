@@ -8,7 +8,7 @@ import {
 	replayRelevantPartsFromVideos,
 	retrievePreviousStepsOrInteractions,
 	followUpWithDetails,
-} from './stateFunctions';
+} from './eventStateFunctions';
 import { callChatGPT } from './utils';
 import {
 	systemPromptEventDetection,
@@ -48,7 +48,7 @@ export const eventTranslator: StateMachineTranslator = {
 	3: "User disagrees",
 	4: "User agrees",
 	5: "User asks for repeating a previous interaction",
-	6: "User asks for playing the segmented video",
+	6: "User asks for controlling the video playback",
 	7: "User asks for general type of questions",
 	8: "User asks about food state related questions",
 	// 9: "User seeks to retrieve previous steps or interactions",
@@ -106,13 +106,16 @@ export const eventDetailedExplanation: StateMachineTranslator = {
          * "Please repeat the last instruction"
          * "How did you say about the ingredients for making the sauce?"`,
 
-	6: `User asks for playing the segmented video
-       - Request for playing the video
+	6: `User asks for controlling the video playback
+       - User requests to play, pause, or replay the video
        - Examples:
+	   	 * "Play"
+	   	 * "Pause"
+		 * "Replay"
 	   	 * "Play the video for this step"
          * "Replay xxx from the video"
          * "Can you show me how they did xxx from the video?"
-         * "I need to see the kneading part again"`,
+         * "I need to play the kneading part again"`,
 
 	7: `User asks for general questions
        - General cooking queries based on the video knowledge except for a specific steps or food states

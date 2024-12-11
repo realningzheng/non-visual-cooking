@@ -23,6 +23,7 @@ import secret from '../../secret.json';
 import { FaUser } from "react-icons/fa";
 import { RiRobot2Fill } from "react-icons/ri";
 import OpenAI from "openai";
+import { repeatPreviousInteraction, playSegmentedVideoFlag } from "./eventStateFunctions";
 
 
 interface WorkFlowProps {
@@ -36,6 +37,8 @@ interface WorkFlowProps {
     setStateFunctionExeRes: (input: string) => void;
     setIsProcessing: (input: boolean) => void;
     setTtsSpeed: (input: number) => void;
+    setSegmentedVideoPlaying: (input: boolean) => void;
+    setReplaySignal: (input: boolean) => void;
     stateTransitionToggle: boolean;
     voiceInputTranscript: string;
     videoKnowledgeInput: string;
@@ -45,10 +48,27 @@ interface WorkFlowProps {
     stateFunctionExeRes: string;
     isProcessing: boolean;
     ttsSpeed: number;
+    replaySignal: boolean;
 }
 
 
 const openaiClient = new OpenAI({ apiKey: secret.OPENAI_KEY, dangerouslyAllowBrowser: true });
+
+
+// Update the interface for the interaction memory items
+interface InteractionMemoryItem {
+    index: number;
+    user_query?: string;
+    agent_response?: string;
+    memorized_item_key?: string;
+    memorized_item_value?: string;
+}
+
+// Update the interface for auto agent response items
+interface AutoAgentResponseItem {
+    index: number;
+    response: string;
+}
 
 
 export default function WorkFlow(props: WorkFlowProps) {
@@ -60,8 +80,8 @@ export default function WorkFlow(props: WorkFlowProps) {
     const [selectedFileName, setSelectedFileName] = useState<string>('');
     const [isConnected, setIsConnected] = useState(false);
     const [items, setItems] = useState<ItemType[]>([]);
-    const [interactionMemoryKv, setInteractionMemoryKv] = useState<{ [key: string]: any }>({});
-    const [autoAgentResponseMemoryKv, setAutoAgentResponseMemoryKv] = useState<{ [key: string]: any }>({});
+    const [interactionMemoryKv, setInteractionMemoryKv] = useState<InteractionMemoryItem[]>([]);
+    const [autoAgentResponseMemoryKv, setAutoAgentResponseMemoryKv] = useState<AutoAgentResponseItem[]>([]);
     const [interactionID, setInteractionID] = useState<number>(0);
     const [autoAgentResponseID, setAutoAgentResponseID] = useState<number>(0);
     const [isRecording, setIsRecording] = useState(false);
@@ -112,7 +132,7 @@ export default function WorkFlow(props: WorkFlowProps) {
         props.setCurrentState(-1);
         setIsConnected(false);
         setItems([]);
-        setInteractionMemoryKv({});
+        setInteractionMemoryKv([]);
 
         const client = clientRef.current;
         client.disconnect();
@@ -258,11 +278,15 @@ export default function WorkFlow(props: WorkFlowProps) {
                 },
             },
             async ({ key, value }: { [key: string]: any }) => {
-                setInteractionMemoryKv((interactionMemoryKv) => {
-                    const newKv = { ...interactionMemoryKv };
-                    newKv[key] = value;
-                    return newKv;
-                });
+                setInteractionMemoryKv(prevList => [
+                    ...prevList,
+                    {
+                        index: interactionID,
+                        memorized_item_key: key,
+                        memorized_item_value: value
+                    }
+                ]);
+                setInteractionID(prev => prev + 1);
                 return { ok: true };
             }
         );
@@ -335,17 +359,39 @@ export default function WorkFlow(props: WorkFlowProps) {
     }, [items]);
 
 
-    // automatically execute the state function when user event changes
+    /** Handle state transition */
     const gotoNextState = async (statePrev: number, event: number, voiceInputTranscript: string, videoKnowledgeInput: string) => {
         if (event >= 0 && (event in stateMachine[statePrev])) {
-            if (event === 5) {
+            if (event === 5) {              // handle replay previous interaction 
+                let retrievedResponse = await repeatPreviousInteraction(
+                    voiceInputTranscript,
+                    interactionMemoryKv
+                );
+                let retrievedIndex = Number(retrievedResponse.response);
+                let retrievedInfo = interactionMemoryKv[retrievedIndex];
+                let agentResponse = retrievedInfo.agent_response;
                 try {
-                    const parsed = JSON.parse(props.stateFunctionExeRes);
-                    await playTTS(parsed.response, props.ttsSpeed);
+                    if (agentResponse) {
+                        const parsed = JSON.parse(agentResponse);
+                        console.log('[parsed]');
+                        console.log(parsed);
+                        await playTTS(String(parsed.response), props.ttsSpeed);
+                    }
                 } catch {
                     // do nothing
                 }
+            } else if (event === 6) {       // handle replay segmented video
+                let response = await playSegmentedVideoFlag(voiceInputTranscript);
+                if (response.response === 0) {
+                    props.setSegmentedVideoPlaying(false);
+                } else if (response.response === 1) {
+                    props.setSegmentedVideoPlaying(true);
+                } else if (response.response === 2) {
+                    props.setSegmentedVideoPlaying(true);
+                    props.setReplaySignal(!props.replaySignal);
+                }
             } else {
+                props.setSegmentedVideoPlaying(false);
                 const realityImageBase64 = await props.captureRealityFrame();
                 props.setIsProcessing(true);
                 let stateFunctionExeRes = await executeStateFunction(
@@ -367,25 +413,31 @@ export default function WorkFlow(props: WorkFlowProps) {
                     props.setStateFunctionExeRes(formattedResponse);
                     // store user input and agent response
                     if (voiceInputTranscript.length > 0) {
-                        setInteractionMemoryKv(prevKv => ({
-                            ...prevKv,
-                            [`voice_input_${interactionID}`]: voiceInputTranscript,
-                            [`agent_response_${interactionID}`]: formattedResponse
-                        }));
+                        setInteractionMemoryKv(prevList => [
+                            ...prevList,
+                            {
+                                index: interactionID,
+                                user_query: voiceInputTranscript,
+                                agent_response: formattedResponse
+                            }
+                        ]);
                         setInteractionID(prev => prev + 1);
                     }
 
                     // store auto agent response
                     if (formattedResponse.length > 0 && formattedResponse.startsWith("<")) {
-                        setAutoAgentResponseMemoryKv(prev => ({
-                            ...prev,
-                            [autoAgentResponseID.toString()]: formattedResponse
-                        }));
+                        setAutoAgentResponseMemoryKv(prevList => [
+                            ...prevList,
+                            {
+                                index: autoAgentResponseID,
+                                response: formattedResponse
+                            }
+                        ]);
                         setAutoAgentResponseID(prev => prev + 1);
                     }
                     try {
                         const parsed = JSON.parse(formattedResponse);
-                        await playTTS(parsed.response, props.ttsSpeed);
+                        await playTTS(String(parsed.response), props.ttsSpeed);
                     } catch {
                         // do nothing
                     }
@@ -396,6 +448,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     };
 
 
+    /** Handle state transition */
     useEffect(() => {
         const executeNextState = async () => {
             if (props.stateMachineEvent >= 0) {
@@ -755,27 +808,36 @@ export default function WorkFlow(props: WorkFlowProps) {
                     <div className="divider"></div>
                     <div className='text-lg font-bold content-block kv'>Interaction history</div>
                     <div className="content-block-body content-kv">
-                        {" { "}
-                        {props.currentState !== -1 && Object.entries(interactionMemoryKv).map(([key, value]) => (
-                            <div key={key} style={{ marginLeft: '20px' }}>
-                                {key}: {String(value).length > 70 ?
-                                    `${String(value).substring(0, 40)}...${String(value).slice(-30)}` :
-                                    String(value)} ,
+                        {" [ "}
+                        {props.currentState !== -1 && interactionMemoryKv.map((item, idx) => (
+                            <div key={item.index} style={{ marginLeft: '20px' }}>
+                                {"{"}<br />
+                                &nbsp;&nbsp;&nbsp;&nbsp;index: {item.index},<br />
+                                &nbsp;&nbsp;&nbsp;&nbsp;user_query: {String(item.user_query).length > 70
+                                    ? `${String(item.user_query).substring(0, 40)}...${String(item.user_query).slice(-30)}`
+                                    : String(item.user_query)},<br />
+                                &nbsp;&nbsp;&nbsp;&nbsp;agent_response: {String(item.agent_response).length > 70
+                                    ? `${String(item.agent_response).substring(0, 40)}...${String(item.agent_response).slice(-30)}`
+                                    : String(item.agent_response)}<br />
+                                {"}"},
                             </div>
                         ))}
-                        {" } "}
+                        {" ] "}
                     </div>
                     <div className='text-lg font-bold content-block kv'>Agent initiated response memory</div>
                     <div className="content-block-body content-kv">
-                        {" { "}
-                        {props.currentState !== -1 && Object.entries(autoAgentResponseMemoryKv).map(([key, value]) => (
-                            <div key={key} style={{ marginLeft: '20px' }}>
-                                {key}: {String(value).length > 70 ?
-                                    `${String(value).substring(0, 40)}...${String(value).slice(-30)}` :
-                                    String(value)} ,
+                        {" [ "}
+                        {props.currentState !== -1 && autoAgentResponseMemoryKv.map((item) => (
+                            <div key={item.index} style={{ marginLeft: '20px' }}>
+                                {"{"}<br />
+                                &nbsp;&nbsp;&nbsp;&nbsp;index: {item.index},<br />
+                                &nbsp;&nbsp;&nbsp;&nbsp;response: {String(item.response).length > 70
+                                    ? `${String(item.response).substring(0, 40)}...${String(item.response).slice(-30)}`
+                                    : String(item.response)}<br />
+                                {"}"},
                             </div>
                         ))}
-                        {" } "}
+                        {" ] "}
                     </div>
                 </>
             )}

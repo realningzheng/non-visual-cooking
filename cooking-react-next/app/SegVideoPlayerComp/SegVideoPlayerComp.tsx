@@ -15,6 +15,8 @@ interface SegmentedVideoPlayerAndListDisplayerProps {
     currentSentenceIndex: number;
     verticalCaptions: boolean;
     currentState: number;
+    segmentedVideoPlaying: boolean;
+    replaySignal: boolean;
     setPlaySeconds: (seconds: number) => void;
 }
 
@@ -31,7 +33,9 @@ export default function SegVideoPlayerComp(props: SegmentedVideoPlayerAndListDis
                                 Number(segment.startTime) / 1000,
                                 Number(segment.endTime) / 1000
                             ]
-                        )}
+                        )}                        
+                        segmentedVideoPlaying={props.segmentedVideoPlaying}
+                        replaySignal={props.replaySignal}
                         setPlaySeconds={props.setPlaySeconds}
                     />
                     :

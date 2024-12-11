@@ -4,12 +4,13 @@ import ReactPlayer from 'react-player';
 interface VideoSegmentPlayerProps {
 	sourceUrl: string;
 	segments: [number, number][]; // Array of tuples representing start and end times
+	segmentedVideoPlaying: boolean;
+	replaySignal: boolean;
 	setPlaySeconds: (seconds: number) => void;
 }
 
-const VideoSegmentPlayer: React.FC<VideoSegmentPlayerProps> = ({ sourceUrl, segments, setPlaySeconds }) => {
+const VideoSegmentPlayer: React.FC<VideoSegmentPlayerProps> = (props: VideoSegmentPlayerProps) => {
 	const [currentSegmentIndex, setCurrentSegmentIndex] = useState(0);
-	const [playing, setPlaying] = useState(false);
 	const playerRef = useRef<ReactPlayer>(null);
 	const [isClient, setIsClient] = useState(false);
 
@@ -20,14 +21,19 @@ const VideoSegmentPlayer: React.FC<VideoSegmentPlayerProps> = ({ sourceUrl, segm
 		}
 	}, []);
 
+	// listen to passive playSeconds change
+	useEffect(() => {
+		playerRef.current?.seekTo(props.segments[0][0]);
+	}, [props.replaySignal]);
+
 	return (
 		<div>
 			{isClient && (
 				<div className="relative pt-[56.25%]"> {/* 16:9 aspect ratio wrapper */}
 					<ReactPlayer
 						ref={playerRef}
-						url={sourceUrl}
-						playing={playing}
+						url={props.sourceUrl}
+						playing={props.segmentedVideoPlaying}
 						controls
 						width="100%"
 						height="100%"
@@ -37,21 +43,21 @@ const VideoSegmentPlayer: React.FC<VideoSegmentPlayerProps> = ({ sourceUrl, segm
 							left: 0,
 						}}
 						onProgress={({ playedSeconds }) => {
-							setPlaySeconds(playedSeconds);
+							props.setPlaySeconds(playedSeconds);
 							// Ensure playback starts from first segment
-							if (playedSeconds < segments[0][0]) {
-								playerRef.current?.seekTo(segments[0][0]);
+							if (playedSeconds < props.segments[0][0]) {
+								playerRef.current?.seekTo(props.segments[0][0]);
 								return;
 							}
-							// Stop at final segment end
-							if (playedSeconds >= segments[segments.length - 1][1]) {
-								setPlaying(false);
+							// Stop at final segment end and seek back to the beginning
+							if (playedSeconds >= props.segments[props.segments.length - 1][1]) {
 								playerRef.current?.getInternalPlayer()?.pause();
+								playerRef.current?.seekTo(props.segments[0][0]);
 								return;
 							}
 							// Move to next segment if current segment ended
-							if (playedSeconds >= segments[currentSegmentIndex][1]) {
-								playerRef.current?.seekTo(segments[currentSegmentIndex + 1][0]);
+							if (playedSeconds >= props.segments[currentSegmentIndex][1]) {
+								playerRef.current?.seekTo(props.segments[currentSegmentIndex + 1][0]);
 								setCurrentSegmentIndex(currentSegmentIndex + 1);
 							}
 						}}

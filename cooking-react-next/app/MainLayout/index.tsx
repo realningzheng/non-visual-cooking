@@ -23,13 +23,15 @@ interface TransriptSentenceItemProps {
 
 export default function MainLayout() {
     const [evalMode, setEvalMode] = useState(false);
-    // original video states
+    // original and segmented video states
     const [videoUrl, setVideoUrl] = useState('rwYaDqXFH88.mp4');
     const [videoSegments, setVideoSegments] = useState<TransriptSentenceItemProps[]>([]);
     const [playSeconds, setPlaySeconds] = useState<number>(0);
     const [currentSentenceIndex, setCurrentSentenceIndex] = useState<number>(0);
     const [showRawVideo, setShowRawVideo] = useState(true);
     const [verticalCaptions, setVerticalCaptions] = useState(false);
+    const [segmentedVideoPlaying, setSegmentedVideoPlaying] = useState(false);
+    const [replaySignal, setReplaySignal] = useState(false);
 
     // Reality preview states
     const [isVideoPlaying, setIsVideoPlaying] = useState(false);
@@ -206,6 +208,8 @@ export default function MainLayout() {
                             currentSentenceIndex={currentSentenceIndex}
                             verticalCaptions={verticalCaptions}
                             currentState={currentState}
+                            segmentedVideoPlaying={segmentedVideoPlaying}
+                            replaySignal={replaySignal}
                             setPlaySeconds={setPlaySeconds}
                         />
                     </div>
@@ -254,6 +258,8 @@ export default function MainLayout() {
                             setStateFunctionExeRes={setStateFunctionExeRes}
                             captureRealityFrame={captureRealityFrame}
                             setTtsSpeed={setTtsSpeed}
+                            setSegmentedVideoPlaying={setSegmentedVideoPlaying}
+                            setReplaySignal={setReplaySignal}
                             stateTransitionToggle={stateTransitionToggle}
                             isProcessing={isProcessing}
                             voiceInputTranscript={voiceInputTranscript}
@@ -263,6 +269,7 @@ export default function MainLayout() {
                             realityImageBase64={realityImageBase64}
                             stateFunctionExeRes={stateFunctionExeRes}
                             ttsSpeed={ttsSpeed}
+                            replaySignal={replaySignal}
                         />
                     }
                 </Grid>
