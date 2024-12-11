@@ -376,9 +376,11 @@ export default function WorkFlow(props: WorkFlowProps) {
                 let retrievedIndex = Number(retrievedResponse.response);
                 let retrievedInfo = interactionMemoryKv[retrievedIndex];
                 let agentResponse = retrievedInfo.agent_response;
+                let videoSegmentIndex = retrievedInfo.video_segment_index;
                 if (agentResponse) {
                     await playTTS(agentResponse, props.ttsSpeed);
                 }
+                props.setStateFunctionExeRes(JSON.stringify({"response": agentResponse, "video_segment_index": videoSegmentIndex}));
             } else if (event === 6) {       // handle replay segmented video
                 let response = await getPlaySegmentedVideoFlag(voiceInputTranscript);
                 if (response.response === 0) {
@@ -791,7 +793,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                     <div className="divider"></div>
 
                     <div className='flex items-center gap-2'>
-                        <div className='text-lg font-bold'>State function executed result</div>
+                        <div className='text-lg font-bold'>Agent response</div>
                         {props.currentState !== -1 && (props.isProcessing && <span className="loading loading-dots loading-lg"></span>)}
                     </div>
                     {props.currentState !== -1 && (
