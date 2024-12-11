@@ -1,5 +1,14 @@
-import { respondAndProvideVideoSegmentIndex, retrievePreviousInteraction, determinePlaySegmentedVideo } from './utils';
-import { systemPromptRetrievePreviousInteraction, systemPromptDefault, systemPromptCtxFollowUp } from '../prompt';
+import {
+	respondAndProvideVideoSegmentIndex,
+	retrievePreviousInteraction,
+	determinePlaySegmentedVideo
+} from './utils';
+import {
+	systemPromptRetrievePreviousInteraction,
+	systemPromptDefault,
+	systemPromptCtxFollowUp,
+	systemPromptErrorHandling
+} from '../prompt';
 
 
 /** State functions */
@@ -216,7 +225,7 @@ export const handlingUserDisagreements = async (		// state 5
 		${voiceInputTranscript}
 	`;
 	console.log(`[state 5: handling user disagreements prompt]`);
-	const response = await respondAndProvideVideoSegmentIndex(systemPromptDefault, prompt, [realityImageBase64]);
+	const response = await respondAndProvideVideoSegmentIndex(systemPromptErrorHandling, prompt, [realityImageBase64]);
 	return response;
 };
 
@@ -229,8 +238,13 @@ export const followUpWithDetails = async (   // state 8
 	autoAgentResponseMemoryKv: { [key: string]: any }
 ) => {
 	const prompt = `
+		<VIDEO KNOWLEDGE>
+		${videoKnowledgeInput}
+		<INTERACTION HISTORY>
+		${JSON.stringify(interactionMemoryKv)}
 		<USER REQUEST>
 		${voiceInputTranscript}
+		Please provide both your response and the index of the video segment that is relevant to my question.
 	`;
 	console.log(`[state 8: follow up with details prompt]`);
 	const response = await respondAndProvideVideoSegmentIndex(systemPromptCtxFollowUp, prompt, [realityImageBase64]);
