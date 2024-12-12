@@ -205,25 +205,15 @@ export const handlingUserDisagreements = async (		// state 5
 	interactionMemoryKv: { [key: string]: any },
 	autoAgentResponseMemoryKv: { [key: string]: any }
 ) => {
-	const useVideoKnowledgeFlag = false;
-	const useInteractionMemoryFlag = false;
-	const useAutoAgentResponseMemoryFlag = false;
-	const useVideoAndMemoryCtx = false;
-
 	const prompt = `
-		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? '<VIDEO KNOWLEDGE>:' : ''}
-		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? videoKnowledgeInput : ''}
-		${useInteractionMemoryFlag && useVideoAndMemoryCtx ? 'Interaction memory is the previous user-agent interaction memory, it is useful for some of the requests given by the user but not all of them. Use it as needed.' : ''}
-		${useInteractionMemoryFlag && useVideoAndMemoryCtx ? 'User\'s memory is provided after the tag <INTERACTION MEMORY>.' : ''}
-		${useInteractionMemoryFlag && useVideoAndMemoryCtx ? '<INTERACTION MEMORY>:' : ''}
-		${useInteractionMemoryFlag && useVideoAndMemoryCtx ? interactionMemoryKv : ''}
-		${useAutoAgentResponseMemoryFlag && useVideoAndMemoryCtx ? 'Auto Agent response memory is the store of previous automatic agent response.' : ''}
-		${useAutoAgentResponseMemoryFlag && useVideoAndMemoryCtx ? 'Auto Agent response memory is provided after the tag <AUTO AGENT RESPONSE MEMORY>.' : ''}
-		${useAutoAgentResponseMemoryFlag && useVideoAndMemoryCtx ? '<AUTO AGENT RESPONSE MEMORY>:' : ''}
-		${useAutoAgentResponseMemoryFlag && useVideoAndMemoryCtx ? autoAgentResponseMemoryKv : ''}
+		<VIDEO KNOWLEDGE>
+		${videoKnowledgeInput}
+		<INTERACTION HISTORY>
+		${JSON.stringify(interactionMemoryKv)}
 		<USER REQUEST>
 		${voiceInputTranscript}
-	`;
+		Please provide both your response and the index of the video segment that is relevant to my question.
+	`
 	console.log(`[state 5: handling user disagreements prompt]`);
 	const response = await respondAndProvideVideoSegmentIndex(systemPromptErrorHandling, prompt, [realityImageBase64]);
 	return response;
