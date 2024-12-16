@@ -28,27 +28,27 @@ import { repeatPreviousInteraction, getPlaySegmentedVideoFlag } from "./eventSta
 
 interface WorkFlowProps {
     setStateTransitionToggle: (input: boolean) => void;
-    captureRealityFrame: () => Promise<string>;
     setStateMachineEvent: (event: number) => void;
     setCurrentState: (state: number) => void;
     setVoiceInputTranscript: (input: string) => void;
     setVideoKnowledgeInput: (input: string) => void;
-    setRealityImageBase64: (input: string) => void;
     setStateFunctionExeRes: (input: string) => void;
     setIsProcessing: (input: boolean) => void;
     setTtsSpeed: (input: number) => void;
     setSegmentedVideoPlaying: (input: boolean) => void;
     setReplaySignal: (input: boolean) => void;
+    setRealityImageBase64: (input: string) => void;
     stateTransitionToggle: boolean;
     voiceInputTranscript: string;
     videoKnowledgeInput: string;
     currentState: number;
     stateMachineEvent: number;
-    realityImageBase64: string;
     stateFunctionExeRes: string;
     isProcessing: boolean;
     ttsSpeed: number;
     replaySignal: boolean;
+    videoRef: React.RefObject<HTMLVideoElement>;
+    canvasRef: React.RefObject<HTMLCanvasElement>;
 }
 
 
@@ -380,7 +380,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                 if (agentResponse) {
                     await playTTS(agentResponse, props.ttsSpeed);
                 }
-                props.setStateFunctionExeRes(JSON.stringify({"response": agentResponse, "video_segment_index": videoSegmentIndex}));
+                props.setStateFunctionExeRes(JSON.stringify({ "response": agentResponse, "video_segment_index": videoSegmentIndex }));
             } else if (event === 6) {       // handle replay segmented video
                 let response = await getPlaySegmentedVideoFlag(voiceInputTranscript);
                 if (response.response === 0) {
@@ -393,8 +393,19 @@ export default function WorkFlow(props: WorkFlowProps) {
                 }
             } else {
                 props.setSegmentedVideoPlaying(false);
-                const realityImageBase64 = await props.captureRealityFrame();
                 props.setIsProcessing(true);
+                let realityImageBase64 = '';
+                const canvas = props.canvasRef.current;
+                const video = props.videoRef.current;
+                if (canvas && video) {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    // save the image to base64 string
+                    const base64data = canvas.toDataURL('image/png');
+                    realityImageBase64 = base64data;
+                }
+                props.setRealityImageBase64(realityImageBase64);
                 let stateFunctionExeRes = await executeStateFunction(
                     stateMachine[statePrev][event],
                     videoKnowledgeInput,

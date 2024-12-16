@@ -122,26 +122,6 @@ export default function MainLayout() {
     }
 
 
-    const captureRealityFrame = async (): Promise<string> => {
-        if (!enableWebCam) {
-            return realityImageBase64;
-        } else {
-            const canvas = canvasRef.current;
-            const video = videoRef.current;
-            if (canvas && video) {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
-                // save the image to base64 string
-                const base64data = canvas.toDataURL('image/png');
-                setRealityImageBase64(base64data);
-                return base64data;
-            }
-        }
-        return '';
-    };
-
-
     return (
         <>
             <Box 
@@ -254,22 +234,22 @@ export default function MainLayout() {
                             setCurrentState={setCurrentState}
                             setVoiceInputTranscript={setVoiceInputTranscript}
                             setVideoKnowledgeInput={setVideoKnowledgeInput}
-                            setRealityImageBase64={setRealityImageBase64}
                             setStateFunctionExeRes={setStateFunctionExeRes}
-                            captureRealityFrame={captureRealityFrame}
                             setTtsSpeed={setTtsSpeed}
                             setSegmentedVideoPlaying={setSegmentedVideoPlaying}
                             setReplaySignal={setReplaySignal}
+                            setRealityImageBase64={setRealityImageBase64}
                             stateTransitionToggle={stateTransitionToggle}
                             isProcessing={isProcessing}
                             voiceInputTranscript={voiceInputTranscript}
                             videoKnowledgeInput={videoKnowledgeInput}
                             currentState={currentState}
                             stateMachineEvent={stateMachineEvent}
-                            realityImageBase64={realityImageBase64}
                             stateFunctionExeRes={stateFunctionExeRes}
                             ttsSpeed={ttsSpeed}
                             replaySignal={replaySignal}
+                            videoRef={videoRef}
+                            canvasRef={canvasRef}
                         />
                     }
                 </Grid>
