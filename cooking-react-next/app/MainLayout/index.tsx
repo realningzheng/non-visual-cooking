@@ -10,9 +10,9 @@ import ImageUploader from '../RealityPreview/ImageUploader';
 import RealityPreview from '../RealityPreview/RealityPreview';
 import EvalResVis from '../EvalResVis';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
-
-import transriptSentenceList from '../data/rwYaDqXFH88_sentence.json';
 import SegVideoPlayerComp from '../SegVideoPlayerComp/SegVideoPlayerComp';
+import { LiveAPIProvider } from '../contexts/LiveAPIContext';
+import secret from '../../secret.json';
 
 interface TransriptSentenceItemProps {
     sentenceIndex: number;
@@ -20,6 +20,11 @@ interface TransriptSentenceItemProps {
     startTime: string;
     endTime: string;
 }
+
+const host = "generativelanguage.googleapis.com";
+const uri = `wss://${host}/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent`;
+const GEMINI_KEY = secret.GEMINI_KEY;
+
 
 export default function MainLayout() {
     const [evalMode, setEvalMode] = useState(false);
@@ -123,7 +128,7 @@ export default function MainLayout() {
 
 
     return (
-        <>
+        <LiveAPIProvider url={uri} apiKey={GEMINI_KEY}>
             <Box 
                 sx={{ 
                     display: 'flex', 
@@ -254,6 +259,6 @@ export default function MainLayout() {
                     }
                 </Grid>
             </Grid>
-        </>
+        </LiveAPIProvider>
     )
 }
