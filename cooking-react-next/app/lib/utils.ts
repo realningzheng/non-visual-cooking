@@ -23,10 +23,12 @@ const map: Map<string, AudioContext> = new Map();
 export const audioContext: (
   options?: GetAudioContextOptions,
 ) => Promise<AudioContext> = (() => {
-  const didInteract = new Promise((res) => {
-    window.addEventListener("pointerdown", res, { once: true });
-    window.addEventListener("keydown", res, { once: true });
-  });
+  const didInteract = typeof window !== 'undefined' 
+    ? new Promise((res) => {
+        window.addEventListener("pointerdown", res, { once: true });
+        window.addEventListener("keydown", res, { once: true });
+      })
+    : Promise.resolve();
 
   return async (options?: GetAudioContextOptions) => {
     try {

@@ -11,8 +11,7 @@ import RealityPreview from '../RealityPreview/RealityPreview';
 import EvalResVis from '../EvalResVis';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import SegVideoPlayerComp from '../SegVideoPlayerComp/SegVideoPlayerComp';
-import { LiveAPIProvider } from '../contexts/LiveAPIContext';
-import secret from '../../secret.json';
+
 
 interface TransriptSentenceItemProps {
     sentenceIndex: number;
@@ -20,10 +19,6 @@ interface TransriptSentenceItemProps {
     startTime: string;
     endTime: string;
 }
-
-const host = "generativelanguage.googleapis.com";
-const uri = `wss://${host}/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent`;
-const GEMINI_KEY = secret.GEMINI_KEY;
 
 
 export default function MainLayout() {
@@ -57,6 +52,7 @@ export default function MainLayout() {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
+    const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -128,11 +124,11 @@ export default function MainLayout() {
 
 
     return (
-        <LiveAPIProvider url={uri} apiKey={GEMINI_KEY}>
-            <Box 
-                sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
+        <>
+            <Box
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
                     padding: '0.75rem',
                     background: 'linear-gradient(to right, #fff, #f5f5f5)',
                     boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
@@ -140,16 +136,16 @@ export default function MainLayout() {
                     marginBottom: '1rem',
                 }}
             >
-                <RestaurantIcon 
-                    sx={{ 
-                        fontSize: '2rem', 
+                <RestaurantIcon
+                    sx={{
+                        fontSize: '2rem',
                         marginRight: '0.5rem',
                         color: '#d85a5a'
-                    }} 
+                    }}
                 />
-                <Typography 
-                    variant="h5" 
-                    sx={{ 
+                <Typography
+                    variant="h5"
+                    sx={{
                         fontWeight: 'bold',
                         color: '#000',
                         letterSpacing: '0.5px',
@@ -255,10 +251,12 @@ export default function MainLayout() {
                             replaySignal={replaySignal}
                             videoRef={videoRef}
                             canvasRef={canvasRef}
+                            videoStream={videoStream}
+                            setVideoStream={setVideoStream}
                         />
                     }
                 </Grid>
             </Grid>
-        </LiveAPIProvider>
+        </>
     )
 }

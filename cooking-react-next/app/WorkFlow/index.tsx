@@ -11,19 +11,23 @@ import {
     executeStateFunction,
     eventDetailedExplanation
 } from './stateMachine';
-import { WavRecorder, WavStreamPlayer } from '../wavtools/index.js';
+// import { WavRecorder, WavStreamPlayer } from '../wavtools/index.js';
 import { XCircle } from 'react-feather';
 import SendIcon from '@mui/icons-material/Send';
 import DeleteIcon from '@mui/icons-material/Delete';
 // @ts-ignore
-import { RealtimeClient } from '@openai/realtime-api-beta';
-// @ts-ignore
-import { ItemType } from "@openai/realtime-api-beta/dist/lib/client";
-import secret from '../../secret.json';
+// import { RealtimeClient } from '@openai/realtime-api-beta';
+// // @ts-ignore
+// import { ItemType } from "@openai/realtime-api-beta/dist/lib/client";
+import credential from '../../secret.json';
 import { FaUser } from "react-icons/fa";
 import { RiRobot2Fill } from "react-icons/ri";
 import OpenAI from "openai";
 import { repeatPreviousInteraction, getPlaySegmentedVideoFlag } from "./eventStateFunctions";
+import { useLiveAPIContext } from "../contexts/LiveAPIContext";
+import ControlTray from "../components/control-tray/ControlTray";
+
+// const openaiClient = new OpenAI({ apiKey: credential.OPENAI_KEY, dangerouslyAllowBrowser: true });
 
 
 interface WorkFlowProps {
@@ -49,11 +53,9 @@ interface WorkFlowProps {
     replaySignal: boolean;
     videoRef: React.RefObject<HTMLVideoElement>;
     canvasRef: React.RefObject<HTMLCanvasElement>;
+    videoStream: MediaStream | null;
+    setVideoStream: (input: MediaStream | null) => void;
 }
-
-
-const openaiClient = new OpenAI({ apiKey: secret.OPENAI_KEY, dangerouslyAllowBrowser: true });
-
 
 // Update the interface for the interaction memory items
 interface InteractionMemoryItem {
@@ -73,14 +75,14 @@ interface AutoAgentResponseItem {
 
 
 export default function WorkFlow(props: WorkFlowProps) {
-    const wavRecorderRef = useRef<WavRecorder>(new WavRecorder({ sampleRate: 24000 }));
-    const wavStreamPlayerRef = useRef<WavStreamPlayer>(new WavStreamPlayer({ sampleRate: 24000 }));
-    const clientRef = useRef<RealtimeClient>(new RealtimeClient({ apiKey: secret.OPENAI_KEY, dangerouslyAllowAPIKeyInBrowser: true }));
+    // const wavRecorderRef = useRef<WavRecorder>(new WavRecorder({ sampleRate: 24000 }));
+    // const wavStreamPlayerRef = useRef<WavStreamPlayer>(new WavStreamPlayer({ sampleRate: 24000 }));
+    // const clientRef = useRef<RealtimeClient>(new RealtimeClient({ apiKey: credential.OPENAI_KEY, dangerouslyAllowAPIKeyInBrowser: true }));
     const startTimeRef = useRef<string>(new Date().toISOString());
     const conversationRef = useRef<HTMLDivElement>(null);
     const [selectedFileName, setSelectedFileName] = useState<string>('');
     const [isConnected, setIsConnected] = useState(false);
-    const [items, setItems] = useState<ItemType[]>([]);
+    // const [items, setItems] = useState<ItemType[]>([]);
     const [interactionMemoryKv, setInteractionMemoryKv] = useState<InteractionMemoryItem[]>([]);
     const [autoAgentResponseMemoryKv, setAutoAgentResponseMemoryKv] = useState<AutoAgentResponseItem[]>([]);
     const [interactionID, setInteractionID] = useState<number>(0);
@@ -104,260 +106,267 @@ export default function WorkFlow(props: WorkFlowProps) {
         }
     }, [props.currentState]);
 
+
+    const { client, connected, connect, disconnect, volume } = useLiveAPIContext();
+
+
     /** Bootstrap functions */
     /** Connect to conversation */
     const connectConversation = async () => {
+        await connect();
         // initiate automatic checking for video-reality alignment
         props.setStateMachineEvent(20);
         props.setCurrentState(0);
-        const client = clientRef.current;
-        const wavRecorder = wavRecorderRef.current;
-        const wavStreamPlayer = wavStreamPlayerRef.current;
+        // const client = clientRef.current;
+        // const wavRecorder = wavRecorderRef.current;
+        // const wavStreamPlayer = wavStreamPlayerRef.current;
 
         // Set state variables
         startTimeRef.current = new Date().toISOString();
         setIsConnected(true);
-        setItems(client.conversation.getItems());
+        // setItems(client.conversation.getItems());
 
-        await wavRecorder.begin();
-        await wavStreamPlayer.connect();
-        await client.connect();
-        if (client.getTurnDetectionType() === 'server_vad') {
-            await wavRecorder.record((data) => client.appendInputAudio(data.mono));
-        }
+        // await wavRecorder.begin();
+        // await wavStreamPlayer.connect();
+        // await client.connect();
+        // if (client.getTurnDetectionType() === 'server_vad') {
+        //     await wavRecorder.record((data) => client.appendInputAudio(data.mono));
+        // }
     };
 
     /* Disconnect and reset conversation state */
     const disconnectConversation = async () => {
+        await disconnect();
         props.setStateMachineEvent(-1);
         props.setCurrentState(-1);
         setIsConnected(false);
-        setItems([]);
-        setInteractionMemoryKv([]);
+        // setItems([]);
+        // setInteractionMemoryKv([]);
 
-        const client = clientRef.current;
-        client.disconnect();
+        // const client = clientRef.current;
+        // client.disconnect();
 
-        const wavRecorder = wavRecorderRef.current;
-        await wavRecorder.end();
+        // const wavRecorder = wavRecorderRef.current;
+        // await wavRecorder.end();
 
-        const wavStreamPlayer = wavStreamPlayerRef.current;
-        await wavStreamPlayer.interrupt();
+        // const wavStreamPlayer = wavStreamPlayerRef.current;
+        // await wavStreamPlayer.interrupt();
     };
 
 
     /** Delete a conversation item */
-    const deleteConversationItem = async (id: string) => {
-        const client = clientRef.current;
-        client.deleteItem(id);
-    };
+    // const deleteConversationItem = async (id: string) => {
+    //     const client = clientRef.current;
+    //     client.deleteItem(id);
+    // };
 
 
     /**
      * In push-to-talk mode, start recording
      * .appendInputAudio() for each sample
      */
-    const startRecording = async () => {
-        setIsRecording(true);
-        const client = clientRef.current;
-        const wavRecorder = wavRecorderRef.current;
-        const wavStreamPlayer = wavStreamPlayerRef.current;
-        const trackSampleOffset = await wavStreamPlayer.interrupt();
-        if (audioAgentDuty === 'chatbot') {
-            if (trackSampleOffset?.trackId) {
-                const { trackId, offset } = trackSampleOffset;
-                await client.cancelResponse(trackId, offset);
-            }
-        }
-        await wavRecorder.record((data) => client.appendInputAudio(data.mono));
-    };
+    // const startRecording = async () => {
+    //     setIsRecording(true);
+    //     const client = clientRef.current;
+    //     const wavRecorder = wavRecorderRef.current;
+    //     const wavStreamPlayer = wavStreamPlayerRef.current;
+    //     const trackSampleOffset = await wavStreamPlayer.interrupt();
+    //     if (audioAgentDuty === 'chatbot') {
+    //         if (trackSampleOffset?.trackId) {
+    //             const { trackId, offset } = trackSampleOffset;
+    //             await client.cancelResponse(trackId, offset);
+    //         }
+    //     }
+    //     await wavRecorder.record((data) => client.appendInputAudio(data.mono));
+    // };
 
     /**
      * In push-to-talk mode, stop recording
      */
-    const stopRecording = async () => {
-        setIsRecording(false);
-        const client = clientRef.current;
-        const wavRecorder = wavRecorderRef.current;
-        await wavRecorder.pause();
-        if (audioAgentDuty === 'detect') {
-            // @TODO: should be a better way to append this message at the beginning of the conversation
-            client.sendUserMessageContent([
-                {
-                    type: `input_text`,
-                    text: `Please decide the sentence I just said falls under which type of the following categories:\n\n
-                    ${possibleNextUserEvents.join("\n")}\n
+    // const stopRecording = async () => {
+    //     setIsRecording(false);
+    //     const client = clientRef.current;
+    //     const wavRecorder = wavRecorderRef.current;
+    //     await wavRecorder.pause();
+    //     if (audioAgentDuty === 'detect') {
+    //         // @TODO: should be a better way to append this message at the beginning of the conversation
+    //         client.sendUserMessageContent([
+    //             {
+    //                 type: `input_text`,
+    //                 text: `Please decide the sentence I just said falls under which type of the following categories:\n\n
+    //                 ${possibleNextUserEvents.join("\n")}\n
 
-                    Please reply ONLY the index of the most appropriate category.`
-                }
-            ]);
-        } else if (audioAgentDuty === 'chatbot') {
-            client.createResponse();
-        } else {
-            console.error("Invalid audio agent duty");
-        }
-    };
+    //                 Please reply ONLY the index of the most appropriate category.`
+    //             }
+    //         ]);
+    //     } else if (audioAgentDuty === 'chatbot') {
+    //         client.createResponse();
+    //     } else {
+    //         console.error("Invalid audio agent duty");
+    //     }
+    // };
 
 
     /**
      * Switch between Manual <> VAD mode for communication
      */
-    const changeTurnEndType = async (value: string) => {
-        const client = clientRef.current;
-        const wavRecorder = wavRecorderRef.current;
-        if (value === 'none' && wavRecorder.getStatus() === 'recording') {
-            await wavRecorder.pause();
-        }
-        client.updateSession({
-            turn_detection: value === 'none' ? null : { type: 'server_vad' },
-        });
-        if (value === 'server_vad' && client.isConnected()) {
-            await wavRecorder.record((data) => client.appendInputAudio(data.mono));
-        }
-        setCanPushToTalk(value === 'none');
-    };
+    // const changeTurnEndType = async (value: string) => {
+    //     const client = clientRef.current;
+    //     const wavRecorder = wavRecorderRef.current;
+    //     if (value === 'none' && wavRecorder.getStatus() === 'recording') {
+    //         await wavRecorder.pause();
+    //     }
+    //     client.updateSession({
+    //         turn_detection: value === 'none' ? null : { type: 'server_vad' },
+    //     });
+    //     if (value === 'server_vad' && client.isConnected()) {
+    //         await wavRecorder.record((data) => client.appendInputAudio(data.mono));
+    //     }
+    //     setCanPushToTalk(value === 'none');
+    // };
 
 
     const playTTS = async (text: string, speed: number) => {
-        try {
-            console.log('[TTS play]', text);
-            const wavStreamPlayer = wavStreamPlayerRef.current;
-            const mp3Response = await openaiClient.audio.speech.create({
-                model: "tts-1",
-                voice: "alloy",
-                input: text,
-                response_format: 'pcm',
-                speed: speed,
-            });
-            const arrayBuffer = await mp3Response.arrayBuffer();
-            await wavStreamPlayer.connect();
-            await wavStreamPlayer.add16BitPCM(arrayBuffer);
-        } catch (error) {
-            console.error("Error generating or playing TTS:", error);
-        }
+        console.log('[TTS play not implemented!]', text);
+        //     try {
+        //         console.log('[TTS play]', text);
+        //         const wavStreamPlayer = wavStreamPlayerRef.current;
+        //         const mp3Response = await openaiClient.audio.speech.create({
+        //             model: "tts-1",
+        //             voice: "alloy",
+        //             input: text,
+        //             response_format: 'pcm',
+        //             speed: speed,
+        //         });
+        //         const arrayBuffer = await mp3Response.arrayBuffer();
+        //         await wavStreamPlayer.connect();
+        //         await wavStreamPlayer.add16BitPCM(arrayBuffer);
+        //     } catch (error) {
+        //         console.error("Error generating or playing TTS:", error);
+        //     }
     };
 
 
     /** Event handlers */
     /** Core RealtimeClient and audio capture setup */
-    useEffect(() => {
-        // Get refs
-        const wavStreamPlayer = wavStreamPlayerRef.current;
-        const client = clientRef.current;
-        // Set instructions
-        client.updateSession({
-            instructions: `System settings:
-            Tool use: enabled.
-            `
-        });
+    // useEffect(() => {
+    //     // Get refs
+    //     const wavStreamPlayer = wavStreamPlayerRef.current;
+    //     const client = clientRef.current;
+    //     // Set instructions
+    //     client.updateSession({
+    //         instructions: `System settings:
+    //         Tool use: enabled.
+    //         `
+    //     });
 
-        // Set transcription, otherwise we don't get user transcriptions back
-        client.updateSession({
-            input_audio_transcription: { model: 'whisper-1' },
-            modalities: ['text', 'audio']
-        });
+    //     // Set transcription, otherwise we don't get user transcriptions back
+    //     client.updateSession({
+    //         input_audio_transcription: { model: 'whisper-1' },
+    //         modalities: ['text', 'audio']
+    //     });
 
-        // Add tools
-        client.addTool(
-            {
-                name: 'set_memory',
-                description: 'Saves important data about the user into memory.',
-                parameters: {
-                    type: 'object',
-                    properties: {
-                        key: {
-                            type: 'string',
-                            description:
-                                'The key of the memory value. Always use lowercase and underscores, no other characters.',
-                        },
-                        value: {
-                            type: 'string',
-                            description: 'Value can be anything represented as a string',
-                        },
-                    },
-                    required: ['key', 'value'],
-                },
-            },
-            async ({ key, value }: { [key: string]: any }) => {
-                setInteractionMemoryKv(prevList => [
-                    ...prevList,
-                    {
-                        index: interactionID,
-                        memorized_item_key: key,
-                        memorized_item_value: value
-                    }
-                ]);
-                setInteractionID(prev => prev + 1);
-                return { ok: true };
-            }
-        );
+    //     // Add tools
+    //     client.addTool(
+    //         {
+    //             name: 'set_memory',
+    //             description: 'Saves important data about the user into memory.',
+    //             parameters: {
+    //                 type: 'object',
+    //                 properties: {
+    //                     key: {
+    //                         type: 'string',
+    //                         description:
+    //                             'The key of the memory value. Always use lowercase and underscores, no other characters.',
+    //                     },
+    //                     value: {
+    //                         type: 'string',
+    //                         description: 'Value can be anything represented as a string',
+    //                     },
+    //                 },
+    //                 required: ['key', 'value'],
+    //             },
+    //         },
+    //         async ({ key, value }: { [key: string]: any }) => {
+    //             setInteractionMemoryKv(prevList => [
+    //                 ...prevList,
+    //                 {
+    //                     index: interactionID,
+    //                     memorized_item_key: key,
+    //                     memorized_item_value: value
+    //                 }
+    //             ]);
+    //             setInteractionID(prev => prev + 1);
+    //             return { ok: true };
+    //         }
+    //     );
 
-        // handle realtime events from client + server for event logging
-        client.on('conversation.updated', async ({ item, delta }: any) => {
-            const items = client.conversation.getItems();
-            // if (delta?.audio) {
-            //     wavStreamPlayer.add16BitPCM(delta.audio, item.id);
-            // }
-            if (item.status === 'completed' && item.formatted.audio?.length) {
-                const wavFile = await WavRecorder.decode(
-                    item.formatted.audio,
-                    24000,
-                    24000
-                );
-                item.formatted.file = wavFile;
-            }
-            setItems(items);
-        });
-        client.on('conversation.interrupted', async () => {
-            const trackSampleOffset = await wavStreamPlayer.interrupt();
-            if (trackSampleOffset?.trackId) {
-                const { trackId, offset } = trackSampleOffset;
-                await client.cancelResponse(trackId, offset);
-            }
-        });
-        client.on('error', (event: any) => console.error(event));
+    //     // handle realtime events from client + server for event logging
+    //     client.on('conversation.updated', async ({ item, delta }: any) => {
+    //         const items = client.conversation.getItems();
+    //         // if (delta?.audio) {
+    //         //     wavStreamPlayer.add16BitPCM(delta.audio, item.id);
+    //         // }
+    //         if (item.status === 'completed' && item.formatted.audio?.length) {
+    //             const wavFile = await WavRecorder.decode(
+    //                 item.formatted.audio,
+    //                 24000,
+    //                 24000
+    //             );
+    //             item.formatted.file = wavFile;
+    //         }
+    //         setItems(items);
+    //     });
+    //     client.on('conversation.interrupted', async () => {
+    //         const trackSampleOffset = await wavStreamPlayer.interrupt();
+    //         if (trackSampleOffset?.trackId) {
+    //             const { trackId, offset } = trackSampleOffset;
+    //             await client.cancelResponse(trackId, offset);
+    //         }
+    //     });
+    //     client.on('error', (event: any) => console.error(event));
 
-        setItems(client.conversation.getItems());
+    //     setItems(client.conversation.getItems());
 
-        return () => {
-            // cleanup; resets to defaults
-            client.reset();
-        };
-    }, []);
+    //     return () => {
+    //         // cleanup; resets to defaults
+    //         client.reset();
+    //     };
+    // }, []);
 
 
     // Handle user transcript update
-    useEffect(() => {
-        // scroll the conversation panel to the bottom
-        if (conversationRef.current) {
-            conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
-        }
-        if (items.length > 0) {
-            // read through items in reverse to find the latest user transcript and agent response
-            for (let i = items.length - 1; i >= 0; i--) {
-                if (items[i].role === 'user' && items[i].formatted.transcript) {
-                    props.setVoiceInputTranscript(items[i].formatted.transcript || '');
-                    props.setStateTransitionToggle(!props.stateTransitionToggle);
-                    break;
-                }
-            }
-            for (let i = items.length - 1; i >= 0; i--) {
-                if (items[i].role === 'assistant') {
-                    // set user event to the non-null value among transcript and text
-                    if (items[i].formatted.transcript) {
-                        if (Object.keys(stateMachine[props.currentState]).includes(Number(items[i].formatted.transcript).toString())) {
-                            props.setStateMachineEvent(Number(items[i].formatted.transcript));
-                        }
-                    } else if (items[i].formatted.text) {
-                        if (Object.keys(stateMachine[props.currentState]).includes(Number(items[i].formatted.text).toString())) {
-                            props.setStateMachineEvent(Number(items[i].formatted.text));
-                        }
-                    }
-                    break;
-                }
-            }
-        }
-    }, [items]);
+    // useEffect(() => {
+    //     // scroll the conversation panel to the bottom
+    //     if (conversationRef.current) {
+    //         conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
+    //     }
+    //     if (items.length > 0) {
+    //         // read through items in reverse to find the latest user transcript and agent response
+    //         for (let i = items.length - 1; i >= 0; i--) {
+    //             if (items[i].role === 'user' && items[i].formatted.transcript) {
+    //                 props.setVoiceInputTranscript(items[i].formatted.transcript || '');
+    //                 props.setStateTransitionToggle(!props.stateTransitionToggle);
+    //                 break;
+    //             }
+    //         }
+    //         for (let i = items.length - 1; i >= 0; i--) {
+    //             if (items[i].role === 'assistant') {
+    //                 // set user event to the non-null value among transcript and text
+    //                 if (items[i].formatted.transcript) {
+    //                     if (Object.keys(stateMachine[props.currentState]).includes(Number(items[i].formatted.transcript).toString())) {
+    //                         props.setStateMachineEvent(Number(items[i].formatted.transcript));
+    //                     }
+    //                 } else if (items[i].formatted.text) {
+    //                     if (Object.keys(stateMachine[props.currentState]).includes(Number(items[i].formatted.text).toString())) {
+    //                         props.setStateMachineEvent(Number(items[i].formatted.text));
+    //                     }
+    //                 }
+    //                 break;
+    //             }
+    //         }
+    //     }
+    // }, [items]);
 
 
     /** Handle state transition */
@@ -531,12 +540,19 @@ export default function WorkFlow(props: WorkFlowProps) {
         <Stack spacing={1}>
             <div className='text-xl font-bold gap-2 pt-1 flex items-center'>
                 CONTROL PANEL
-                <button
+                {/* <button
                     className={`btn btn-xs ${isConnected ? 'bg-success' : 'btn-outline'}`}
                     onClick={isConnected ? disconnectConversation : connectConversation}
                 >
                     {isConnected ? 'disconnect' : 'connect'}
-                </button>
+                </button> */}
+                <ControlTray
+                    videoRef={props.videoRef}
+                    supportsVideo={true}
+                    onVideoStreamChange={props.setVideoStream}
+                >
+                    {/* put your own buttons here */}
+                </ControlTray>
                 <div className="flex-grow" />
                 <div className="dropdown dropdown-end mr-2">
                     <label tabIndex={0} className="btn btn-xs btn-ghost bg-gray-0">
@@ -569,7 +585,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                             </label>
                         </li>
                         <li className="menu-title">Turn Detection</li>
-                        <li>
+                        {/* <li>
                             <label className="label cursor-pointer">
                                 <span className="label-text">Manual</span>
                                 <input
@@ -590,7 +606,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                                     onChange={() => changeTurnEndType('server_vad')}
                                 />
                             </label>
-                        </li>
+                        </li> */}
                         <li className="menu-title">TTS Speed</li>
                         <li>
                             <label className="label cursor-pointer">
@@ -646,7 +662,7 @@ export default function WorkFlow(props: WorkFlowProps) {
             {/* display the things below only when selected file name is not empty */}
             {selectedFileName && (
                 <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: '20px', pt: '15px', gap: '10px' }}>
-                    {isConnected && canPushToTalk && (
+                    {/* {isConnected && canPushToTalk && (
                         <button
                             className={`btn btn-m ${isRecording ? 'btn-error' : 'btn-active'} 
                                 ${(!isConnected || !canPushToTalk) ? 'btn-disabled' : ''}`}
@@ -656,7 +672,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                         >
                             {isRecording ? 'release to send' : 'push to talk'}
                         </button>
-                    )}
+                    )} */}
                     <input
                         type="text"
                         placeholder="Latest user command"
@@ -703,80 +719,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                         marginBottom: '20px'
                     }}
                 >
-                    {!items.length && !isConnected && `awaiting connection...`}
-                    {items.map((conversationItem, i) => {
-                        return (
-                            <div className="conversation-item" key={conversationItem.id}>
-                                <div className={`speaker-content`}>
-                                    {/* tool response */}
-                                    {conversationItem.type === 'function_call_output' && (
-                                        <div>{conversationItem.formatted.output}</div>
-                                    )}
-                                    {/* tool call */}
-                                    {!!conversationItem.formatted.tool && (
-                                        <div>
-                                            {conversationItem.formatted.tool.name}(
-                                            {conversationItem.formatted.tool.arguments})
-                                        </div>
-                                    )}
 
-                                    {/* Transcript from the user */}
-                                    {!conversationItem.formatted.tool &&
-                                        conversationItem.role === 'user' && (
-                                            <div>
-                                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-                                                    <FaUser /> <h5 style={{ marginLeft: '10px' }}>
-                                                        {conversationItem.formatted.transcript ||
-                                                            (conversationItem.formatted.audio?.length
-                                                                ? '(awaiting transcript)'
-                                                                : conversationItem.formatted.text ||
-                                                                '(item sent)')
-                                                        }
-                                                    </h5>
-                                                    <div style={{ flexGrow: 1 }} />
-                                                    <div
-                                                        className="close"
-                                                        style={{ cursor: 'pointer' }}
-                                                        onClick={() =>
-                                                            deleteConversationItem(conversationItem.id)
-                                                        }
-                                                    >
-                                                        < XCircle />
-                                                    </div>
-                                                </div>
-
-                                            </div>
-                                        )
-                                    }
-                                    {!conversationItem.formatted.tool && audioAgentDuty === 'chatbot' &&
-                                        conversationItem.role === 'assistant' && (
-                                            <div>
-                                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-                                                    <RiRobot2Fill /> <h5 style={{ marginLeft: '10px' }}>
-                                                        {conversationItem.formatted.transcript ||
-                                                            conversationItem.formatted.text ||
-                                                            '(truncated)'
-                                                        }
-                                                    </h5>
-                                                    {/* div flexgrow */}
-                                                    <div style={{ flexGrow: 1 }} />
-                                                    <div
-                                                        className="close"
-                                                        style={{ cursor: 'pointer' }}
-                                                        onClick={() =>
-                                                            deleteConversationItem(conversationItem.id)
-                                                        }
-                                                    >
-                                                        < XCircle />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )
-                                    }
-                                </div>
-                            </div>
-                        );
-                    })}
                 </div>
             )}
 
