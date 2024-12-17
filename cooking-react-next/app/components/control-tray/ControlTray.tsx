@@ -117,7 +117,7 @@ function ControlTray({
 			const video = videoRef.current;
 			const canvas = renderCanvasRef.current;
 
-			if (!video || !canvas) {
+			if (!video || !canvas || !activeVideoStream) {
 				return;
 			}
 
@@ -128,6 +128,7 @@ function ControlTray({
 				ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
 				const base64 = canvas.toDataURL("image/jpeg", 1.0);
 				const data = base64.slice(base64.indexOf(",") + 1, Infinity);
+				console.log('send visuals')
 				client.sendRealtimeInput([{ mimeType: "image/jpeg", data }]);
 			}
 			if (connected) {

@@ -53,8 +53,6 @@ interface WorkFlowProps {
     replaySignal: boolean;
     videoRef: React.RefObject<HTMLVideoElement>;
     canvasRef: React.RefObject<HTMLCanvasElement>;
-    videoStream: MediaStream | null;
-    setVideoStream: (input: MediaStream | null) => void;
 }
 
 // Update the interface for the interaction memory items
@@ -546,13 +544,6 @@ export default function WorkFlow(props: WorkFlowProps) {
                 >
                     {isConnected ? 'disconnect' : 'connect'}
                 </button> */}
-                <ControlTray
-                    videoRef={props.videoRef}
-                    supportsVideo={true}
-                    onVideoStreamChange={props.setVideoStream}
-                >
-                    {/* put your own buttons here */}
-                </ControlTray>
                 <div className="flex-grow" />
                 <div className="dropdown dropdown-end mr-2">
                     <label tabIndex={0} className="btn btn-xs btn-ghost bg-gray-0">

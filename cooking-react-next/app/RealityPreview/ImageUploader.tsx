@@ -153,7 +153,7 @@ export default function ImageUploader(props: ImageUploaderProps) {
                         color: '#999', 
                         fontSize: '0.9rem' 
                     }}>
-                        Supported formats: PNG, JPG, JPEG
+                        Supported formats: JPEG
                     </span>
                 </>
             )}

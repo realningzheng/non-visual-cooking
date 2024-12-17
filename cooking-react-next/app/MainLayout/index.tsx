@@ -11,6 +11,7 @@ import RealityPreview from '../RealityPreview/RealityPreview';
 import EvalResVis from '../EvalResVis';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import SegVideoPlayerComp from '../SegVideoPlayerComp/SegVideoPlayerComp';
+import ControlTray from '../components/control-tray/ControlTray';
 
 
 interface TransriptSentenceItemProps {
@@ -36,7 +37,6 @@ export default function MainLayout() {
     // Reality preview states
     const [isVideoPlaying, setIsVideoPlaying] = useState(false);
     const [realityImageBase64, setRealityImageBase64] = useState('');
-    const [enableWebCam, setEnableWebCam] = useState(false);
 
     // Workflow states
     const [stateTransitionToggle, setStateTransitionToggle] = useState(false);
@@ -54,16 +54,12 @@ export default function MainLayout() {
 
     const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
 
+
     useEffect(() => {
         if (typeof window !== 'undefined') {
             setIsClient(true);
         }
     }, []);
-
-
-    useEffect(() => {
-        getVideo();
-    }, [videoRef, !enableWebCam]);
 
 
     useEffect(() => {
@@ -103,24 +99,6 @@ export default function MainLayout() {
             }
         }
     }, [playSeconds]);
-
-
-    const getVideo = () => {
-        navigator.mediaDevices
-            .getUserMedia({
-                video: { width: 1280, height: 720 }
-            })
-            .then(stream => {
-                let video = videoRef.current;
-                if (video) {
-                    video.srcObject = stream;
-                    video.play();
-                }
-            })
-            .catch(err => {
-                console.error(err);
-            })
-    }
 
 
     return (
@@ -200,19 +178,13 @@ export default function MainLayout() {
                     <div className='text-xl font-bold flex items-center gap-2 p-1'>
                         REALITY PREVIEW
                         <button
-                            className={`btn btn-xs ${enableWebCam ? 'btn-primary' : 'btn-outline'}`}
-                            onClick={() => setEnableWebCam(!enableWebCam)}
-                        >
-                            web cam
-                        </button>
-                        <button
                             className={`btn btn-xs ${evalMode ? 'btn-error' : 'btn-outline'}`}
                             onClick={() => setEvalMode(!evalMode)}
                         >
                             eval mode
                         </button>
                     </div>
-                    {!enableWebCam ?
+                    {!videoStream ?
                         <ImageUploader
                             realityImageBase64={realityImageBase64}
                             setRealityImageBase64={setRealityImageBase64}
@@ -220,8 +192,6 @@ export default function MainLayout() {
                         <RealityPreview
                             isClient={isClient}
                             videoRef={videoRef}
-                            canvasRef={canvasRef}
-                            realityImageBase64={realityImageBase64}
                         />
                     }
                 </Grid>
@@ -251,12 +221,17 @@ export default function MainLayout() {
                             replaySignal={replaySignal}
                             videoRef={videoRef}
                             canvasRef={canvasRef}
-                            videoStream={videoStream}
-                            setVideoStream={setVideoStream}
                         />
                     }
                 </Grid>
             </Grid>
+            <ControlTray
+                videoRef={videoRef}
+                supportsVideo={true}
+                onVideoStreamChange={setVideoStream}
+            >
+                {/* put your own buttons here */}
+            </ControlTray>
         </>
     )
 }

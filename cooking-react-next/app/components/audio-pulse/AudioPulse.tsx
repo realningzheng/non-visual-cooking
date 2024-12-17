@@ -63,7 +63,7 @@ export default function AudioPulse({ active, volume, hover }: AudioPulseProps) {
 							if (el) lines.current[i] = el;
 						}}
 						className={c(
-							"w-1 bg-primary rounded-full transition-all duration-200",
+							"w-1 bg-neutral rounded-full transition-all duration-200",
 							active && "animate-pulse"
 						)}
 						style={{ 
