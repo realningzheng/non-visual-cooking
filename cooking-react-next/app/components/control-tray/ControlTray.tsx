@@ -30,6 +30,8 @@ export type ControlTrayProps = {
 	children?: ReactNode;
 	supportsVideo: boolean;
 	onVideoStreamChange?: (stream: MediaStream | null) => void;
+	setStateMachineEvent: (event: number) => void;
+	setCurrentState: (state: number) => void;
 };
 
 type MediaStreamButtonProps = {
@@ -56,12 +58,7 @@ const MediaStreamButton = memo(
 		),
 );
 
-function ControlTray({
-	videoRef,
-	children,
-	onVideoStreamChange = () => { },
-	supportsVideo,
-}: ControlTrayProps) {
+function ControlTray(props: ControlTrayProps) {
 	const videoStreams = [useWebcam(), useScreenCapture()];
 	const [activeVideoStream, setActiveVideoStream] =
 		useState<MediaStream | null>(null);
@@ -107,14 +104,14 @@ function ControlTray({
 	}, [connected, client, muted, audioRecorder]);
 
 	useEffect(() => {
-		if (videoRef.current) {
-			videoRef.current.srcObject = activeVideoStream;
+		if (props.videoRef.current) {
+			props.videoRef.current.srcObject = activeVideoStream;
 		}
 
 		let timeoutId = -1;
 
 		function sendVideoFrame() {
-			const video = videoRef.current;
+			const video = props.videoRef.current;
 			const canvas = renderCanvasRef.current;
 
 			if (!video || !canvas || !activeVideoStream) {
@@ -125,7 +122,7 @@ function ControlTray({
 			canvas.width = video.videoWidth * 0.25;
 			canvas.height = video.videoHeight * 0.25;
 			if (canvas.width + canvas.height > 0) {
-				ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+				ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 				const base64 = canvas.toDataURL("image/jpeg", 1.0);
 				const data = base64.slice(base64.indexOf(",") + 1, Infinity);
 				console.log('send visuals')
@@ -141,21 +138,37 @@ function ControlTray({
 		return () => {
 			clearTimeout(timeoutId);
 		};
-	}, [connected, activeVideoStream, client, videoRef]);
+	}, [connected, activeVideoStream, client, props.videoRef]);
 
 	//handler for swapping from one video-stream to the next
 	const changeStreams = (next?: UseMediaStreamResult) => async () => {
 		if (next) {
 			const mediaStream = await next.start();
 			setActiveVideoStream(mediaStream);
-			onVideoStreamChange(mediaStream);
+			props.onVideoStreamChange?.(mediaStream);
 		} else {
 			setActiveVideoStream(null);
-			onVideoStreamChange(null);
+			props.onVideoStreamChange?.(null);
 		}
 
 		videoStreams.filter((msr) => msr !== next).forEach((msr) => msr.stop());
 	};
+
+
+	/** Connect to conversation */
+	const connectConversation = async () => {
+        await connect();
+        props.setStateMachineEvent(20);
+        props.setCurrentState(0);
+    };
+
+    /* Disconnect and reset conversation state */
+    const disconnectConversation = async () => {
+        await disconnect();
+        props.setStateMachineEvent(-1);
+        props.setCurrentState(-1);
+    };
+
 
 	return (
 		<div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-base-200 rounded-full shadow-lg px-6 py-3">
@@ -176,7 +189,7 @@ function ControlTray({
 						<AudioPulse volume={volume} active={connected} hover={false} />
 					</div>
 
-					{supportsVideo && (
+					{props.supportsVideo && (
 						<>
 							<button
 								className={cn("btn btn-sm btn-circle", {
@@ -198,7 +211,7 @@ function ControlTray({
 							</button>
 						</>
 					)}
-					{children}
+					{props.children}
 				</div>
 
 				<div className="flex items-center gap-2 ml-2 pl-2 border-l border-base-300">
@@ -208,7 +221,7 @@ function ControlTray({
 							"btn-neutral": connected,
 							"btn-ghost": !connected
 						})}
-						onClick={connected ? disconnect : connect}
+						onClick={connected ? disconnectConversation : connectConversation}
 					>
 						{connected ? <BiPause size={16} /> : <BiPlay size={16} />}
 					</button>

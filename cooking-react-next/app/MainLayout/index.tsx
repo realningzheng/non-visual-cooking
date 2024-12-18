@@ -229,6 +229,8 @@ export default function MainLayout() {
                 videoRef={videoRef}
                 supportsVideo={true}
                 onVideoStreamChange={setVideoStream}
+                setStateMachineEvent={setStateMachineEvent}
+                setCurrentState={setCurrentState}
             >
                 {/* put your own buttons here */}
             </ControlTray>

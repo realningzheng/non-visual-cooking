@@ -246,11 +246,11 @@ export class MultimodalLiveClient extends EventEmitter<MultimodalLiveClientEvent
     for (let i = 0; i < chunks.length; i++) {
       const ch = chunks[i];
       if (ch.mimeType.includes("audio")) {
-        console.log('[has audio]');
+        // console.log('[has audio]');
         hasAudio = true;
       }
       if (ch.mimeType.includes("image")) {
-        console.log('[has image]');
+        // console.log('[has image]');
         hasVideo = true;
       }
       if (hasAudio && hasVideo) {

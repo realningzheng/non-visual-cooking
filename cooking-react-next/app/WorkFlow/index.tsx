@@ -73,13 +73,14 @@ interface AutoAgentResponseItem {
 
 
 export default function WorkFlow(props: WorkFlowProps) {
+    const { connected, client } = useLiveAPIContext();
     // const wavRecorderRef = useRef<WavRecorder>(new WavRecorder({ sampleRate: 24000 }));
     // const wavStreamPlayerRef = useRef<WavStreamPlayer>(new WavStreamPlayer({ sampleRate: 24000 }));
     // const clientRef = useRef<RealtimeClient>(new RealtimeClient({ apiKey: credential.OPENAI_KEY, dangerouslyAllowAPIKeyInBrowser: true }));
-    const startTimeRef = useRef<string>(new Date().toISOString());
-    const conversationRef = useRef<HTMLDivElement>(null);
+    // const startTimeRef = useRef<string>(new Date().toISOString());
+    // const conversationRef = useRef<HTMLDivElement>(null);
     const [selectedFileName, setSelectedFileName] = useState<string>('');
-    const [isConnected, setIsConnected] = useState(false);
+    // const [isConnected, setIsConnected] = useState(false)
     // const [items, setItems] = useState<ItemType[]>([]);
     const [interactionMemoryKv, setInteractionMemoryKv] = useState<InteractionMemoryItem[]>([]);
     const [autoAgentResponseMemoryKv, setAutoAgentResponseMemoryKv] = useState<AutoAgentResponseItem[]>([]);
@@ -104,52 +105,48 @@ export default function WorkFlow(props: WorkFlowProps) {
         }
     }, [props.currentState]);
 
-
-    const { client, connected, connect, disconnect, volume } = useLiveAPIContext();
-
-
     /** Bootstrap functions */
     /** Connect to conversation */
-    const connectConversation = async () => {
-        await connect();
-        // initiate automatic checking for video-reality alignment
-        props.setStateMachineEvent(20);
-        props.setCurrentState(0);
-        // const client = clientRef.current;
-        // const wavRecorder = wavRecorderRef.current;
-        // const wavStreamPlayer = wavStreamPlayerRef.current;
+    // const connectConversation = async () => {
+    //     await connect();
+    //     // initiate automatic checking for video-reality alignment
+    //     props.setStateMachineEvent(20);
+    //     props.setCurrentState(0);
+    //     // const client = clientRef.current;
+    //     // const wavRecorder = wavRecorderRef.current;
+    //     // const wavStreamPlayer = wavStreamPlayerRef.current;
 
-        // Set state variables
-        startTimeRef.current = new Date().toISOString();
-        setIsConnected(true);
-        // setItems(client.conversation.getItems());
+    //     // Set state variables
+    //     startTimeRef.current = new Date().toISOString();
+    //     setIsConnected(true);
+    //     // setItems(client.conversation.getItems());
 
-        // await wavRecorder.begin();
-        // await wavStreamPlayer.connect();
-        // await client.connect();
-        // if (client.getTurnDetectionType() === 'server_vad') {
-        //     await wavRecorder.record((data) => client.appendInputAudio(data.mono));
-        // }
-    };
+    //     // await wavRecorder.begin();
+    //     // await wavStreamPlayer.connect();
+    //     // await client.connect();
+    //     // if (client.getTurnDetectionType() === 'server_vad') {
+    //     //     await wavRecorder.record((data) => client.appendInputAudio(data.mono));
+    //     // }
+    // };
 
-    /* Disconnect and reset conversation state */
-    const disconnectConversation = async () => {
-        await disconnect();
-        props.setStateMachineEvent(-1);
-        props.setCurrentState(-1);
-        setIsConnected(false);
-        // setItems([]);
-        // setInteractionMemoryKv([]);
+    // /* Disconnect and reset conversation state */
+    // const disconnectConversation = async () => {
+    //     await disconnect();
+    //     props.setStateMachineEvent(-1);
+    //     props.setCurrentState(-1);
+    //     setIsConnected(false);
+    //     // setItems([]);
+    //     // setInteractionMemoryKv([]);
 
-        // const client = clientRef.current;
-        // client.disconnect();
+    //     // const client = clientRef.current;
+    //     // client.disconnect();
 
-        // const wavRecorder = wavRecorderRef.current;
-        // await wavRecorder.end();
+    //     // const wavRecorder = wavRecorderRef.current;
+    //     // await wavRecorder.end();
 
-        // const wavStreamPlayer = wavStreamPlayerRef.current;
-        // await wavStreamPlayer.interrupt();
-    };
+    //     // const wavStreamPlayer = wavStreamPlayerRef.current;
+    //     // await wavStreamPlayer.interrupt();
+    // };
 
 
     /** Delete a conversation item */
@@ -696,7 +693,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                 </Box>
             )}
 
-            {selectedFileName && (
+            {/* {selectedFileName && (
                 <div
                     className="content-block-body"
                     data-conversation-content
@@ -712,9 +709,9 @@ export default function WorkFlow(props: WorkFlowProps) {
                 >
 
                 </div>
-            )}
+            )} */}
 
-            {selectedFileName && audioAgentDuty === 'detect' && (
+            {/* {selectedFileName && audioAgentDuty === 'detect' && (
                 <>
                     <div className='text-lg font-bold'>Possible next events</div>
                     {props.currentState !== -1 && (
@@ -791,7 +788,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                         {" ] "}
                     </div>
                 </>
-            )}
+            )} */}
         </Stack>
     );
 }
