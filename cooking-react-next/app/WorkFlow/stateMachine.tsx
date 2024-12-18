@@ -265,10 +265,10 @@ export const executeStateFunction = async (
 
 
 // This function is used by possible next event bottons
-export const asyncNextEventChooser = async (
-	voiceInput: string,
+export const getPromptForPossibleNextEvents = (
+	// voiceInput: string,
 	currentState: number
-): Promise<number> => {
+): string => {
 	// 1. Get all possible next events based on currentState and state machine
 	const possibleNextEventsObj = stateMachine[currentState];
 
@@ -279,18 +279,26 @@ export const asyncNextEventChooser = async (
 		return `${eventNumber}: ${eventExplanation}`;
 	});
 	// 2. (openai_api) Select the category of the next event based on user inputs (stream and voice)
-	const prompt = `<USER REQUEST>: 
-					${voiceInput}
+	// const prompt = `<USER REQUEST>: 
+	// 				${voiceInput}
+	// 				<CATEGORY>:
+	// 				${possibleNextEvents.join("\n")}
+	// 				Please decide which category my request belongs to.
+	// 				Please reply ONLY the index of the most appropriate category
+	// 				`;
+	const prompt = `
 					<CATEGORY>:
 					${possibleNextEvents.join("\n")}
 					Please decide which category my request belongs to.
 					Please reply ONLY the index of the most appropriate category
 					`;
-	const response = await decideCategoryFromUserRequest(systemPromptEventDetection, prompt);
-	if (response) {
-		const eventNumber = Number(response.response);
-		return eventNumber;
-	}
 
-	return -1;
+	// const response = await decideCategoryFromUserRequest(systemPromptEventDetection, prompt);
+	// if (response) {
+	// 	const eventNumber = Number(response.response);
+	// 	return eventNumber;
+	// }
+
+	return prompt;
+	// return -1;
 }

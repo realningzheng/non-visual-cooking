@@ -227,6 +227,7 @@ export default function MainLayout() {
             </Grid>
             <ControlTray
                 videoRef={videoRef}
+                currentState={currentState}
                 supportsVideo={true}
                 onVideoStreamChange={setVideoStream}
                 setStateMachineEvent={setStateMachineEvent}

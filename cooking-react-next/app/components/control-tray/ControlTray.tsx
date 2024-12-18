@@ -24,11 +24,15 @@ import { useScreenCapture } from "../../hooks/use-screen-capture";
 import { useWebcam } from "../../hooks/use-webcam";
 import { AudioRecorder } from "../../lib/audio-recorder";
 import AudioPulse from "../audio-pulse/AudioPulse";
+import { systemPromptEventDetection } from "../../prompt";
+import { getPromptForPossibleNextEvents } from "../../WorkFlow/stateMachine";
+
 
 export type ControlTrayProps = {
 	videoRef: RefObject<HTMLVideoElement>;
 	children?: ReactNode;
 	supportsVideo: boolean;
+	currentState: number;
 	onVideoStreamChange?: (stream: MediaStream | null) => void;
 	setStateMachineEvent: (event: number) => void;
 	setCurrentState: (state: number) => void;
@@ -65,24 +69,44 @@ function ControlTray(props: ControlTrayProps) {
 	const [webcam, screenCapture] = videoStreams;
 	const [inVolume, setInVolume] = useState(0);
 	const [audioRecorder] = useState(() => new AudioRecorder());
-	const [muted, setMuted] = useState(false);
+	const [muted, setMuted] = useState(true);
 	const renderCanvasRef = useRef<HTMLCanvasElement>(null);
 	const connectButtonRef = useRef<HTMLButtonElement>(null);
 
-	const { client, connected, connect, disconnect, volume } =
+	const { client, connected, connect, disconnect, volume, setConfig, config } =
 		useLiveAPIContext();
+
+	useEffect(() => {
+		setConfig({
+			...config,
+			generationConfig: {
+				responseModalities: "text"
+			},
+			systemInstruction: {
+				parts: [
+					{
+						text: systemPromptEventDetection,
+					},
+				],
+			},
+		});
+	}, [setConfig]);
+
 
 	useEffect(() => {
 		if (!connected && connectButtonRef.current) {
 			connectButtonRef.current.focus();
 		}
 	}, [connected]);
+
+
 	useEffect(() => {
 		document.documentElement.style.setProperty(
 			"--volume",
 			`${Math.max(5, Math.min(inVolume * 200, 8))}px`,
 		);
 	}, [inVolume]);
+
 
 	useEffect(() => {
 		const onData = (base64: string) => {
@@ -102,6 +126,7 @@ function ControlTray(props: ControlTrayProps) {
 			audioRecorder.off("data", onData).off("volume", setInVolume);
 		};
 	}, [connected, client, muted, audioRecorder]);
+
 
 	useEffect(() => {
 		if (props.videoRef.current) {
@@ -140,6 +165,7 @@ function ControlTray(props: ControlTrayProps) {
 		};
 	}, [connected, activeVideoStream, client, props.videoRef]);
 
+
 	//handler for swapping from one video-stream to the next
 	const changeStreams = (next?: UseMediaStreamResult) => async () => {
 		if (next) {
@@ -157,17 +183,18 @@ function ControlTray(props: ControlTrayProps) {
 
 	/** Connect to conversation */
 	const connectConversation = async () => {
-        await connect();
-        props.setStateMachineEvent(20);
-        props.setCurrentState(0);
-    };
+		await connect();
+		props.setStateMachineEvent(20);
+		props.setCurrentState(0);
+	};
 
-    /* Disconnect and reset conversation state */
-    const disconnectConversation = async () => {
-        await disconnect();
-        props.setStateMachineEvent(-1);
-        props.setCurrentState(-1);
-    };
+
+	/* Disconnect and reset conversation state */
+	const disconnectConversation = async () => {
+		await disconnect();
+		props.setStateMachineEvent(-1);
+		props.setCurrentState(-1);
+	};
 
 
 	return (

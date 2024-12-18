@@ -7,25 +7,26 @@ import {
     eventTranslator,
     stateMachine,
     stateFunctions,
-    asyncNextEventChooser,
+    getPromptForPossibleNextEvents,
     executeStateFunction,
     eventDetailedExplanation
 } from './stateMachine';
 // import { WavRecorder, WavStreamPlayer } from '../wavtools/index.js';
-import { XCircle } from 'react-feather';
-import SendIcon from '@mui/icons-material/Send';
+// import { XCircle } from 'react-feather';
+// import SendIcon from '@mui/icons-material/Send';
 import DeleteIcon from '@mui/icons-material/Delete';
 // @ts-ignore
 // import { RealtimeClient } from '@openai/realtime-api-beta';
 // // @ts-ignore
 // import { ItemType } from "@openai/realtime-api-beta/dist/lib/client";
-import credential from '../../secret.json';
-import { FaUser } from "react-icons/fa";
-import { RiRobot2Fill } from "react-icons/ri";
-import OpenAI from "openai";
+// import credential from '../../secret.json';
+// import { FaUser } from "react-icons/fa";
+// import { RiRobot2Fill } from "react-icons/ri";
+// import OpenAI from "openai";
 import { repeatPreviousInteraction, getPlaySegmentedVideoFlag } from "./eventStateFunctions";
 import { useLiveAPIContext } from "../contexts/LiveAPIContext";
-import ControlTray from "../components/control-tray/ControlTray";
+import { IoSend } from "react-icons/io5";
+
 
 // const openaiClient = new OpenAI({ apiKey: credential.OPENAI_KEY, dangerouslyAllowBrowser: true });
 
@@ -73,7 +74,10 @@ interface AutoAgentResponseItem {
 
 
 export default function WorkFlow(props: WorkFlowProps) {
-    const { connected, client } = useLiveAPIContext();
+    const { connected, client, content, turnComplete } = useLiveAPIContext();
+    // Track previous turnComplete value
+    const prevTurnComplete = useRef(turnComplete);
+
     // const wavRecorderRef = useRef<WavRecorder>(new WavRecorder({ sampleRate: 24000 }));
     // const wavStreamPlayerRef = useRef<WavStreamPlayer>(new WavStreamPlayer({ sampleRate: 24000 }));
     // const clientRef = useRef<RealtimeClient>(new RealtimeClient({ apiKey: credential.OPENAI_KEY, dangerouslyAllowAPIKeyInBrowser: true }));
@@ -105,120 +109,8 @@ export default function WorkFlow(props: WorkFlowProps) {
         }
     }, [props.currentState]);
 
-    /** Bootstrap functions */
-    /** Connect to conversation */
-    // const connectConversation = async () => {
-    //     await connect();
-    //     // initiate automatic checking for video-reality alignment
-    //     props.setStateMachineEvent(20);
-    //     props.setCurrentState(0);
-    //     // const client = clientRef.current;
-    //     // const wavRecorder = wavRecorderRef.current;
-    //     // const wavStreamPlayer = wavStreamPlayerRef.current;
 
-    //     // Set state variables
-    //     startTimeRef.current = new Date().toISOString();
-    //     setIsConnected(true);
-    //     // setItems(client.conversation.getItems());
-
-    //     // await wavRecorder.begin();
-    //     // await wavStreamPlayer.connect();
-    //     // await client.connect();
-    //     // if (client.getTurnDetectionType() === 'server_vad') {
-    //     //     await wavRecorder.record((data) => client.appendInputAudio(data.mono));
-    //     // }
-    // };
-
-    // /* Disconnect and reset conversation state */
-    // const disconnectConversation = async () => {
-    //     await disconnect();
-    //     props.setStateMachineEvent(-1);
-    //     props.setCurrentState(-1);
-    //     setIsConnected(false);
-    //     // setItems([]);
-    //     // setInteractionMemoryKv([]);
-
-    //     // const client = clientRef.current;
-    //     // client.disconnect();
-
-    //     // const wavRecorder = wavRecorderRef.current;
-    //     // await wavRecorder.end();
-
-    //     // const wavStreamPlayer = wavStreamPlayerRef.current;
-    //     // await wavStreamPlayer.interrupt();
-    // };
-
-
-    /** Delete a conversation item */
-    // const deleteConversationItem = async (id: string) => {
-    //     const client = clientRef.current;
-    //     client.deleteItem(id);
-    // };
-
-
-    /**
-     * In push-to-talk mode, start recording
-     * .appendInputAudio() for each sample
-     */
-    // const startRecording = async () => {
-    //     setIsRecording(true);
-    //     const client = clientRef.current;
-    //     const wavRecorder = wavRecorderRef.current;
-    //     const wavStreamPlayer = wavStreamPlayerRef.current;
-    //     const trackSampleOffset = await wavStreamPlayer.interrupt();
-    //     if (audioAgentDuty === 'chatbot') {
-    //         if (trackSampleOffset?.trackId) {
-    //             const { trackId, offset } = trackSampleOffset;
-    //             await client.cancelResponse(trackId, offset);
-    //         }
-    //     }
-    //     await wavRecorder.record((data) => client.appendInputAudio(data.mono));
-    // };
-
-    /**
-     * In push-to-talk mode, stop recording
-     */
-    // const stopRecording = async () => {
-    //     setIsRecording(false);
-    //     const client = clientRef.current;
-    //     const wavRecorder = wavRecorderRef.current;
-    //     await wavRecorder.pause();
-    //     if (audioAgentDuty === 'detect') {
-    //         // @TODO: should be a better way to append this message at the beginning of the conversation
-    //         client.sendUserMessageContent([
-    //             {
-    //                 type: `input_text`,
-    //                 text: `Please decide the sentence I just said falls under which type of the following categories:\n\n
-    //                 ${possibleNextUserEvents.join("\n")}\n
-
-    //                 Please reply ONLY the index of the most appropriate category.`
-    //             }
-    //         ]);
-    //     } else if (audioAgentDuty === 'chatbot') {
-    //         client.createResponse();
-    //     } else {
-    //         console.error("Invalid audio agent duty");
-    //     }
-    // };
-
-
-    /**
-     * Switch between Manual <> VAD mode for communication
-     */
-    // const changeTurnEndType = async (value: string) => {
-    //     const client = clientRef.current;
-    //     const wavRecorder = wavRecorderRef.current;
-    //     if (value === 'none' && wavRecorder.getStatus() === 'recording') {
-    //         await wavRecorder.pause();
-    //     }
-    //     client.updateSession({
-    //         turn_detection: value === 'none' ? null : { type: 'server_vad' },
-    //     });
-    //     if (value === 'server_vad' && client.isConnected()) {
-    //         await wavRecorder.record((data) => client.appendInputAudio(data.mono));
-    //     }
-    //     setCanPushToTalk(value === 'none');
-    // };
+    const [clientEventResponse, setClientEventResponse] = useState<string>('');
 
 
     const playTTS = async (text: string, speed: number) => {
@@ -468,6 +360,13 @@ export default function WorkFlow(props: WorkFlowProps) {
     }
 
 
+    const handleSubmit = (voiceInput: string, currentState: number): void => {
+        const nextEventPrompt = getPromptForPossibleNextEvents(currentState);
+        // @todo: set as system prompt
+        client.send([{ text: '<USER REQUEST>: \n' + voiceInput + nextEventPrompt }]);
+    }
+
+
     /** Handle state transition */
     useEffect(() => {
         const executeNextState = async () => {
@@ -482,33 +381,63 @@ export default function WorkFlow(props: WorkFlowProps) {
     }, [props.stateTransitionToggle, props.videoKnowledgeInput]);
 
 
-    // periodically trigger event 20 (comparingVideoRealityAlignment) 
-    // when in state 0 (System automatically compares video-reality alignment)
-    // useEffect(() => {
-    //     if (props.currentState === 0 && props.isProcessing === false) {
-    //         const automaticCheck = async () => {
-    //             try {
-    //                 if (!isConnected || props.currentState !== 0) return;
-    //                 console.log('[automatic check]');
-    //                 console.log(props.currentState);
-    //                 await gotoNextState(0, 20, '', props.videoKnowledgeInput);
-    //                 // Only schedule next check after current one completes
-    //                 setTimeout(automaticCheck, 3000);
-    //             } catch (error) {
-    //                 console.error('Error in automatic check:', error);
-    //                 // raise an error
-    //                 throw new Error('System automatically detects misalignment');
-    //             }
-    //         };
+    /** Listen to client content stream */
+    useEffect(() => {
+        // When turnComplete switches from true to false, reset the state
+        if (!turnComplete && prevTurnComplete.current) {
+            setClientEventResponse('');
+        }
 
-    //         // Initial check
-    //         automaticCheck();
+        // Only process content when we're in the middle of a turn
+        if (content.length > 0 && !turnComplete) {
+            setClientEventResponse(prev => {
+                // Check if content is already at the end of prev
+                if (!prev.endsWith(content)) {
+                    return prev + content;
+                }
+                return prev;
+            });
+        }
 
-    //         // Cleanup function
-    //         return () => { };
-    //     }
-    // }, [props.currentState, isConnected]);
+        // Update the ref for next render
+        prevTurnComplete.current = turnComplete;
+    }, [content, turnComplete]);
 
+
+    /** Handle event and state change c*/
+    useEffect(() => {
+        if (!clientEventResponse) return;
+        try {
+            // Try parsing as JSON first in case it's a list
+            const parsed = JSON.parse(clientEventResponse);
+            
+            if (Array.isArray(parsed)) {
+                // If it's an array, take the first number
+                if (parsed.length > 0) {
+                    const number = Number(parsed[0]);
+                    if (!isNaN(number)) {
+                        props.setStateMachineEvent(number);
+                        props.setStateTransitionToggle(!props.stateTransitionToggle);
+                    }
+                }
+            } else {
+                // If it's a single value, convert directly to number
+                const number = Number(parsed);
+                if (!isNaN(number)) {
+                    props.setStateMachineEvent(number);
+                    props.setStateTransitionToggle(!props.stateTransitionToggle);
+                }
+            }
+        } catch (e) {
+            // If JSON parsing fails, try converting directly to number
+            const number = Number(clientEventResponse);
+            if (!isNaN(number)) {
+                props.setStateMachineEvent(number);
+                props.setStateTransitionToggle(!props.stateTransitionToggle);
+            }
+        }
+    }, [clientEventResponse]);
+    
 
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -648,7 +577,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                 <p className={props.isProcessing ? 'text-gray-400' : ''}><span className='text-lg font-bold'>Current state:</span> {props.isProcessing && <span className="loading loading-dots loading-xs"></span>} {props.currentState} : {stateTranslator[Number(props.currentState)]}</p>
             </div>
             {/* display the things below only when selected file name is not empty */}
-            {selectedFileName && (
+            {props.currentState !== -1 && (
                 <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: '20px', pt: '15px', gap: '10px' }}>
                     {/* {isConnected && canPushToTalk && (
                         <button
@@ -663,35 +592,58 @@ export default function WorkFlow(props: WorkFlowProps) {
                     )} */}
                     <input
                         type="text"
-                        placeholder="Latest user command"
+                        placeholder="user command"
                         className="input input-bordered w-full"
                         onChange={(e) => props.setVoiceInputTranscript(e.target.value)}
                         value={props.voiceInputTranscript}
-                        onKeyDown={async (e) => {
-                            if (e.key === 'Enter') {
-                                let event = await asyncNextEventChooser(props.voiceInputTranscript, props.currentState);
-                                if (event >= 0 && (event in stateMachine[props.currentState])) {
-                                    props.setStateMachineEvent(event);
-                                    props.setStateTransitionToggle(!props.stateTransitionToggle);
-                                }
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                                handleSubmit(props.voiceInputTranscript, props.currentState);
+                                // let event = await handleVoiceToNextEvent(props.voiceInputTranscript, props.currentState);
+                                // if (event >= 0 && (event in stateMachine[props.currentState])) {
+                                //     props.setStateMachineEvent(event);
+                                //     props.setStateTransitionToggle(!props.stateTransitionToggle);
+                                // }
                             }
                         }}
                     />
-                    <IconButton
-                        color="inherit"
-                        onClick={async () => {
-                            let event = await asyncNextEventChooser(props.voiceInputTranscript, props.currentState);
-                            if (event >= 0 && (event in stateMachine[props.currentState])) {
-                                props.setStateMachineEvent(event);
-                                props.setStateTransitionToggle(!props.stateTransitionToggle);
-                            }
+                    <button
+                        className="btn btn-sm "
+                        onClick={() => {
+                            handleSubmit(props.voiceInputTranscript, props.currentState);
+                            // let event = await handleVoiceToNextEvent(props.voiceInputTranscript, props.currentState);
+                            // if (event >= 0 && (event in stateMachine[props.currentState])) {
+                            //     props.setStateMachineEvent(event);
+                            //     props.setStateTransitionToggle(!props.stateTransitionToggle);
+                            // }
                         }}
-                        sx={{ marginRight: 1 }}
                     >
-                        <SendIcon />
-                    </IconButton>
+                        Send
+                    </button>
                 </Box>
             )}
+
+            {props.currentState !== -1 && (
+                <ul style={{ listStyleType: 'none', padding: 0 }}>
+                    {props.currentState in stateMachine && Object.keys(stateMachine[props.currentState])
+                        .sort((a, b) => Number(a) - Number(b))
+                        .map((event) => (
+                            <li
+                                key={`event-${event}`}
+                                onClick={() => {
+                                    props.setVoiceInputTranscript('[Debug] Respond with Woohoo!');
+                                    props.setStateMachineEvent(Number(event));
+                                }}
+                                className='btn btn-outline btn-xs text-left mb-2.5 mr-1 cursor-pointer'
+                            >
+                                {event}: {eventTranslator[Number(event)]}
+                            </li>
+                        ))}
+                </ul>
+            )}
+
+            {props.currentState !== -1 && <div className='text-lg font-bold'>Client event response</div>}
+            {clientEventResponse}
 
             {/* {selectedFileName && (
                 <div
