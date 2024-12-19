@@ -24,6 +24,8 @@ import { FaUser } from "react-icons/fa";
 import { RiRobot2Fill } from "react-icons/ri";
 import OpenAI from "openai";
 import { repeatPreviousInteraction, getPlaySegmentedVideoFlag } from "./eventStateFunctions";
+import { useLiveAPIContext } from "../contexts/LiveAPIContext";
+import ControlTray from "../components/control-tray/ControlTray";
 
 
 interface WorkFlowProps {
@@ -49,6 +51,8 @@ interface WorkFlowProps {
     isProcessing: boolean;
     ttsSpeed: number;
     replaySignal: boolean;
+    videoRef: React.RefObject<HTMLVideoElement>;
+    setVideoStream: (stream: MediaStream | null) => void;
 }
 
 
@@ -104,9 +108,20 @@ export default function WorkFlow(props: WorkFlowProps) {
         }
     }, [props.currentState]);
 
+    const {
+        client: liveAPIClient,
+        connected: liveAPIConnected,
+        content: liveAPIContent,
+        turnComplete: liveAPITurnComplete,
+    } = useLiveAPIContext();
+    const [liveClientResponse, setLiveClientResponse] = useState('');
+    const prevEventTurnComplete = useRef(false);
+
+
     /** Bootstrap functions */
     /** Connect to conversation */
     const connectConversation = async () => {
+        console.log('[connectConversation]');
         // initiate automatic checking for video-reality alignment
         props.setStateMachineEvent(20);
         props.setCurrentState(0);
@@ -129,6 +144,7 @@ export default function WorkFlow(props: WorkFlowProps) {
 
     /* Disconnect and reset conversation state */
     const disconnectConversation = async () => {
+        console.log('[disconnectConversation]');
         props.setStateMachineEvent(-1);
         props.setCurrentState(-1);
         setIsConnected(false);
@@ -326,6 +342,30 @@ export default function WorkFlow(props: WorkFlowProps) {
     }, []);
 
 
+    /** Handle realtime video stream response */
+    /** Listen to event detection content stream */
+    useEffect(() => {
+        // When turnComplete switches from true to false, reset the state
+        if (!liveAPITurnComplete && prevEventTurnComplete.current) {
+            setLiveClientResponse('');
+        }
+
+        // Only process content when we're in the middle of a turn
+        if (liveAPIContent.length > 0 && !liveAPITurnComplete) {
+            setLiveClientResponse(prev => {
+                // Check if content is already at the end of prev
+                if (!prev.endsWith(liveAPIContent)) {
+                    return prev + liveAPIContent;
+                }
+                return prev;
+            });
+        }
+
+        // Update the ref for next render
+        prevEventTurnComplete.current = liveAPITurnComplete;
+    }, [liveAPIContent, liveAPITurnComplete]);
+
+
     // Handle user transcript update
     useEffect(() => {
         // scroll the conversation panel to the bottom
@@ -380,7 +420,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                 if (agentResponse) {
                     await playTTS(agentResponse, props.ttsSpeed);
                 }
-                props.setStateFunctionExeRes(JSON.stringify({"response": agentResponse, "video_segment_index": videoSegmentIndex}));
+                props.setStateFunctionExeRes(JSON.stringify({ "response": agentResponse, "video_segment_index": videoSegmentIndex }));
             } else if (event === 6) {       // handle replay segmented video
                 let response = await getPlaySegmentedVideoFlag(voiceInputTranscript);
                 if (response.response === 0) {
@@ -520,12 +560,12 @@ export default function WorkFlow(props: WorkFlowProps) {
         <Stack spacing={1}>
             <div className='text-xl font-bold gap-2 pt-1 flex items-center'>
                 CONTROL PANEL
-                <button
+                {/* <button
                     className={`btn btn-xs ${isConnected ? 'bg-success' : 'btn-outline'}`}
                     onClick={isConnected ? disconnectConversation : connectConversation}
                 >
                     {isConnected ? 'disconnect' : 'connect'}
-                </button>
+                </button> */}
                 <div className="flex-grow" />
                 <div className="dropdown dropdown-end mr-2">
                     <label tabIndex={0} className="btn btn-xs btn-ghost bg-gray-0">
@@ -633,7 +673,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                 <p className={props.isProcessing ? 'text-gray-400' : ''}><span className='text-lg font-bold'>Current state:</span> {props.isProcessing && <span className="loading loading-dots loading-xs"></span>} {props.currentState} : {stateTranslator[Number(props.currentState)]}</p>
             </div>
             {/* display the things below only when selected file name is not empty */}
-            {selectedFileName && (
+            {isConnected && (
                 <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: '20px', pt: '15px', gap: '10px' }}>
                     {isConnected && canPushToTalk && (
                         <button
@@ -678,99 +718,108 @@ export default function WorkFlow(props: WorkFlowProps) {
                 </Box>
             )}
 
-            {selectedFileName && (
-                <div
-                    className="content-block-body"
-                    data-conversation-content
-                    ref={conversationRef}
-                    style={{
-                        maxHeight: `${audioAgentDuty === 'chatbot' ? '50vh' : '200px'}`,
-                        overflowY: 'auto',
-                        border: '1px solid #ccc',
-                        borderRadius: '5px',
-                        padding: '10px',
-                        marginBottom: '20px'
-                    }}
-                >
-                    {!items.length && !isConnected && `awaiting connection...`}
-                    {items.map((conversationItem, i) => {
-                        return (
-                            <div className="conversation-item" key={conversationItem.id}>
-                                <div className={`speaker-content`}>
-                                    {/* tool response */}
-                                    {conversationItem.type === 'function_call_output' && (
-                                        <div>{conversationItem.formatted.output}</div>
-                                    )}
-                                    {/* tool call */}
-                                    {!!conversationItem.formatted.tool && (
-                                        <div>
-                                            {conversationItem.formatted.tool.name}(
-                                            {conversationItem.formatted.tool.arguments})
-                                        </div>
-                                    )}
-
-                                    {/* Transcript from the user */}
-                                    {!conversationItem.formatted.tool &&
-                                        conversationItem.role === 'user' && (
-                                            <div>
-                                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-                                                    <FaUser /> <h5 style={{ marginLeft: '10px' }}>
-                                                        {conversationItem.formatted.transcript ||
-                                                            (conversationItem.formatted.audio?.length
-                                                                ? '(awaiting transcript)'
-                                                                : conversationItem.formatted.text ||
-                                                                '(item sent)')
-                                                        }
-                                                    </h5>
-                                                    <div style={{ flexGrow: 1 }} />
-                                                    <div
-                                                        className="close"
-                                                        style={{ cursor: 'pointer' }}
-                                                        onClick={() =>
-                                                            deleteConversationItem(conversationItem.id)
-                                                        }
-                                                    >
-                                                        < XCircle />
-                                                    </div>
-                                                </div>
-
-                                            </div>
-                                        )
-                                    }
-                                    {!conversationItem.formatted.tool && audioAgentDuty === 'chatbot' &&
-                                        conversationItem.role === 'assistant' && (
-                                            <div>
-                                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-                                                    <RiRobot2Fill /> <h5 style={{ marginLeft: '10px' }}>
-                                                        {conversationItem.formatted.transcript ||
-                                                            conversationItem.formatted.text ||
-                                                            '(truncated)'
-                                                        }
-                                                    </h5>
-                                                    {/* div flexgrow */}
-                                                    <div style={{ flexGrow: 1 }} />
-                                                    <div
-                                                        className="close"
-                                                        style={{ cursor: 'pointer' }}
-                                                        onClick={() =>
-                                                            deleteConversationItem(conversationItem.id)
-                                                        }
-                                                    >
-                                                        < XCircle />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )
-                                    }
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-
-            {selectedFileName && audioAgentDuty === 'detect' && (
+            {liveAPIConnected &&
                 <>
+                    <div className='flex items-center gap-2'>
+                        <div className='text-lg font-bold'>Live client response</div>
+                    </div>
+                    {liveClientResponse}
+                    <div className="divider"></div>
+                </>
+            }
+
+
+            {isConnected &&
+                <>
+                    <div
+                        className="content-block-body"
+                        data-conversation-content
+                        ref={conversationRef}
+                        style={{
+                            maxHeight: `${audioAgentDuty === 'chatbot' ? '50vh' : '200px'}`,
+                            overflowY: 'auto',
+                            border: '1px solid #ccc',
+                            borderRadius: '5px',
+                            padding: '10px',
+                            marginBottom: '20px'
+                        }}
+                    >
+                        {!items.length && !isConnected && `awaiting connection...`}
+                        {items.map((conversationItem, i) => {
+                            return (
+                                <div className="conversation-item" key={conversationItem.id}>
+                                    <div className={`speaker-content`}>
+                                        {/* tool response */}
+                                        {conversationItem.type === 'function_call_output' && (
+                                            <div>{conversationItem.formatted.output}</div>
+                                        )}
+                                        {/* tool call */}
+                                        {!!conversationItem.formatted.tool && (
+                                            <div>
+                                                {conversationItem.formatted.tool.name}(
+                                                {conversationItem.formatted.tool.arguments})
+                                            </div>
+                                        )}
+
+                                        {/* Transcript from the user */}
+                                        {!conversationItem.formatted.tool &&
+                                            conversationItem.role === 'user' && (
+                                                <div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                                                        <FaUser /> <h5 style={{ marginLeft: '10px' }}>
+                                                            {conversationItem.formatted.transcript ||
+                                                                (conversationItem.formatted.audio?.length
+                                                                    ? '(awaiting transcript)'
+                                                                    : conversationItem.formatted.text ||
+                                                                    '(item sent)')
+                                                            }
+                                                        </h5>
+                                                        <div style={{ flexGrow: 1 }} />
+                                                        <div
+                                                            className="close"
+                                                            style={{ cursor: 'pointer' }}
+                                                            onClick={() =>
+                                                                deleteConversationItem(conversationItem.id)
+                                                            }
+                                                        >
+                                                            < XCircle />
+                                                        </div>
+                                                    </div>
+
+                                                </div>
+                                            )
+                                        }
+                                        {!conversationItem.formatted.tool && audioAgentDuty === 'chatbot' &&
+                                            conversationItem.role === 'assistant' && (
+                                                <div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                                                        <RiRobot2Fill /> <h5 style={{ marginLeft: '10px' }}>
+                                                            {conversationItem.formatted.transcript ||
+                                                                conversationItem.formatted.text ||
+                                                                '(truncated)'
+                                                            }
+                                                        </h5>
+                                                        {/* div flexgrow */}
+                                                        <div style={{ flexGrow: 1 }} />
+                                                        <div
+                                                            className="close"
+                                                            style={{ cursor: 'pointer' }}
+                                                            onClick={() =>
+                                                                deleteConversationItem(conversationItem.id)
+                                                            }
+                                                        >
+                                                            < XCircle />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )
+                                        }
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
                     <div className='text-lg font-bold'>Possible next events</div>
                     {props.currentState !== -1 && (
                         <ul style={{ listStyleType: 'none', padding: 0 }}>
@@ -811,6 +860,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                         </p>
                     )}
                     <div className="divider"></div>
+
                     <div className='text-lg font-bold content-block kv'>Interaction history</div>
                     <div className="content-block-body content-kv">
                         {" [ "}
@@ -846,7 +896,17 @@ export default function WorkFlow(props: WorkFlowProps) {
                         {" ] "}
                     </div>
                 </>
-            )}
-        </Stack>
+            }
+            <ControlTray
+                videoRef={props.videoRef}
+                currentState={props.currentState}
+                supportsVideo={true}
+                onVideoStreamChange={props.setVideoStream}
+                setStateMachineEvent={props.setStateMachineEvent}
+                setCurrentState={props.setCurrentState}
+                connectConversation={connectConversation}
+                disconnectConversation={disconnectConversation}
+            />
+        </Stack >
     );
 }

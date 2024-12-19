@@ -31,6 +31,8 @@ export default function RealityPreview(props: RealityPreviewProps) {
                                     objectFit: 'contain',
                                     margin: 'auto'
                                 }}
+                                autoPlay
+                                playsInline
                             />
                         </div>
                     }
@@ -76,7 +78,7 @@ export default function RealityPreview(props: RealityPreviewProps) {
                 width={'100%'}
                 marginTop={'10px'}
             >
-                <button
+                {/* <button
                     className='btn btn-outline btn-sm'
                     color="primary"
                     onClick={() => { props.videoRef.current?.play() }}
@@ -91,7 +93,7 @@ export default function RealityPreview(props: RealityPreviewProps) {
                     style={{ marginRight: 1, marginLeft: 1 }}
                 >
                     Reality Pause
-                </button>
+                </button> */}
             </Box>
         </>
     );

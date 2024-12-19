@@ -13,6 +13,7 @@ import RestaurantIcon from '@mui/icons-material/Restaurant';
 
 import transriptSentenceList from '../data/rwYaDqXFH88_sentence.json';
 import SegVideoPlayerComp from '../SegVideoPlayerComp/SegVideoPlayerComp';
+import ControlTray from '../components/control-tray/ControlTray';
 
 interface TransriptSentenceItemProps {
     sentenceIndex: number;
@@ -52,6 +53,7 @@ export default function MainLayout() {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
+    const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -60,9 +62,9 @@ export default function MainLayout() {
     }, []);
 
 
-    useEffect(() => {
-        getVideo();
-    }, [videoRef, !enableWebCam]);
+    // useEffect(() => {
+    //     getVideo();
+    // }, [videoRef, !enableWebCam]);
 
 
     useEffect(() => {
@@ -104,26 +106,26 @@ export default function MainLayout() {
     }, [playSeconds]);
 
 
-    const getVideo = () => {
-        navigator.mediaDevices
-            .getUserMedia({
-                video: { width: 1280, height: 720 }
-            })
-            .then(stream => {
-                let video = videoRef.current;
-                if (video) {
-                    video.srcObject = stream;
-                    video.play();
-                }
-            })
-            .catch(err => {
-                console.error(err);
-            })
-    }
+    // const getVideo = () => {
+    //     navigator.mediaDevices
+    //         .getUserMedia({
+    //             video: { width: 1280, height: 720 }
+    //         })
+    //         .then(stream => {
+    //             let video = videoRef.current;
+    //             if (video) {
+    //                 video.srcObject = stream;
+    //                 video.play();
+    //             }
+    //         })
+    //         .catch(err => {
+    //             console.error(err);
+    //         })
+    // }
 
 
     const captureRealityFrame = async (): Promise<string> => {
-        if (!enableWebCam) {
+        if (!videoStream) {
             return realityImageBase64;
         } else {
             const canvas = canvasRef.current;
@@ -218,12 +220,12 @@ export default function MainLayout() {
 
                     <div className='text-xl font-bold flex items-center gap-2 p-1'>
                         REALITY PREVIEW
-                        <button
+                        {/* <button
                             className={`btn btn-xs ${enableWebCam ? 'btn-primary' : 'btn-outline'}`}
                             onClick={() => setEnableWebCam(!enableWebCam)}
                         >
                             web cam
-                        </button>
+                        </button> */}
                         <button
                             className={`btn btn-xs ${evalMode ? 'btn-error' : 'btn-outline'}`}
                             onClick={() => setEvalMode(!evalMode)}
@@ -231,7 +233,7 @@ export default function MainLayout() {
                             eval mode
                         </button>
                     </div>
-                    {!enableWebCam ?
+                    {!videoStream ?
                         <ImageUploader
                             realityImageBase64={realityImageBase64}
                             setRealityImageBase64={setRealityImageBase64}
@@ -270,6 +272,8 @@ export default function MainLayout() {
                             stateFunctionExeRes={stateFunctionExeRes}
                             ttsSpeed={ttsSpeed}
                             replaySignal={replaySignal}
+                            videoRef={videoRef}
+                            setVideoStream={setVideoStream}
                         />
                     }
                 </Grid>
