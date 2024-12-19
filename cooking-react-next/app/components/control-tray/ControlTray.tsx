@@ -35,6 +35,7 @@ export type ControlTrayProps = {
 	children?: ReactNode;
 	supportsVideo: boolean;
 	currentState: number;
+	rtTriggerAudio: string;
 	onVideoStreamChange?: (stream: MediaStream | null) => void;
 	setStateMachineEvent: (event: number) => void;
 	setCurrentState: (state: number) => void;
@@ -107,6 +108,7 @@ function ControlTray(props: ControlTrayProps) {
 
 
 	/** Send real time audio to multimodal state client */
+	// @TODO
 	useEffect(() => {
 		const onData = (base64: string) => {
 			liveAPIClient.sendRealtimeInput([
@@ -128,57 +130,29 @@ function ControlTray(props: ControlTrayProps) {
 	}, [liveAPIConnected, liveAPIClient, muted, audioRecorder]);
 
 
-	/** Handle turn completion and sending data */
-	// useEffect(() => {
-	// 	if (eventTurnComplete && audioChunks.current.length > 0) {
-	// 		try {
-	// 			if (audioChunks.current.length > 0) {
-	// 				console.log('[Sending audio data]');
-	// 			}
-	// 			// Send a 1-second audio chunk with very quiet random noise to signal end of stream
-	// 			const samples = 8000; // 1 second at 16kHz
-	// 			const buffer = new Int16Array(samples);
-	// 			for (let i = 0; i < samples; i++) {
-	// 				// Random values between -50 and 50 (very quiet compared to 16-bit range of -32768 to 32767)
-	// 				buffer[i] = Math.floor(Math.random() * 100 - 50);
-	// 			}
-	// 			const base64EmptyChunk = btoa(String.fromCharCode(...new Uint8Array(buffer.buffer)));
-	// 			multimodalClient.sendRealtimeInput([{
-	// 				mimeType: "audio/pcm;rate=16000",
-	// 				data: base64EmptyChunk
-	// 			}]);
-
-	// 			// Send each chunk as a separate input
-	// 			for (const chunk of audioChunks.current) {
-	// 				multimodalClient.sendRealtimeInput([{
-	// 					mimeType: "audio/pcm;rate=16000",
-	// 					data: chunk
-	// 				}]);
-	// 			}
-
-	// 			multimodalClient.sendRealtimeInput([{
-	// 				mimeType: "audio/pcm;rate=16000",
-	// 				data: base64EmptyChunk
-	// 			}]);
-	// 		} catch (e) {
-	// 			console.error('[Error sending audio data]', e);
-	// 		} finally {
-	// 			audioChunks.current = [];
-	// 			console.log('[Cache cleared]');
-	// 		}
-	// 	}
-	// }, [eventTurnComplete, multimodalClient]);
-
-
 	/** This hook frequently sends video frames to the multimodal state client */
 	useEffect(() => {
 		if (props.videoRef.current) {
-			console.log('activeVideoStream', activeVideoStream);
 			props.videoRef.current.srcObject = activeVideoStream;
 		}
 
-		let timeoutId = -1;
+		let videoTimeoutId = -1;
+		let audioTimeoutId = -1;
 
+		// Function to send audio data
+		// function sendAudioData() {
+		// 	liveAPIClient.sendRealtimeInput([{
+		// 		mimeType: "audio/pcm;rate=16000",
+		// 		data: props.rtTriggerAudio
+		// 	}]);
+		// 	console.log('send audio data')
+		// 	// Schedule next audio send
+		// 	if (liveAPIConnected) {
+		// 		audioTimeoutId = window.setTimeout(sendAudioData, 1000 * 5 / 0.5);
+		// 	}
+		// }
+
+		// Function to send video frame
 		function sendVideoFrame() {
 			const video = props.videoRef.current;
 			const canvas = renderCanvasRef.current;
@@ -191,23 +165,31 @@ function ControlTray(props: ControlTrayProps) {
 			canvas.width = video.videoWidth * 0.25;
 			canvas.height = video.videoHeight * 0.25;
 			if (canvas.width + canvas.height > 0) {
+				console.log('send video frame')
 				ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 				const base64 = canvas.toDataURL("image/jpeg", 1.0);
 				const data = base64.slice(base64.indexOf(",") + 1, Infinity);
-				console.log('send visuals')
 				liveAPIClient.sendRealtimeInput([{ mimeType: "image/jpeg", data }]);
 			}
 			if (liveAPIConnected) {
-				timeoutId = window.setTimeout(sendVideoFrame, 1000 / 0.5);
+				videoTimeoutId = window.setTimeout(sendVideoFrame, 1000 / 0.5);
 			}
 		}
-		if (liveAPIConnected && activeVideoStream !== null) {
-			requestAnimationFrame(sendVideoFrame);
+
+		// Start both video and audio sending if connected
+		if (liveAPIConnected) {
+			if (activeVideoStream !== null) {
+				requestAnimationFrame(sendVideoFrame);
+				// requestAnimationFrame(sendAudioData);
+			}
 		}
+
+		// Cleanup on unmount or dependency change
 		return () => {
-			clearTimeout(timeoutId);
+			clearTimeout(videoTimeoutId);
+			clearTimeout(audioTimeoutId);
 		};
-	}, [liveAPIConnected, activeVideoStream, liveAPIClient, props.videoRef]);
+	}, [liveAPIConnected, activeVideoStream, liveAPIClient, props.videoRef, muted]);
 
 
 	//handler for swapping from one video-stream to the next

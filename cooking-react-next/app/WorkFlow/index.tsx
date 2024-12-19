@@ -116,6 +116,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     } = useLiveAPIContext();
     const [liveClientResponse, setLiveClientResponse] = useState('');
     const prevEventTurnComplete = useRef(false);
+    const [rtTriggerAudio, setRtTriggerAudio] = useState<string>('');
 
 
     /** Bootstrap functions */
@@ -252,6 +253,45 @@ export default function WorkFlow(props: WorkFlowProps) {
             console.error("Error generating or playing TTS:", error);
         }
     };
+
+
+    // useEffect(() => {
+    //     let mounted = true;
+
+    //     const initializePCMData = async () => {
+    //         try {
+    //             const response = await openaiClient.audio.speech.create({
+    //                 model: "tts-1",
+    //                 voice: "alloy",
+    //                 input: "Can you describe the image for me?",
+    //                 response_format: 'pcm',
+    //                 speed: 1,
+    //             });
+
+    //             if (mounted) {
+    //                 const arrayBuffer = await response.arrayBuffer();
+    //                 const pcmData = new Uint8Array(arrayBuffer);
+                    
+    //                 // Convert from 24kHz to 16kHz
+    //                 const pcmData16k = convert24kHzTo16kHz(pcmData);
+                    
+    //                 // Convert to base64 for sending
+    //                 const base64 = btoa(String.fromCharCode(...pcmData16k));
+    //                 setRtTriggerAudio(base64);
+    //             }
+    //         } catch (error) {
+    //             if (mounted) {
+    //                 console.error('Error getting PCM data:', error);
+    //             }
+    //         }
+    //     };
+
+    //     initializePCMData();
+
+    //     return () => {
+    //         mounted = false;
+    //     };
+    // }, []);
 
 
     /** Event handlers */
@@ -901,6 +941,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                 videoRef={props.videoRef}
                 currentState={props.currentState}
                 supportsVideo={true}
+                rtTriggerAudio={rtTriggerAudio}
                 onVideoStreamChange={props.setVideoStream}
                 setStateMachineEvent={props.setStateMachineEvent}
                 setCurrentState={props.setCurrentState}
@@ -910,3 +951,46 @@ export default function WorkFlow(props: WorkFlowProps) {
         </Stack >
     );
 }
+
+
+// function convert24kHzTo16kHz(input24kHz: Uint8Array): Uint8Array {
+//     // Convert Uint8Array to Float32Array for processing
+//     const float32Data = new Float32Array(input24kHz.length / 2);
+//     for (let i = 0; i < input24kHz.length; i += 2) {
+//         // Combine two 8-bit values into one 16-bit value
+//         const sample = (input24kHz[i + 1] << 8) | input24kHz[i];
+//         // Convert to float32 (-1 to 1 range)
+//         float32Data[i / 2] = sample / 32768.0;
+//     }
+
+//     // Calculate the new length for 16kHz
+//     const ratio = 16000 / 24000;
+//     const newLength = Math.floor(float32Data.length * ratio);
+//     const output16kHz = new Float32Array(newLength);
+
+//     // Linear interpolation for downsampling
+//     for (let i = 0; i < newLength; i++) {
+//         const position = i / ratio;
+//         const index = Math.floor(position);
+//         const fraction = position - index;
+
+//         // Linear interpolation between samples
+//         const sample1 = float32Data[index];
+//         const sample2 = float32Data[Math.min(index + 1, float32Data.length - 1)];
+//         output16kHz[i] = sample1 + fraction * (sample2 - sample1);
+//     }
+
+//     // Convert back to Uint8Array
+//     const result = new Uint8Array(newLength * 2);
+//     for (let i = 0; i < newLength; i++) {
+//         // Convert float32 back to 16-bit integer
+//         const sample = Math.max(-1, Math.min(1, output16kHz[i]));
+//         const int16 = Math.floor(sample * 32767);
+        
+//         // Split into two 8-bit values
+//         result[i * 2] = int16 & 0xFF;
+//         result[i * 2 + 1] = (int16 >> 8) & 0xFF;
+//     }
+
+//     return result;
+// }
