@@ -55,9 +55,11 @@ function ControlTray(props: ControlTrayProps) {
 	const [webcam, screenCapture] = videoStreams;
 	const [inVolume, setInVolume] = useState(0);
 	const [audioRecorder] = useState(() => new AudioRecorder());
-	const [muted, setMuted] = useState(true);
+	const [muted, setMuted] = useState(false);
 	const renderCanvasRef = useRef<HTMLCanvasElement>(null);
 	const connectButtonRef = useRef<HTMLButtonElement>(null);
+	const audioCache = useRef<string>('');
+	const audioChunks = useRef<string[]>([]);
 
 	const {
 		client: eventClient,
@@ -66,7 +68,8 @@ function ControlTray(props: ControlTrayProps) {
 		disconnect: eventDisconnect,
 		volume: eventVolume,
 		setConfig: eventSetConfig,
-		config: eventConfig
+		config: eventConfig,
+		turnComplete: eventTurnComplete
 	} = useEventDetectionContext();
 
 	const {
@@ -131,17 +134,17 @@ function ControlTray(props: ControlTrayProps) {
 	}, [inVolume]);
 
 
-	/** Send real time audio to multimodal client */
+	/** Send real time audio to event detection client */
 	useEffect(() => {
 		const onData = (base64: string) => {
-			multimodalClient.sendRealtimeInput([
+			eventClient.sendRealtimeInput([
 				{
 					mimeType: "audio/pcm;rate=16000",
 					data: base64,
 				},
 			]);
 		};
-		if (multimodalConnected && !muted && audioRecorder) {
+		if (eventConnected && !muted && audioRecorder) {
 			audioRecorder.on("data", onData).on("volume", setInVolume).start();
 		} else {
 			audioRecorder.stop();
@@ -149,9 +152,51 @@ function ControlTray(props: ControlTrayProps) {
 		return () => {
 			audioRecorder.off("data", onData).off("volume", setInVolume);
 		};
-	}, [ multimodalConnected, multimodalClient, muted, audioRecorder]);
+	}, [eventConnected, eventClient, muted, audioRecorder]);
 
 
+	/** Handle audio recording setup */
+	useEffect(() => {
+		const onData = (base64: string) => {
+			if (base64.length > 0) {
+				audioChunks.current.push(base64);
+			}
+		};
+
+		if (multimodalConnected && !muted && audioRecorder) {
+			audioRecorder.on("data", onData).start();
+		} else {
+			audioRecorder.stop();
+		}
+
+		return () => {
+			audioRecorder.off("data", onData).off("volume", setInVolume);
+		};
+	}, [multimodalConnected, multimodalClient, muted, audioRecorder]);
+
+
+	/** Handle turn completion and sending data */
+	useEffect(() => {
+		if (eventTurnComplete && audioChunks.current.length > 0) {
+			try {
+				// Send each chunk as a separate input
+				for (const chunk of audioChunks.current) {
+					multimodalClient.sendRealtimeInput([{
+						mimeType: "audio/pcm;rate=16000",
+						data: chunk
+					}]);
+				}
+			} catch (e) {
+				console.error('[Error sending audio data]', e);
+			} finally {
+				audioChunks.current = [];
+				console.log('[Cache cleared]');
+			}
+		}
+	}, [eventTurnComplete, multimodalClient]);
+
+
+	/** This hook frequently sends video frames to the multimodal state client */
 	useEffect(() => {
 		if (props.videoRef.current) {
 			props.videoRef.current.srcObject = activeVideoStream;
