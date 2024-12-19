@@ -58,19 +58,18 @@ function ControlTray(props: ControlTrayProps) {
 	const [muted, setMuted] = useState(false);
 	const renderCanvasRef = useRef<HTMLCanvasElement>(null);
 	const connectButtonRef = useRef<HTMLButtonElement>(null);
-	const audioCache = useRef<string>('');
 	const audioChunks = useRef<string[]>([]);
 
-	const {
-		client: eventClient,
-		connected: eventConnected,
-		connect: eventConnect,
-		disconnect: eventDisconnect,
-		volume: eventVolume,
-		setConfig: eventSetConfig,
-		config: eventConfig,
-		turnComplete: eventTurnComplete
-	} = useEventDetectionContext();
+	// const {
+	// 	client: eventClient,
+	// 	connected: eventConnected,
+	// 	connect: eventConnect,
+	// 	disconnect: eventDisconnect,
+	// 	volume: eventVolume,
+	// 	setConfig: eventSetConfig,
+	// 	config: eventConfig,
+	// 	turnComplete: eventTurnComplete
+	// } = useEventDetectionContext();
 
 	const {
 		client: multimodalClient,
@@ -84,21 +83,21 @@ function ControlTray(props: ControlTrayProps) {
 
 
 	/** Configure event detection session client, response with text only */
-	useEffect(() => {
-		eventSetConfig({
-			...eventConfig,
-			generationConfig: {
-				responseModalities: "text"
-			},
-			systemInstruction: {
-				parts: [
-					{
-						text: systemPromptEventDetection,
-					},
-				],
-			},
-		});
-	}, [eventSetConfig]);
+	// useEffect(() => {
+	// 	eventSetConfig({
+	// 		...eventConfig,
+	// 		generationConfig: {
+	// 			responseModalities: "text"
+	// 		},
+	// 		systemInstruction: {
+	// 			parts: [
+	// 				{
+	// 					text: systemPromptEventDetection,
+	// 				},
+	// 			],
+	// 		},
+	// 	});
+	// }, [eventSetConfig]);
 
 
 	/** Configure multimodal session client, response with audio */
@@ -120,13 +119,6 @@ function ControlTray(props: ControlTrayProps) {
 
 
 	useEffect(() => {
-		if (!eventConnected && !multimodalConnected && connectButtonRef.current) {
-			connectButtonRef.current.focus();
-		}
-	}, [eventConnected, multimodalConnected]);
-
-
-	useEffect(() => {
 		document.documentElement.style.setProperty(
 			"--volume",
 			`${Math.max(5, Math.min(inVolume * 200, 8))}px`,
@@ -135,16 +127,39 @@ function ControlTray(props: ControlTrayProps) {
 
 
 	/** Send real time audio to event detection client */
+	// useEffect(() => {
+	// 	const onData = (base64: string) => {
+	// 		eventClient.sendRealtimeInput([
+	// 			{
+	// 				mimeType: "audio/pcm;rate=16000",
+	// 				data: base64,
+	// 			},
+	// 		]);
+	// 		audioChunks.current.push(base64);
+	// 	};
+	// 	if (eventConnected && !muted && audioRecorder) {
+	// 		audioRecorder.on("data", onData).on("volume", setInVolume).start();
+	// 	} else {
+	// 		audioRecorder.stop();
+	// 	}
+	// 	return () => {
+	// 		audioRecorder.off("data", onData).off("volume", setInVolume);
+	// 	};
+	// }, [eventConnected, eventClient, muted, audioRecorder]);
+
+
+	/** Send real time audio to multimodal state client */
 	useEffect(() => {
 		const onData = (base64: string) => {
-			eventClient.sendRealtimeInput([
+			multimodalClient.sendRealtimeInput([
 				{
 					mimeType: "audio/pcm;rate=16000",
 					data: base64,
 				},
 			]);
+			audioChunks.current.push(base64);
 		};
-		if (eventConnected && !muted && audioRecorder) {
+		if (multimodalConnected && !muted && audioRecorder) {
 			audioRecorder.on("data", onData).on("volume", setInVolume).start();
 		} else {
 			audioRecorder.stop();
@@ -152,48 +167,49 @@ function ControlTray(props: ControlTrayProps) {
 		return () => {
 			audioRecorder.off("data", onData).off("volume", setInVolume);
 		};
-	}, [eventConnected, eventClient, muted, audioRecorder]);
-
-
-	/** Handle audio recording setup */
-	useEffect(() => {
-		const onData = (base64: string) => {
-			if (base64.length > 0) {
-				audioChunks.current.push(base64);
-			}
-		};
-
-		if (multimodalConnected && !muted && audioRecorder) {
-			audioRecorder.on("data", onData).start();
-		} else {
-			audioRecorder.stop();
-		}
-
-		return () => {
-			audioRecorder.off("data", onData).off("volume", setInVolume);
-		};
 	}, [multimodalConnected, multimodalClient, muted, audioRecorder]);
 
 
 	/** Handle turn completion and sending data */
-	useEffect(() => {
-		if (eventTurnComplete && audioChunks.current.length > 0) {
-			try {
-				// Send each chunk as a separate input
-				for (const chunk of audioChunks.current) {
-					multimodalClient.sendRealtimeInput([{
-						mimeType: "audio/pcm;rate=16000",
-						data: chunk
-					}]);
-				}
-			} catch (e) {
-				console.error('[Error sending audio data]', e);
-			} finally {
-				audioChunks.current = [];
-				console.log('[Cache cleared]');
-			}
-		}
-	}, [eventTurnComplete, multimodalClient]);
+	// useEffect(() => {
+	// 	if (eventTurnComplete && audioChunks.current.length > 0) {
+	// 		try {
+	// 			if (audioChunks.current.length > 0) {
+	// 				console.log('[Sending audio data]');
+	// 			}
+	// 			// Send a 1-second audio chunk with very quiet random noise to signal end of stream
+	// 			const samples = 8000; // 1 second at 16kHz
+	// 			const buffer = new Int16Array(samples);
+	// 			for (let i = 0; i < samples; i++) {
+	// 				// Random values between -50 and 50 (very quiet compared to 16-bit range of -32768 to 32767)
+	// 				buffer[i] = Math.floor(Math.random() * 100 - 50);
+	// 			}
+	// 			const base64EmptyChunk = btoa(String.fromCharCode(...new Uint8Array(buffer.buffer)));
+	// 			multimodalClient.sendRealtimeInput([{
+	// 				mimeType: "audio/pcm;rate=16000",
+	// 				data: base64EmptyChunk
+	// 			}]);
+
+	// 			// Send each chunk as a separate input
+	// 			for (const chunk of audioChunks.current) {
+	// 				multimodalClient.sendRealtimeInput([{
+	// 					mimeType: "audio/pcm;rate=16000",
+	// 					data: chunk
+	// 				}]);
+	// 			}
+
+	// 			multimodalClient.sendRealtimeInput([{
+	// 				mimeType: "audio/pcm;rate=16000",
+	// 				data: base64EmptyChunk
+	// 			}]);
+	// 		} catch (e) {
+	// 			console.error('[Error sending audio data]', e);
+	// 		} finally {
+	// 			audioChunks.current = [];
+	// 			console.log('[Cache cleared]');
+	// 		}
+	// 	}
+	// }, [eventTurnComplete, multimodalClient]);
 
 
 	/** This hook frequently sends video frames to the multimodal state client */
@@ -252,7 +268,9 @@ function ControlTray(props: ControlTrayProps) {
 
 	/** Connect to conversation */
 	const connectConversation = async () => {
-		await eventConnect();
+		// Clear any existing audio chunks when starting a new connection
+		audioChunks.current = [];
+		// await eventConnect();
 		await multimodalConnect();
 		props.setStateMachineEvent(20);
 		props.setCurrentState(0);
@@ -261,7 +279,7 @@ function ControlTray(props: ControlTrayProps) {
 
 	/* Disconnect and reset conversation state */
 	const disconnectConversation = async () => {
-		await eventDisconnect();
+		// await eventDisconnect();
 		await multimodalDisconnect();
 		props.setStateMachineEvent(-1);
 		props.setCurrentState(-1);
@@ -272,10 +290,10 @@ function ControlTray(props: ControlTrayProps) {
 		<div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-base-200 rounded-full shadow-lg px-6 py-3">
 			<canvas className="hidden" ref={renderCanvasRef} />
 			<div className="flex items-center gap-2">
-				<div className={cn("flex items-center gap-2", { "opacity-50": !eventConnected || !multimodalConnected })}>
+				<div className={cn("flex items-center gap-2", { "opacity-50": !multimodalConnected })}>
 					<button
 						className={cn("btn btn-sm btn-circle", {
-							"btn-error": !muted && eventConnected && multimodalConnected,
+							"btn-error": !muted && multimodalConnected,
 							"btn-ghost": muted
 						})}
 						onClick={() => setMuted(!muted)}
@@ -316,12 +334,12 @@ function ControlTray(props: ControlTrayProps) {
 					<button
 						ref={connectButtonRef}
 						className={cn("btn btn-sm btn-circle", {
-							"btn-neutral": eventConnected && multimodalConnected,
-							"btn-ghost": !eventConnected || !multimodalConnected
+							"btn-neutral": multimodalConnected,
+							"btn-ghost": !multimodalConnected
 						})}
-						onClick={eventConnected || multimodalConnected ? disconnectConversation : connectConversation}
+						onClick={multimodalConnected ? disconnectConversation : connectConversation}
 					>
-						{eventConnected || multimodalConnected ? <BiPause size={16} /> : <BiPlay size={16} />}
+						{multimodalConnected ? <BiPause size={16} /> : <BiPlay size={16} />}
 					</button>
 				</div>
 			</div>
