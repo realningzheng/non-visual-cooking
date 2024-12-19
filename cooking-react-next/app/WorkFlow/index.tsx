@@ -392,7 +392,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     }, [props.stateTransitionToggle, props.videoKnowledgeInput]);
 
 
-    /** Listen to client content stream */
+    /** Listen to event detection content stream */
     useEffect(() => {
         // When turnComplete switches from true to false, reset the state
         if (!eventTurnComplete && prevEventTurnComplete.current) {
@@ -659,7 +659,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                     {clientEventResponse}
                     <div className="divider"></div>
                     <div className='text-lg font-bold'>Agent response</div>
-                    <p style={{ whiteSpace: 'pre-line' }}>
+                    {/* <p style={{ whiteSpace: 'pre-line' }}>
                         {(() => {
                             try {
                                 const parsed = typeof props.stateFunctionExeRes === 'string'
@@ -670,7 +670,8 @@ export default function WorkFlow(props: WorkFlowProps) {
                                 return props.stateFunctionExeRes;
                             }
                         })()}
-                    </p>
+                    </p> */}
+                    {'<TODO: transcribe audio output>'}
                     <div className="divider"></div>
                     <div className='text-lg font-bold content-block kv'>Interaction history</div>
                     <div className="content-block-body content-kv">
