@@ -24,7 +24,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 // import { RiRobot2Fill } from "react-icons/ri";
 // import OpenAI from "openai";
 import { repeatPreviousInteraction, getPlaySegmentedVideoFlag } from "./eventStateFunctions";
-import { useLiveAPIContext } from "../contexts/LiveAPIContext";
+import { useEventDetectionContext } from "../contexts/EventDetectionContext";
+import { useMultimodalStateContext } from "../contexts/MultimodalStateContext";
 import { IoSend } from "react-icons/io5";
 
 
@@ -74,9 +75,20 @@ interface AutoAgentResponseItem {
 
 
 export default function WorkFlow(props: WorkFlowProps) {
-    const { connected, client, content, turnComplete } = useLiveAPIContext();
+    const {
+        client: eventClient,
+        content: eventContent,
+        turnComplete: eventTurnComplete
+    } = useEventDetectionContext();
+    const {
+        client: multimodalClient,
+        content: multimodalContent,
+        turnComplete: multimodalTurnComplete
+    } = useMultimodalStateContext();
+
     // Track previous turnComplete value
-    const prevTurnComplete = useRef(turnComplete);
+    const prevEventTurnComplete = useRef(eventTurnComplete);
+    const prevMultimodalTurnComplete = useRef(multimodalTurnComplete);
 
     // const wavRecorderRef = useRef<WavRecorder>(new WavRecorder({ sampleRate: 24000 }));
     // const wavStreamPlayerRef = useRef<WavStreamPlayer>(new WavStreamPlayer({ sampleRate: 24000 }));
@@ -111,27 +123,27 @@ export default function WorkFlow(props: WorkFlowProps) {
 
 
     const [clientEventResponse, setClientEventResponse] = useState<string>('');
+    const [clientMultimodalResponse, setClientMultimodalResponse] = useState<string>('');
 
-
-    const playTTS = async (text: string, speed: number) => {
-        console.log('[TTS play not implemented!]', text);
-        //     try {
-        //         console.log('[TTS play]', text);
-        //         const wavStreamPlayer = wavStreamPlayerRef.current;
-        //         const mp3Response = await openaiClient.audio.speech.create({
-        //             model: "tts-1",
-        //             voice: "alloy",
-        //             input: text,
-        //             response_format: 'pcm',
-        //             speed: speed,
-        //         });
-        //         const arrayBuffer = await mp3Response.arrayBuffer();
-        //         await wavStreamPlayer.connect();
-        //         await wavStreamPlayer.add16BitPCM(arrayBuffer);
-        //     } catch (error) {
-        //         console.error("Error generating or playing TTS:", error);
-        //     }
-    };
+    // const playTTS = async (text: string, speed: number) => {
+    //     console.log('[TTS play not implemented!]', text);
+    //     try {
+    //         console.log('[TTS play]', text);
+    //         const wavStreamPlayer = wavStreamPlayerRef.current;
+    //         const mp3Response = await openaiClient.audio.speech.create({
+    //             model: "tts-1",
+    //             voice: "alloy",
+    //             input: text,
+    //             response_format: 'pcm',
+    //             speed: speed,
+    //         });
+    //         const arrayBuffer = await mp3Response.arrayBuffer();
+    //         await wavStreamPlayer.connect();
+    //         await wavStreamPlayer.add16BitPCM(arrayBuffer);
+    //     } catch (error) {
+    //         console.error("Error generating or playing TTS:", error);
+    //     }
+    // };
 
 
     /** Event handlers */
@@ -257,113 +269,112 @@ export default function WorkFlow(props: WorkFlowProps) {
 
 
     /** Handle state transition */
-    const gotoNextState = async (
-        statePrev: number,
-        event: number,
-        voiceInputTranscript: string,
-        videoKnowledgeInput: string
-    ) => {
-        if (event >= 0 && (event in stateMachine[statePrev])) {
-            if (event === 5) {              // handle replay previous interaction 
-                let retrievedResponse = await repeatPreviousInteraction(
-                    voiceInputTranscript,
-                    interactionMemoryKv
-                );
-                let retrievedIndex = Number(retrievedResponse.response);
-                let retrievedInfo = interactionMemoryKv[retrievedIndex];
-                let agentResponse = retrievedInfo.agent_response;
-                let videoSegmentIndex = retrievedInfo.video_segment_index;
-                if (agentResponse) {
-                    await playTTS(agentResponse, props.ttsSpeed);
-                }
-                props.setStateFunctionExeRes(JSON.stringify({ "response": agentResponse, "video_segment_index": videoSegmentIndex }));
-            } else if (event === 6) {       // handle replay segmented video
-                let response = await getPlaySegmentedVideoFlag(voiceInputTranscript);
-                if (response.response === 0) {
-                    props.setSegmentedVideoPlaying(false);
-                } else if (response.response === 1) {
-                    props.setSegmentedVideoPlaying(true);
-                } else if (response.response === 2) {
-                    props.setSegmentedVideoPlaying(true);
-                    props.setReplaySignal(!props.replaySignal);
-                }
-            } else {
-                props.setSegmentedVideoPlaying(false);
-                props.setIsProcessing(true);
-                let realityImageBase64 = '';
-                const canvas = props.canvasRef.current;
-                const video = props.videoRef.current;
-                if (canvas && video) {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    // save the image to base64 string
-                    const base64data = canvas.toDataURL('image/png');
-                    realityImageBase64 = base64data;
-                }
-                props.setRealityImageBase64(realityImageBase64);
-                let stateFunctionExeRes = await executeStateFunction(
-                    stateMachine[statePrev][event],
-                    videoKnowledgeInput,
-                    realityImageBase64,
-                    voiceInputTranscript,
-                    interactionMemoryKv,
-                    autoAgentResponseMemoryKv
-                );
-                props.setIsProcessing(false);
+    // const gotoNextState = async (
+    //     statePrev: number,
+    //     event: number,
+    //     voiceInputTranscript: string,
+    //     videoKnowledgeInput: string
+    // ) => {
+    //     if (event >= 0 && (event in stateMachine[statePrev])) {
+    //         if (event === 5) {              // handle replay previous interaction 
+    //             let retrievedResponse = await repeatPreviousInteraction(
+    //                 voiceInputTranscript,
+    //                 interactionMemoryKv
+    //             );
+    //             let retrievedIndex = Number(retrievedResponse.response);
+    //             let retrievedInfo = interactionMemoryKv[retrievedIndex];
+    //             let agentResponse = retrievedInfo.agent_response;
+    //             let videoSegmentIndex = retrievedInfo.video_segment_index;
+    //             // if (agentResponse) {
+    //             //     await playTTS(agentResponse, props.ttsSpeed);
+    //             // }
+    //             props.setStateFunctionExeRes(JSON.stringify({ "response": agentResponse, "video_segment_index": videoSegmentIndex }));
+    //         } else if (event === 6) {       // handle replay segmented video
+    //             let response = await getPlaySegmentedVideoFlag(voiceInputTranscript);
+    //             if (response.response === 0) {
+    //                 props.setSegmentedVideoPlaying(false);
+    //             } else if (response.response === 1) {
+    //                 props.setSegmentedVideoPlaying(true);
+    //             } else if (response.response === 2) {
+    //                 props.setSegmentedVideoPlaying(true);
+    //                 props.setReplaySignal(!props.replaySignal);
+    //             }
+    //         } else {
+    //             props.setSegmentedVideoPlaying(false);
+    //             props.setIsProcessing(true);
+    //             let realityImageBase64 = '';
+    //             const canvas = props.canvasRef.current;
+    //             const video = props.videoRef.current;
+    //             if (canvas && video) {
+    //                 canvas.width = video.videoWidth;
+    //                 canvas.height = video.videoHeight;
+    //                 canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
+    //                 // save the image to base64 string
+    //                 const base64data = canvas.toDataURL('image/png');
+    //                 realityImageBase64 = base64data;
+    //             }
+    //             props.setRealityImageBase64(realityImageBase64);
+    //             let stateFunctionExeRes = await executeStateFunction(
+    //                 stateMachine[statePrev][event],
+    //                 videoKnowledgeInput,
+    //                 realityImageBase64,
+    //                 voiceInputTranscript,
+    //                 interactionMemoryKv,
+    //                 autoAgentResponseMemoryKv
+    //             );
+    //             props.setIsProcessing(false);
 
-                // Convert object response to string if necessary
-                const stringifiedResponse = typeof stateFunctionExeRes === 'object'
-                    ? JSON.stringify(stateFunctionExeRes, null, 2)
-                    : String(stateFunctionExeRes);
+    //             // Convert object response to string if necessary
+    //             const stringifiedResponse = typeof stateFunctionExeRes === 'object'
+    //                 ? JSON.stringify(stateFunctionExeRes, null, 2)
+    //                 : String(stateFunctionExeRes);
 
-                if (stringifiedResponse !== props.stateFunctionExeRes) {
-                    props.setStateFunctionExeRes(stringifiedResponse);
-                    // store user input and agent response
-                    if (voiceInputTranscript.length > 0) {
-                        if (typeof stateFunctionExeRes === 'object') {
-                            setInteractionMemoryKv(prevList => [
-                                ...prevList,
-                                {
-                                    index: interactionID,
-                                    user_query: voiceInputTranscript,
-                                    agent_response: stateFunctionExeRes.response,
-                                    video_segment_index: stateFunctionExeRes.video_segment_index
-                                }
-                            ]);
-                            setInteractionID(prev => prev + 1);
-                        }
+    //             if (stringifiedResponse !== props.stateFunctionExeRes) {
+    //                 props.setStateFunctionExeRes(stringifiedResponse);
+    //                 // store user input and agent response
+    //                 if (voiceInputTranscript.length > 0) {
+    //                     if (typeof stateFunctionExeRes === 'object') {
+    //                         setInteractionMemoryKv(prevList => [
+    //                             ...prevList,
+    //                             {
+    //                                 index: interactionID,
+    //                                 user_query: voiceInputTranscript,
+    //                                 agent_response: stateFunctionExeRes.response,
+    //                                 video_segment_index: stateFunctionExeRes.video_segment_index
+    //                             }
+    //                         ]);
+    //                         setInteractionID(prev => prev + 1);
+    //                     }
 
-                        // store auto agent response
-                        if (typeof stateFunctionExeRes !== 'object') {
-                            setAutoAgentResponseMemoryKv(prevList => [
-                                ...prevList,
-                                {
-                                    index: autoAgentResponseID,
-                                    response: stringifiedResponse
-                                }
-                            ]);
-                            setAutoAgentResponseID(prev => prev + 1);
-                        }
+    //                     // store auto agent response
+    //                     if (typeof stateFunctionExeRes !== 'object') {
+    //                         setAutoAgentResponseMemoryKv(prevList => [
+    //                             ...prevList,
+    //                             {
+    //                                 index: autoAgentResponseID,
+    //                                 response: stringifiedResponse
+    //                             }
+    //                         ]);
+    //                         setAutoAgentResponseID(prev => prev + 1);
+    //                     }
 
-                        // play the natural language response from the agent
-                        if (typeof stateFunctionExeRes === 'object') {
-                            await playTTS(String(stateFunctionExeRes.response), props.ttsSpeed);
-                        } else {
-                            await playTTS(stringifiedResponse, props.ttsSpeed);
-                        }
-                    }
-                }
-                return;
-            }
-        };
-    }
+    //                     // // play the natural language response from the agent
+    //                     // if (typeof stateFunctionExeRes === 'object') {
+    //                     //     await playTTS(String(stateFunctionExeRes.response), props.ttsSpeed);
+    //                     // } else {
+    //                     //     await playTTS(stringifiedResponse, props.ttsSpeed);
+    //                     // }
+    //                 }
+    //             }
+    //             return;
+    //         }
+    //     };
+    // }
 
 
     const handleSubmit = (voiceInput: string, currentState: number): void => {
         const nextEventPrompt = getPromptForPossibleNextEvents(currentState);
-        // @todo: set as system prompt
-        client.send([{ text: '<USER REQUEST>: \n' + voiceInput + nextEventPrompt }]);
+        eventClient.send([{ text: '<USER REQUEST>: \n' + voiceInput + nextEventPrompt }]);
     }
 
 
@@ -372,7 +383,7 @@ export default function WorkFlow(props: WorkFlowProps) {
         const executeNextState = async () => {
             if (props.stateMachineEvent >= 0) {
                 if (props.voiceInputTranscript.length > 0 && (props.stateMachineEvent in stateMachine[props.currentState])) {
-                    await gotoNextState(props.currentState, props.stateMachineEvent, props.voiceInputTranscript, props.videoKnowledgeInput);
+                    // await gotoNextState(props.currentState, props.stateMachineEvent, props.voiceInputTranscript, props.videoKnowledgeInput);
                     props.setCurrentState(stateMachine[props.currentState][props.stateMachineEvent]);
                 }
             }
@@ -384,24 +395,24 @@ export default function WorkFlow(props: WorkFlowProps) {
     /** Listen to client content stream */
     useEffect(() => {
         // When turnComplete switches from true to false, reset the state
-        if (!turnComplete && prevTurnComplete.current) {
+        if (!eventTurnComplete && prevEventTurnComplete.current) {
             setClientEventResponse('');
         }
 
         // Only process content when we're in the middle of a turn
-        if (content.length > 0 && !turnComplete) {
+        if (eventContent.length > 0 && !eventTurnComplete) {
             setClientEventResponse(prev => {
                 // Check if content is already at the end of prev
-                if (!prev.endsWith(content)) {
-                    return prev + content;
+                if (!prev.endsWith(eventContent)) {
+                    return prev + eventContent;
                 }
                 return prev;
             });
         }
 
         // Update the ref for next render
-        prevTurnComplete.current = turnComplete;
-    }, [content, turnComplete]);
+        prevEventTurnComplete.current = eventTurnComplete;
+    }, [eventContent, eventTurnComplete]);
 
 
     /** Handle event and state change c*/
@@ -410,7 +421,7 @@ export default function WorkFlow(props: WorkFlowProps) {
         try {
             // Try parsing as JSON first in case it's a list
             const parsed = JSON.parse(clientEventResponse);
-            
+
             if (Array.isArray(parsed)) {
                 // If it's an array, take the first number
                 if (parsed.length > 0) {
@@ -437,7 +448,7 @@ export default function WorkFlow(props: WorkFlowProps) {
             }
         }
     }, [clientEventResponse]);
-    
+
 
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -630,10 +641,10 @@ export default function WorkFlow(props: WorkFlowProps) {
                         .map((event) => (
                             <li
                                 key={`event-${event}`}
-                                onClick={() => {
-                                    props.setVoiceInputTranscript('[Debug] Respond with Woohoo!');
-                                    props.setStateMachineEvent(Number(event));
-                                }}
+                                // onClick={() => {
+                                //     props.setVoiceInputTranscript('[Debug] Respond with Woohoo!');
+                                //     props.setStateMachineEvent(Number(event));
+                                // }}
                                 className='btn btn-outline btn-xs text-left mb-2.5 mr-1 cursor-pointer'
                             >
                                 {event}: {eventTranslator[Number(event)]}
@@ -642,8 +653,61 @@ export default function WorkFlow(props: WorkFlowProps) {
                 </ul>
             )}
 
-            {props.currentState !== -1 && <div className='text-lg font-bold'>Client event response</div>}
-            {clientEventResponse}
+            {props.currentState !== -1 && (
+                <>
+                    <div className='text-lg font-bold'>Client event response</div>
+                    {clientEventResponse}
+                    <div className="divider"></div>
+                    <div className='text-lg font-bold'>Agent response</div>
+                    <p style={{ whiteSpace: 'pre-line' }}>
+                        {(() => {
+                            try {
+                                const parsed = typeof props.stateFunctionExeRes === 'string'
+                                    ? JSON.parse(props.stateFunctionExeRes)
+                                    : props.stateFunctionExeRes;
+                                return parsed.response || props.stateFunctionExeRes;
+                            } catch {
+                                return props.stateFunctionExeRes;
+                            }
+                        })()}
+                    </p>
+                    <div className="divider"></div>
+                    <div className='text-lg font-bold content-block kv'>Interaction history</div>
+                    <div className="content-block-body content-kv">
+                        {" [ "}
+                        {props.currentState !== -1 && interactionMemoryKv.map((item, idx) => (
+                            <div key={item.index} style={{ marginLeft: '20px' }}>
+                                {"{"}<br />
+                                &nbsp;&nbsp;&nbsp;&nbsp;index: {item.index},<br />
+                                &nbsp;&nbsp;&nbsp;&nbsp;user_query: {String(item.user_query).length > 70
+                                    ? `${String(item.user_query).substring(0, 40)}...${String(item.user_query).slice(-30)}`
+                                    : String(item.user_query)},<br />
+                                &nbsp;&nbsp;&nbsp;&nbsp;agent_response: {String(item.agent_response).length > 70
+                                    ? `${String(item.agent_response).substring(0, 40)}...${String(item.agent_response).slice(-30)}`
+                                    : String(item.agent_response)}<br />
+                                &nbsp;&nbsp;&nbsp;&nbsp;video_segment_index: {String(item.video_segment_index)}<br />
+                                {"}"},
+                            </div>
+                        ))}
+                        {" ] "}
+                    </div>
+                    <div className='text-lg font-bold content-block kv'>Agent initiated response memory</div>
+                    <div className="content-block-body content-kv">
+                        {" [ "}
+                        {props.currentState !== -1 && autoAgentResponseMemoryKv.map((item) => (
+                            <div key={item.index} style={{ marginLeft: '20px' }}>
+                                {"{"}<br />
+                                &nbsp;&nbsp;&nbsp;&nbsp;index: {item.index},<br />
+                                &nbsp;&nbsp;&nbsp;&nbsp;response: {String(item.response).length > 70
+                                    ? `${String(item.response).substring(0, 40)}...${String(item.response).slice(-30)}`
+                                    : String(item.response)}<br />
+                                {"}"},
+                            </div>
+                        ))}
+                        {" ] "}
+                    </div>
+                </>
+            )}
 
             {/* {selectedFileName && (
                 <div
@@ -685,60 +749,6 @@ export default function WorkFlow(props: WorkFlowProps) {
                         </ul>
                     )}
                     <div className="divider"></div>
-
-                    <div className='flex items-center gap-2'>
-                        <div className='text-lg font-bold'>Agent response</div>
-                        {props.currentState !== -1 && (props.isProcessing && <span className="loading loading-dots loading-lg"></span>)}
-                    </div>
-                    {props.currentState !== -1 && (
-                        <p style={{ whiteSpace: 'pre-line' }}>
-                            {(() => {
-                                try {
-                                    const parsed = typeof props.stateFunctionExeRes === 'string'
-                                        ? JSON.parse(props.stateFunctionExeRes)
-                                        : props.stateFunctionExeRes;
-                                    return parsed.response || props.stateFunctionExeRes;
-                                } catch {
-                                    return props.stateFunctionExeRes;
-                                }
-                            })()}
-                        </p>
-                    )}
-                    <div className="divider"></div>
-                    <div className='text-lg font-bold content-block kv'>Interaction history</div>
-                    <div className="content-block-body content-kv">
-                        {" [ "}
-                        {props.currentState !== -1 && interactionMemoryKv.map((item, idx) => (
-                            <div key={item.index} style={{ marginLeft: '20px' }}>
-                                {"{"}<br />
-                                &nbsp;&nbsp;&nbsp;&nbsp;index: {item.index},<br />
-                                &nbsp;&nbsp;&nbsp;&nbsp;user_query: {String(item.user_query).length > 70
-                                    ? `${String(item.user_query).substring(0, 40)}...${String(item.user_query).slice(-30)}`
-                                    : String(item.user_query)},<br />
-                                &nbsp;&nbsp;&nbsp;&nbsp;agent_response: {String(item.agent_response).length > 70
-                                    ? `${String(item.agent_response).substring(0, 40)}...${String(item.agent_response).slice(-30)}`
-                                    : String(item.agent_response)}<br />
-                                &nbsp;&nbsp;&nbsp;&nbsp;video_segment_index: {String(item.video_segment_index)}<br />
-                                {"}"},
-                            </div>
-                        ))}
-                        {" ] "}
-                    </div>
-                    <div className='text-lg font-bold content-block kv'>Agent initiated response memory</div>
-                    <div className="content-block-body content-kv">
-                        {" [ "}
-                        {props.currentState !== -1 && autoAgentResponseMemoryKv.map((item) => (
-                            <div key={item.index} style={{ marginLeft: '20px' }}>
-                                {"{"}<br />
-                                &nbsp;&nbsp;&nbsp;&nbsp;index: {item.index},<br />
-                                &nbsp;&nbsp;&nbsp;&nbsp;response: {String(item.response).length > 70
-                                    ? `${String(item.response).substring(0, 40)}...${String(item.response).slice(-30)}`
-                                    : String(item.response)}<br />
-                                {"}"},
-                            </div>
-                        ))}
-                        {" ] "}
-                    </div>
                 </>
             )} */}
         </Stack>

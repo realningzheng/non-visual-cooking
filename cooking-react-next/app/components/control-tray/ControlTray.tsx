@@ -18,13 +18,14 @@ import cn from "classnames";
 import { BiMicrophone, BiMicrophoneOff, BiPlay, BiPause, BiDesktop, BiStopCircle, BiVideo, BiVideoOff } from 'react-icons/bi';
 
 import { memo, ReactNode, RefObject, useEffect, useRef, useState } from "react";
-import { useLiveAPIContext } from "../../contexts/LiveAPIContext";
+import { useEventDetectionContext } from "../../contexts/EventDetectionContext";
+import { useMultimodalStateContext } from "../../contexts/MultimodalStateContext";
 import { UseMediaStreamResult } from "../../hooks/use-media-stream-mux";
 import { useScreenCapture } from "../../hooks/use-screen-capture";
 import { useWebcam } from "../../hooks/use-webcam";
 import { AudioRecorder } from "../../lib/audio-recorder";
 import AudioPulse from "../audio-pulse/AudioPulse";
-import { systemPromptEventDetection } from "../../prompt";
+import { systemPromptEventDetection, systemPromptDefault } from "../../prompt";
 import { getPromptForPossibleNextEvents } from "../../WorkFlow/stateMachine";
 
 
@@ -46,21 +47,6 @@ type MediaStreamButtonProps = {
 	stop: () => any;
 };
 
-/**
- * button used for triggering webcam or screen-capture
- */
-const MediaStreamButton = memo(
-	({ isStreaming, onIcon, offIcon, start, stop }: MediaStreamButtonProps) =>
-		isStreaming ? (
-			<button className="action-button" onClick={stop}>
-				<span className="material-symbols-outlined">{onIcon}</span>
-			</button>
-		) : (
-			<button className="action-button" onClick={start}>
-				<span className="material-symbols-outlined">{offIcon}</span>
-			</button>
-		),
-);
 
 function ControlTray(props: ControlTrayProps) {
 	const videoStreams = [useWebcam(), useScreenCapture()];
@@ -73,12 +59,31 @@ function ControlTray(props: ControlTrayProps) {
 	const renderCanvasRef = useRef<HTMLCanvasElement>(null);
 	const connectButtonRef = useRef<HTMLButtonElement>(null);
 
-	const { client, connected, connect, disconnect, volume, setConfig, config } =
-		useLiveAPIContext();
+	const {
+		client: eventClient,
+		connected: eventConnected,
+		connect: eventConnect,
+		disconnect: eventDisconnect,
+		volume: eventVolume,
+		setConfig: eventSetConfig,
+		config: eventConfig
+	} = useEventDetectionContext();
 
+	const {
+		client: multimodalClient,
+		connected: multimodalConnected,
+		connect: multimodalConnect,
+		disconnect: multimodalDisconnect,
+		volume: multimodalVolume,
+		setConfig: multimodalSetConfig,
+		config: multimodalConfig
+	} = useMultimodalStateContext();
+
+
+	/** Configure event detection session client, response with text only */
 	useEffect(() => {
-		setConfig({
-			...config,
+		eventSetConfig({
+			...eventConfig,
 			generationConfig: {
 				responseModalities: "text"
 			},
@@ -90,14 +95,32 @@ function ControlTray(props: ControlTrayProps) {
 				],
 			},
 		});
-	}, [setConfig]);
+	}, [eventSetConfig]);
+
+
+	/** Configure multimodal session client, response with audio */
+	useEffect(() => {
+		multimodalSetConfig({
+			...multimodalConfig,
+			generationConfig: {
+				responseModalities: "audio"
+			},
+			systemInstruction: {
+				parts: [
+					{
+						text: systemPromptDefault,
+					},
+				],
+			},
+		});
+	}, [multimodalSetConfig]);
 
 
 	useEffect(() => {
-		if (!connected && connectButtonRef.current) {
+		if (!eventConnected && !multimodalConnected && connectButtonRef.current) {
 			connectButtonRef.current.focus();
 		}
-	}, [connected]);
+	}, [eventConnected, multimodalConnected]);
 
 
 	useEffect(() => {
@@ -108,16 +131,17 @@ function ControlTray(props: ControlTrayProps) {
 	}, [inVolume]);
 
 
+	/** Send real time audio to multimodal client */
 	useEffect(() => {
 		const onData = (base64: string) => {
-			client.sendRealtimeInput([
+			multimodalClient.sendRealtimeInput([
 				{
 					mimeType: "audio/pcm;rate=16000",
 					data: base64,
 				},
 			]);
 		};
-		if (connected && !muted && audioRecorder) {
+		if (multimodalConnected && !muted && audioRecorder) {
 			audioRecorder.on("data", onData).on("volume", setInVolume).start();
 		} else {
 			audioRecorder.stop();
@@ -125,7 +149,7 @@ function ControlTray(props: ControlTrayProps) {
 		return () => {
 			audioRecorder.off("data", onData).off("volume", setInVolume);
 		};
-	}, [connected, client, muted, audioRecorder]);
+	}, [ multimodalConnected, multimodalClient, muted, audioRecorder]);
 
 
 	useEffect(() => {
@@ -151,19 +175,19 @@ function ControlTray(props: ControlTrayProps) {
 				const base64 = canvas.toDataURL("image/jpeg", 1.0);
 				const data = base64.slice(base64.indexOf(",") + 1, Infinity);
 				console.log('send visuals')
-				client.sendRealtimeInput([{ mimeType: "image/jpeg", data }]);
+				multimodalClient.sendRealtimeInput([{ mimeType: "image/jpeg", data }]);
 			}
-			if (connected) {
+			if (multimodalConnected) {
 				timeoutId = window.setTimeout(sendVideoFrame, 1000 / 0.5);
 			}
 		}
-		if (connected && activeVideoStream !== null) {
+		if (multimodalConnected && activeVideoStream !== null) {
 			requestAnimationFrame(sendVideoFrame);
 		}
 		return () => {
 			clearTimeout(timeoutId);
 		};
-	}, [connected, activeVideoStream, client, props.videoRef]);
+	}, [multimodalConnected, activeVideoStream, multimodalClient, props.videoRef]);
 
 
 	//handler for swapping from one video-stream to the next
@@ -183,7 +207,8 @@ function ControlTray(props: ControlTrayProps) {
 
 	/** Connect to conversation */
 	const connectConversation = async () => {
-		await connect();
+		await eventConnect();
+		await multimodalConnect();
 		props.setStateMachineEvent(20);
 		props.setCurrentState(0);
 	};
@@ -191,7 +216,8 @@ function ControlTray(props: ControlTrayProps) {
 
 	/* Disconnect and reset conversation state */
 	const disconnectConversation = async () => {
-		await disconnect();
+		await eventDisconnect();
+		await multimodalDisconnect();
 		props.setStateMachineEvent(-1);
 		props.setCurrentState(-1);
 	};
@@ -201,10 +227,10 @@ function ControlTray(props: ControlTrayProps) {
 		<div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-base-200 rounded-full shadow-lg px-6 py-3">
 			<canvas className="hidden" ref={renderCanvasRef} />
 			<div className="flex items-center gap-2">
-				<div className={cn("flex items-center gap-2", { "opacity-50": !connected })}>
+				<div className={cn("flex items-center gap-2", { "opacity-50": !eventConnected || !multimodalConnected })}>
 					<button
 						className={cn("btn btn-sm btn-circle", {
-							"btn-error": !muted && connected,
+							"btn-error": !muted && eventConnected && multimodalConnected,
 							"btn-ghost": muted
 						})}
 						onClick={() => setMuted(!muted)}
@@ -213,7 +239,7 @@ function ControlTray(props: ControlTrayProps) {
 					</button>
 
 					<div className="btn btn-sm btn-circle btn-ghost no-animation">
-						<AudioPulse volume={volume} active={connected} hover={false} />
+						<AudioPulse volume={multimodalVolume} active={multimodalConnected} hover={false} />
 					</div>
 
 					{props.supportsVideo && (
@@ -245,12 +271,12 @@ function ControlTray(props: ControlTrayProps) {
 					<button
 						ref={connectButtonRef}
 						className={cn("btn btn-sm btn-circle", {
-							"btn-neutral": connected,
-							"btn-ghost": !connected
+							"btn-neutral": eventConnected && multimodalConnected,
+							"btn-ghost": !eventConnected || !multimodalConnected
 						})}
-						onClick={connected ? disconnectConversation : connectConversation}
+						onClick={eventConnected || multimodalConnected ? disconnectConversation : connectConversation}
 					>
-						{connected ? <BiPause size={16} /> : <BiPlay size={16} />}
+						{eventConnected || multimodalConnected ? <BiPause size={16} /> : <BiPlay size={16} />}
 					</button>
 				</div>
 			</div>

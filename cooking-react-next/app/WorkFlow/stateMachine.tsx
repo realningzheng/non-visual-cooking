@@ -208,6 +208,7 @@ export const stateMachine: StateMachine = {
 		6: 4,  // 6: User asks for playing the segmented video; add-on state, stay where it is
 	},
 	5: {
+		1: 8, // 1: User asks follow-up questions; 8: Agent: Follows up (with details) from the previous interaction
 		4: 0, // 4: User agrees; 0: Comparing video-reality alignment
 		3: 5, // 3: User disagrees; 5: Handling user disagreements
 		5: 5, // 5: User asks for repeating a previous interaction; add-on state, stay where it is

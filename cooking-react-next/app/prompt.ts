@@ -32,7 +32,7 @@ Instructions:
 - The list of category names, their index numbers, and explanations will be provided after <CATEGORY>.
 - Your task is to determine which category the request belongs to based on the given information.
 - Output the corresponding category index(es) as a list of numbers.
-- Return only the list of index numbers, with no additional text or explanations.
+- Return only the index number of the most relevant category, with no additional text or explanations.
 
 Example:
 - Input
