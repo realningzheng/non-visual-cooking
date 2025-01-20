@@ -1,4 +1,3 @@
-import transcriptSentenceList from '../data/rwYaDqXFH88_sentence.json';
 import OpenAI from 'openai';
 import axios from "axios";
 import credential from '../../secret.json';

@@ -52,6 +52,8 @@ interface WorkFlowProps {
     ttsSpeed: number;
     replaySignal: boolean;
     videoRef: React.RefObject<HTMLVideoElement>;
+    isSystemActiveEnabled: boolean;
+    setIsSystemActiveEnabled: (input: boolean) => void;
     setVideoStream: (stream: MediaStream | null) => void;
 }
 
@@ -92,6 +94,8 @@ export default function WorkFlow(props: WorkFlowProps) {
     const [isRecording, setIsRecording] = useState(false);
     const [canPushToTalk, setCanPushToTalk] = useState(true);
     const [audioAgentDuty, setAudioAgentDuty] = useState<'chatbot' | 'detect'>('detect');
+    const [systemActivePrompt, setSystemActivePrompt] = useState<string>('');
+
     const possibleNextUserEvents: string[] = useMemo(() => {
         if (props.currentState === -1) return [];
         try {
@@ -712,62 +716,74 @@ export default function WorkFlow(props: WorkFlowProps) {
                 <p><span className='text-lg font-bold'>Current event:</span> {props.stateMachineEvent} : {eventTranslator[props.stateMachineEvent]}</p>
                 <p className={props.isProcessing ? 'text-gray-400' : ''}><span className='text-lg font-bold'>Current state:</span> {props.isProcessing && <span className="loading loading-dots loading-xs"></span>} {props.currentState} : {stateTranslator[Number(props.currentState)]}</p>
             </div>
-            {/* display the things below only when selected file name is not empty */}
+
             {isConnected && (
-                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: '20px', pt: '15px', gap: '10px' }}>
-                    {isConnected && canPushToTalk && (
-                        <button
-                            className={`btn btn-m ${isRecording ? 'btn-error' : 'btn-active'} 
-                                ${(!isConnected || !canPushToTalk) ? 'btn-disabled' : ''}`}
-                            onMouseDown={startRecording}
-                            onMouseUp={stopRecording}
-                            disabled={!isConnected || !canPushToTalk}
-                        >
-                            {isRecording ? 'release to send' : 'push to talk'}
-                        </button>
-                    )}
-                    <input
-                        type="text"
-                        placeholder="Latest user command"
-                        className="input input-bordered w-full"
-                        onChange={(e) => props.setVoiceInputTranscript(e.target.value)}
-                        value={props.voiceInputTranscript}
-                        onKeyDown={async (e) => {
-                            if (e.key === 'Enter') {
+                <>
+                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: '20px', pt: '15px', gap: '10px' }}>
+                        {isConnected && canPushToTalk && (
+                            <button
+                                className={`btn btn-m ${isRecording ? 'btn-error' : 'btn-active'} 
+                                    ${(!isConnected || !canPushToTalk) ? 'btn-disabled' : ''}`}
+                                onMouseDown={startRecording}
+                                onMouseUp={stopRecording}
+                                disabled={!isConnected || !canPushToTalk}
+                            >
+                                {isRecording ? 'release to send' : 'push to talk'}
+                            </button>
+                        )}
+                        <input
+                            type="text"
+                            placeholder="Latest user command"
+                            className="input input-bordered w-full"
+                            onChange={(e) => props.setVoiceInputTranscript(e.target.value)}
+                            value={props.voiceInputTranscript}
+                            onKeyDown={async (e) => {
+                                if (e.key === 'Enter') {
+                                    let event = await asyncNextEventChooser(props.voiceInputTranscript, props.currentState);
+                                    if (event >= 0 && (event in stateMachine[props.currentState])) {
+                                        props.setStateMachineEvent(event);
+                                        props.setStateTransitionToggle(!props.stateTransitionToggle);
+                                    }
+                                }
+                            }}
+                        />
+                        <IconButton
+                            color="inherit"
+                            onClick={async () => { 
                                 let event = await asyncNextEventChooser(props.voiceInputTranscript, props.currentState);
                                 if (event >= 0 && (event in stateMachine[props.currentState])) {
                                     props.setStateMachineEvent(event);
                                     props.setStateTransitionToggle(!props.stateTransitionToggle);
                                 }
+                            }}
+                            sx={{ marginRight: 1 }}
+                        >
+                            <SendIcon />
+                        </IconButton>
+                    </Box>
+                    <input
+                        type="text"
+                        placeholder="Tell me what you see."
+                        className="input input-bordered w-full"
+                        onChange={(e) => setSystemActivePrompt(e.target.value)}
+                        value={systemActivePrompt}
+                        onKeyDown={async (e) => {
+                            if (e.key === 'Enter') {
+                                liveAPIClient.send([{ text: systemActivePrompt }])
                             }
                         }}
                     />
-                    <IconButton
-                        color="inherit"
-                        onClick={async () => {
-                            let event = await asyncNextEventChooser(props.voiceInputTranscript, props.currentState);
-                            if (event >= 0 && (event in stateMachine[props.currentState])) {
-                                props.setStateMachineEvent(event);
-                                props.setStateTransitionToggle(!props.stateTransitionToggle);
-                            }
-                        }}
-                        sx={{ marginRight: 1 }}
-                    >
-                        <SendIcon />
-                    </IconButton>
-                </Box>
+                </>
             )}
 
-            {liveAPIConnected &&
+            {isConnected &&
                 <>
                     <div className='flex items-center gap-2'>
-                        <div className='text-lg font-bold'>Live client response</div>
+                        <div className='text-lg font-bold'>Live visual client</div>
                     </div>
                     {liveClientResponse}
-                    <div className="divider"></div>
                 </>
             }
-
 
             {isConnected &&
                 <>
@@ -785,7 +801,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                         }}
                     >
                         {!items.length && !isConnected && `awaiting connection...`}
-                        {items.map((conversationItem, i) => {
+                        {items.map((conversationItem:any, i:any) => {
                             return (
                                 <div className="conversation-item" key={conversationItem.id}>
                                     <div className={`speaker-content`}>

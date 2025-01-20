@@ -10,10 +10,8 @@ import ImageUploader from '../RealityPreview/ImageUploader';
 import RealityPreview from '../RealityPreview/RealityPreview';
 import EvalResVis from '../EvalResVis';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
-
-import transriptSentenceList from '../data/rwYaDqXFH88_sentence.json';
 import SegVideoPlayerComp from '../SegVideoPlayerComp/SegVideoPlayerComp';
-import ControlTray from '../components/control-tray/ControlTray';
+
 
 interface TransriptSentenceItemProps {
     sentenceIndex: number;
@@ -33,6 +31,7 @@ export default function MainLayout() {
     const [verticalCaptions, setVerticalCaptions] = useState(false);
     const [segmentedVideoPlaying, setSegmentedVideoPlaying] = useState(false);
     const [replaySignal, setReplaySignal] = useState(false);
+    const [isSystemActiveEnabled, setIsSystemActiveEnabled] = useState(false);
 
     // Reality preview states
     const [isVideoPlaying, setIsVideoPlaying] = useState(false);
@@ -273,6 +272,8 @@ export default function MainLayout() {
                             ttsSpeed={ttsSpeed}
                             replaySignal={replaySignal}
                             videoRef={videoRef}
+                            isSystemActiveEnabled={isSystemActiveEnabled}
+                            setIsSystemActiveEnabled={setIsSystemActiveEnabled}
                             setVideoStream={setVideoStream}
                         />
                     }
