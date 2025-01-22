@@ -747,8 +747,8 @@ export default function WorkFlow(props: WorkFlowProps) {
                                 }
                             }}
                         />
-                        <IconButton
-                            color="inherit"
+                        <button
+                            className="btn btn-outline"
                             onClick={async () => { 
                                 let event = await asyncNextEventChooser(props.voiceInputTranscript, props.currentState);
                                 if (event >= 0 && (event in stateMachine[props.currentState])) {
@@ -756,23 +756,30 @@ export default function WorkFlow(props: WorkFlowProps) {
                                     props.setStateTransitionToggle(!props.stateTransitionToggle);
                                 }
                             }}
-                            sx={{ marginRight: 1 }}
                         >
-                            <SendIcon />
-                        </IconButton>
+                            [Debug use] Send User Initiated Request
+                        </button>
                     </Box>
-                    <input
-                        type="text"
-                        placeholder="Tell me what you see."
-                        className="input input-bordered w-full"
-                        onChange={(e) => setSystemActivePrompt(e.target.value)}
-                        value={systemActivePrompt}
-                        onKeyDown={async (e) => {
-                            if (e.key === 'Enter') {
-                                liveAPIClient.send([{ text: systemActivePrompt }])
-                            }
-                        }}
-                    />
+                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: '20px', pt: '15px', gap: '10px' }}>
+                        <input
+                            type="text"
+                            placeholder="Tell me what you see."
+                            className="input input-bordered w-full"
+                            onChange={(e) => setSystemActivePrompt(e.target.value)}
+                            value={systemActivePrompt}
+                            onKeyDown={async (e) => {
+                                if (e.key === 'Enter') {
+                                    liveAPIClient.send([{ text: systemActivePrompt }])
+                                }
+                            }}
+                        />
+                        <button
+                            className="btn btn-outline"
+                            onClick={() => liveAPIClient.send([{ text: systemActivePrompt }])}
+                        >
+                            [Debug use] Send System Initiated Request
+                        </button>
+                    </Box>
                 </>
             )}
 

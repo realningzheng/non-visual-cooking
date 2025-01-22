@@ -81,7 +81,7 @@ function ControlTray(props: ControlTrayProps) {
 		liveAPISetConfig({
 			...liveAPIConfig,
 			generationConfig: {
-				responseModalities: "audio"
+				responseModalities: "text"
 			},
 			systemInstruction: {
 				parts: [
