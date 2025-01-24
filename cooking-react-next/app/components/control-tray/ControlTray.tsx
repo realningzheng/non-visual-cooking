@@ -64,6 +64,23 @@ function ControlTray(props: ControlTrayProps) {
 	const connectButtonRef = useRef<HTMLButtonElement>(null);
 	const audioChunks = useRef<string[]>([]);
 
+	const [videoFile, setVideoFile] = useState<File | null>(null);	// video input (for testing)
+
+	const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+		const file = event.target.files?.[0];
+		if (file && file.type.startsWith("video/")) {
+			setVideoFile(file);
+		}
+	};
+
+	useEffect(() => {
+		if (videoFile && props.videoRef.current) {
+			props.videoRef.current.src = URL.createObjectURL(videoFile);
+			props.videoRef.current.load();
+			props.videoRef.current.play();
+		}
+	}, [videoFile]);
+
 
 	const {
 		client: liveAPIClient,
@@ -128,7 +145,34 @@ function ControlTray(props: ControlTrayProps) {
 			audioRecorder.off("data", onData).off("volume", setInVolume);
 		};
 	}, [liveAPIConnected, liveAPIClient, muted, audioRecorder]);
+	  
+	// Function to send video frame
+	function sendVideoFrame() {
+		const video = props.videoRef.current;
+		const canvas = renderCanvasRef.current;
 
+		// if (!video || !canvas || !activeVideoStream) {
+		// 	return;
+		// }
+		if (!video || !canvas || (!activeVideoStream && (video.paused || video.ended))) {
+			return;
+		}
+
+		const ctx = canvas.getContext("2d")!;
+		canvas.width = video.videoWidth * 0.25;
+		canvas.height = video.videoHeight * 0.25;
+		if (canvas.width + canvas.height > 0) {
+			console.log('send video frame')
+			ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+			const base64 = canvas.toDataURL("image/jpeg", 1.0);
+			const data = base64.slice(base64.indexOf(",") + 1, Infinity);
+			liveAPIClient.sendRealtimeInput([{ mimeType: "image/jpeg", data }]);
+		}
+		if (liveAPIConnected) {
+			window.setTimeout(sendVideoFrame, 1000 / 0.5);
+			// videoTimeoutId = window.setTimeout(sendVideoFrame, 1000 / 0.5);
+		}
+	}
 
 	/** This hook frequently sends video frames to the multimodal state client */
 	useEffect(() => {
@@ -136,8 +180,8 @@ function ControlTray(props: ControlTrayProps) {
 			props.videoRef.current.srcObject = activeVideoStream;
 		}
 
-		let videoTimeoutId = -1;
-		let audioTimeoutId = -1;
+		// let videoTimeoutId = -1;
+		// let audioTimeoutId = -1;
 
 		// Function to send audio data
 		// function sendAudioData() {
@@ -152,29 +196,6 @@ function ControlTray(props: ControlTrayProps) {
 		// 	}
 		// }
 
-		// Function to send video frame
-		function sendVideoFrame() {
-			const video = props.videoRef.current;
-			const canvas = renderCanvasRef.current;
-
-			if (!video || !canvas || !activeVideoStream) {
-				return;
-			}
-
-			const ctx = canvas.getContext("2d")!;
-			canvas.width = video.videoWidth * 0.25;
-			canvas.height = video.videoHeight * 0.25;
-			if (canvas.width + canvas.height > 0) {
-				console.log('send video frame')
-				ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-				const base64 = canvas.toDataURL("image/jpeg", 1.0);
-				const data = base64.slice(base64.indexOf(",") + 1, Infinity);
-				liveAPIClient.sendRealtimeInput([{ mimeType: "image/jpeg", data }]);
-			}
-			if (liveAPIConnected) {
-				videoTimeoutId = window.setTimeout(sendVideoFrame, 1000 / 0.5);
-			}
-		}
 
 		// Start both video and audio sending if connected
 		if (liveAPIConnected) {
@@ -184,14 +205,30 @@ function ControlTray(props: ControlTrayProps) {
 			}
 		}
 
-		// Cleanup on unmount or dependency change
-		return () => {
-			clearTimeout(videoTimeoutId);
-			clearTimeout(audioTimeoutId);
-		};
+		// // Cleanup on unmount or dependency change
+		// return () => {
+		// 	clearTimeout(videoTimeoutId);
+		// 	clearTimeout(audioTimeoutId);
+		// };
 	}, [liveAPIConnected, activeVideoStream, liveAPIClient, props.videoRef, muted]);
 
-
+	useEffect(() => {
+		const video = props.videoRef.current;
+	
+		if (!video) return;
+	
+		const startSendingFrames = () => {
+			console.log("Video started playing");
+			sendVideoFrame(); // Start capturing frames
+		};
+	
+		video.addEventListener("play", startSendingFrames);
+	
+		return () => {
+			video.removeEventListener("play", startSendingFrames);
+		};
+	}, [props.videoRef, liveAPIConnected]);
+	
 	//handler for swapping from one video-stream to the next
 	const changeStreams = (next?: UseMediaStreamResult) => async () => {
 		if (next) {
@@ -231,6 +268,10 @@ function ControlTray(props: ControlTrayProps) {
 
 	return (
 		<div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-base-200 rounded-full shadow-lg px-6 py-3">
+
+			<input type="file" accept="video/mp4" onChange={handleFileChange} />	{/* video input (for testing) */}
+			<video ref={props.videoRef} style={{ display: "none" }} controls />
+
 			<canvas className="hidden" ref={renderCanvasRef} />
 			<div className="flex items-center gap-2">
 				<div className={cn("flex items-center gap-2", { "opacity-50": !liveAPIConnected })}>
