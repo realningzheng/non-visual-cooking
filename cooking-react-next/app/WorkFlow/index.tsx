@@ -600,6 +600,26 @@ export default function WorkFlow(props: WorkFlowProps) {
     // Add a reference to the file input
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // liveAPI: system automatic trigger
+    useEffect(() => {
+        const prompt = "Please continue to increment the number by one. If it's the first time, start from zero.";
+        console.log('sending system active prompt');
+        let intervalId: NodeJS.Timeout | null = null;
+    
+        if (isConnected) {
+            intervalId = setInterval(() => {
+                console.log('sending system active prompt');
+                liveAPIClient.send([{ text: prompt }]);
+            }, 5000);
+        }
+    
+        // Cleanup on unmount or when dependencies change
+        return () => {
+            if (intervalId) clearInterval(intervalId);
+        };
+    }, [isConnected]);  // Added dependencies
+    
+
     return (
         <Stack spacing={1}>
             <div className='text-xl font-bold gap-2 pt-1 flex items-center'>
