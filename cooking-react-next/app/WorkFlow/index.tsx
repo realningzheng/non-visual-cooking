@@ -389,38 +389,30 @@ export default function WorkFlow(props: WorkFlowProps) {
     /** Handle realtime video stream response */
     /** Listen to event detection content stream */
     useEffect(() => {
-        // When turnComplete switches from true to false, reset the state
         if (!liveAPITurnComplete && prevEventTurnComplete.current) {
             setLiveClientResponse('');
         }
-
-        // Only process content when we're in the middle of a turn
         if (liveAPIContent.length > 0 && !liveAPITurnComplete) {
             setLiveClientResponse(prev => {
-                // Check if content is already at the end of prev
                 if (!prev.endsWith(liveAPIContent)) {
-                    return prev + liveAPIContent;
+                    // Avoid duplicate entries
+                    setAllResponses(prevResponses => {
+                        if (!prevResponses.includes(liveAPIContent)) {
+                            return [...prevResponses, liveAPIContent];
+                        }
+                        return prevResponses;
+                    });
+    
+                    return prev + " " + liveAPIContent; // Add space to prevent unwanted newlines
                 }
                 return prev;
             });
         }
-
-        // Update the ref for next render
         prevEventTurnComplete.current = liveAPITurnComplete;
     }, [liveAPIContent, liveAPITurnComplete]);
 
     /** Save all responses to a file (for testing) */
     const [allResponses, setAllResponses] = useState<string[]>([]);
-    useEffect(() => {
-        const saveInterval = setInterval(() => {
-            if (allResponses.length > 0) {
-                saveResponsesToFile();
-            }
-        }, 10000); // Saves every 10 seconds
-
-        return () => clearInterval(saveInterval);
-    }, [allResponses]);
-
     const saveResponsesToFile = () => {
         const blob = new Blob([allResponses.join("\n")], { type: "text/plain" });
         const a = document.createElement("a");
@@ -632,9 +624,9 @@ export default function WorkFlow(props: WorkFlowProps) {
             "Based on the video description, the past conversation, and the current reality, " +
             "please try to align the reality with the video description, and answer the following question:\n" +
             "Is the image related to the video description? " +
-            "If no, please respond with only the word `irrelavent` and ignore the following questions. If yes, respond the following questions:\n" +
+            "If no, please respond with only the word `irrelavent` and ignore the following questions. If yes, don't answer `Yes`, but respond the following questions:\n" +
             "Is the user still in the same precedure as the last detected procedure? " + 
-            "If yes, please respond with the procedure name. and ignore the following questions. " +
+            "If yes, please respond with the procedure name. You don't need to answer `Yes`. Ignore the following questions. " +
             "If no, please respond with `new procedure: procedure name` and answer the following questions:\n" + 
             "Is this new precedure in the correct order (according to the video description? " + 
             "If yes, please respond with `correct order`. If no, please respond with `incorrect order`.\n";
@@ -852,7 +844,9 @@ export default function WorkFlow(props: WorkFlowProps) {
                         <div className='text-lg font-bold'>Live visual client</div>
                     </div>
                     {liveClientResponse}
+                    <button onClick={saveResponsesToFile}>Save Responses</button>
                 </>
+                
             }
 
             {isConnected &&
