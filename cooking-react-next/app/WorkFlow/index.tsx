@@ -409,6 +409,28 @@ export default function WorkFlow(props: WorkFlowProps) {
         prevEventTurnComplete.current = liveAPITurnComplete;
     }, [liveAPIContent, liveAPITurnComplete]);
 
+    /** Save all responses to a file (for testing) */
+    const [allResponses, setAllResponses] = useState<string[]>([]);
+    useEffect(() => {
+        const saveInterval = setInterval(() => {
+            if (allResponses.length > 0) {
+                saveResponsesToFile();
+            }
+        }, 10000); // Saves every 10 seconds
+
+        return () => clearInterval(saveInterval);
+    }, [allResponses]);
+
+    const saveResponsesToFile = () => {
+        const blob = new Blob([allResponses.join("\n")], { type: "text/plain" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "live_api_responses.txt";
+        a.click();
+        URL.revokeObjectURL(a.href);
+    };
+
+    
 
     // Handle user transcript update
     useEffect(() => {
@@ -602,22 +624,43 @@ export default function WorkFlow(props: WorkFlowProps) {
 
     // liveAPI: system automatic trigger
     useEffect(() => {
-        const prompt = "Please continue to increment the number by one. If it's the first time, start from zero.";
-        console.log('sending system active prompt');
+        if (!props.videoKnowledgeInput) return;
+        const firstPrompt = 
+            "The following is a cooking video description.\n" +
+            props.videoKnowledgeInput;
+        const repeatingPrompt = 
+            "Based on the video description, the past conversation, and the current reality, " +
+            "please try to align the reality with the video description, and answer the following question:\n" +
+            "Is the image related to the video description? " +
+            "If no, please respond with only the word `irrelavent` and ignore the following questions. If yes, respond the following questions:\n" +
+            "Is the user still in the same precedure as the last detected procedure? " + 
+            "If yes, please respond with the procedure name. and ignore the following questions. " +
+            "If no, please respond with `new procedure: procedure name` and answer the following questions:\n" + 
+            "Is this new precedure in the correct order (according to the video description? " + 
+            "If yes, please respond with `correct order`. If no, please respond with `incorrect order`.\n";
+            "";
+    
         let intervalId: NodeJS.Timeout | null = null;
+        let hasSentFirstPrompt = false;  // Track whether the first prompt has been sent
     
         if (isConnected) {
+            // Send the first message immediately
+            liveAPIClient.send([{ text: firstPrompt }]);
+            hasSentFirstPrompt = true;
+    
+            // Start the interval for subsequent messages
             intervalId = setInterval(() => {
-                console.log('sending system active prompt');
-                liveAPIClient.send([{ text: prompt }]);
+                if (hasSentFirstPrompt) {
+                    liveAPIClient.send([{ text: repeatingPrompt }]);
+                }
             }, 5000);
         }
     
-        // Cleanup on unmount or when dependencies change
         return () => {
             if (intervalId) clearInterval(intervalId);
         };
-    }, [isConnected]);  // Added dependencies
+    }, [isConnected]); 
+    
     
 
     return (
