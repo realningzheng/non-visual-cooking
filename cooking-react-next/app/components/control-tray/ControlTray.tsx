@@ -65,14 +65,22 @@ function ControlTray(props: ControlTrayProps) {
 	const audioChunks = useRef<string[]>([]);
 
 	const [videoFile, setVideoFile] = useState<File | null>(null);	// video input (for testing)
+	const videoURL = useRef<string | null>(null);
 
 	const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
-		if (file && file.type.startsWith("video/")) {
+		if (file && file.type === "video/mp4") {
+			// Revoke previous object URL to free memory
+			if (videoURL.current) {
+				URL.revokeObjectURL(videoURL.current);
+			}
+
+			videoURL.current = URL.createObjectURL(file);
 			setVideoFile(file);
+		} else {
+			alert("Please upload an MP4 video file.");
 		}
 	};
-
 	useEffect(() => {
 		if (videoFile && props.videoRef.current) {
 			props.videoRef.current.src = URL.createObjectURL(videoFile);
@@ -267,64 +275,66 @@ function ControlTray(props: ControlTrayProps) {
 
 
 	return (
-		<div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-base-200 rounded-full shadow-lg px-6 py-3">
+		<div>
+			<div className="fixed bottom-12 left-1/2 -translate-x-1/2 bg-base-200 shadow-lg px-4 py-2 rounded-lg flex flex-col items-center">
+				<input type="file" accept="video/mp4" onChange={handleFileChange} className="mb-2" /> 
+				<video ref={props.videoRef} controls width="200" className="rounded-md shadow-md" /> 
+			</div>
+			<div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-base-200 rounded-full shadow-lg px-6 py-3">
+				<canvas className="hidden" ref={renderCanvasRef} />
+				<div className="flex items-center gap-2">
+					<div className={cn("flex items-center gap-2", { "opacity-50": !liveAPIConnected })}>
+						<button
+							className={cn("btn btn-sm btn-circle", {
+								"btn-error": !muted && liveAPIConnected,
+								"btn-ghost": muted
+							})}
+							onClick={() => setMuted(!muted)}
+						>
+							{!muted ? <BiMicrophone size={16} /> : <BiMicrophoneOff size={16} />}
+						</button>
 
-			<input type="file" accept="video/mp4" onChange={handleFileChange} />	{/* video input (for testing) */}
-			<video ref={props.videoRef} style={{ display: "none" }} controls />
+						<div className="btn btn-sm btn-circle btn-ghost no-animation">
+							<AudioPulse volume={liveAPIVolume} active={liveAPIConnected} hover={false} />
+						</div>
 
-			<canvas className="hidden" ref={renderCanvasRef} />
-			<div className="flex items-center gap-2">
-				<div className={cn("flex items-center gap-2", { "opacity-50": !liveAPIConnected })}>
-					<button
-						className={cn("btn btn-sm btn-circle", {
-							"btn-error": !muted && liveAPIConnected,
-							"btn-ghost": muted
-						})}
-						onClick={() => setMuted(!muted)}
-					>
-						{!muted ? <BiMicrophone size={16} /> : <BiMicrophoneOff size={16} />}
-					</button>
-
-					<div className="btn btn-sm btn-circle btn-ghost no-animation">
-						<AudioPulse volume={liveAPIVolume} active={liveAPIConnected} hover={false} />
+						{props.supportsVideo && (
+							<>
+								<button
+									className={cn("btn btn-sm btn-circle", {
+										"btn-neutral": screenCapture.isStreaming,
+										"btn-ghost": !screenCapture.isStreaming
+									})}
+									onClick={screenCapture.isStreaming ? changeStreams() : changeStreams(screenCapture)}
+								>
+									{screenCapture.isStreaming ? <BiStopCircle size={16} /> : <BiDesktop size={16} />}
+								</button>
+								<button
+									className={cn("btn btn-sm btn-circle", {
+										"btn-neutral": webcam.isStreaming,
+										"btn-ghost": !webcam.isStreaming
+									})}
+									onClick={webcam.isStreaming ? changeStreams() : changeStreams(webcam)}
+								>
+									{webcam.isStreaming ? <BiVideoOff size={16} /> : <BiVideo size={16} />}
+								</button>
+							</>
+						)}
+						{props.children}
 					</div>
 
-					{props.supportsVideo && (
-						<>
-							<button
-								className={cn("btn btn-sm btn-circle", {
-									"btn-neutral": screenCapture.isStreaming,
-									"btn-ghost": !screenCapture.isStreaming
-								})}
-								onClick={screenCapture.isStreaming ? changeStreams() : changeStreams(screenCapture)}
-							>
-								{screenCapture.isStreaming ? <BiStopCircle size={16} /> : <BiDesktop size={16} />}
-							</button>
-							<button
-								className={cn("btn btn-sm btn-circle", {
-									"btn-neutral": webcam.isStreaming,
-									"btn-ghost": !webcam.isStreaming
-								})}
-								onClick={webcam.isStreaming ? changeStreams() : changeStreams(webcam)}
-							>
-								{webcam.isStreaming ? <BiVideoOff size={16} /> : <BiVideo size={16} />}
-							</button>
-						</>
-					)}
-					{props.children}
-				</div>
-
-				<div className="flex items-center gap-2 ml-2 pl-2 border-l border-base-300">
-					<button
-						ref={connectButtonRef}
-						className={cn("btn btn-sm btn-circle", {
-							"btn-neutral": liveAPIConnected,
-							"btn-ghost": !liveAPIConnected
-						})}
-						onClick={liveAPIConnected ? disconnectConversation : connectConversation}
-					>
-						{liveAPIConnected ? <BiPause size={16} /> : <BiPlay size={16} />}
-					</button>
+					<div className="flex items-center gap-2 ml-2 pl-2 border-l border-base-300">
+						<button
+							ref={connectButtonRef}
+							className={cn("btn btn-sm btn-circle", {
+								"btn-neutral": liveAPIConnected,
+								"btn-ghost": !liveAPIConnected
+							})}
+							onClick={liveAPIConnected ? disconnectConversation : connectConversation}
+						>
+							{liveAPIConnected ? <BiPause size={16} /> : <BiPlay size={16} />}
+						</button>
+					</div>
 				</div>
 			</div>
 		</div>
