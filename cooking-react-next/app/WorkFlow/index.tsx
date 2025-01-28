@@ -398,7 +398,15 @@ export default function WorkFlow(props: WorkFlowProps) {
                     // Avoid duplicate entries
                     setAllResponses(prevResponses => {
                         if (!prevResponses.includes(liveAPIContent)) {
-                            return [...prevResponses, liveAPIContent];
+                            // Check if the previous response ends with space and liveAPIContent starts with space
+                            if (prevResponses.length > 0 && liveAPIContent.startsWith(" ")) {
+                                // Join the last response with liveAPIContent
+                                const updatedResponses = [...prevResponses];
+                                updatedResponses[updatedResponses.length - 1] = updatedResponses[updatedResponses.length - 1] + liveAPIContent;
+                                return updatedResponses;
+                            } else {
+                                return [...prevResponses, liveAPIContent];
+                            }
                         }
                         return prevResponses;
                     });
@@ -613,6 +621,7 @@ export default function WorkFlow(props: WorkFlowProps) {
 
     // Add a reference to the file input
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const allResponsesRef = useRef<string[]>([]);
 
     // liveAPI: system automatic trigger
     useEffect(() => {
@@ -622,8 +631,6 @@ export default function WorkFlow(props: WorkFlowProps) {
             // props.videoKnowledgeInput + "\n" + 
             "Please respond \"video knowledge received\".";
         const repeatingPrompt = 
-            "Past conversation: \n" +
-            allResponses + "\n\n" +
             "Video procedure description in order:\n" +
             "1. Divide the blue cheese into pieces.\n" + 
             "2. Add salt, black pepper, and flavored salt to ground chopped meat and mix.\n" +
@@ -633,7 +640,7 @@ export default function WorkFlow(props: WorkFlowProps) {
             "6. Flip the burger patties on the grill and cook.\n" +
             "7. Slice the tomatoes, spread the sauce on the burger base, and place tomato and spinach on top.\n" +
             "8. Place the patties in between the buns.\n\n" +
-            "Based on the video description, the past conversation, and the current reality, " +
+            "Based on the video description, the past conversation, and the current reality image, " +
             "please try to align the reality with the procedures in the video description.\n" +
             "If you are not sure, don't respond anything. " +
             "Is the image related to the video description? " +
@@ -644,20 +651,23 @@ export default function WorkFlow(props: WorkFlowProps) {
             "If no, please respond with \"new procedure: procedure name\" and answer the following questions:\n" + 
             "Is this new procedure in the correct order according to the video description? Or is there any step missing? " + 
             "If the order is correct, please respond with \"correct order\". If no, please respond with \"incorrect order, the next procedure should be: ...\".\n";
-    
+
         let intervalId: NodeJS.Timeout | null = null;
         let hasSentFirstPrompt = false;  // Track whether the first prompt has been sent
     
         if (isConnected) {
             // Send the first message immediately
             console.log('[liveAPI] Sending first prompt');
+
             liveAPIClient.send([{ text: firstPrompt }]);
             hasSentFirstPrompt = true;
     
             // Start the interval for subsequent messages
             intervalId = setInterval(() => {
                 if (hasSentFirstPrompt) {
-                    liveAPIClient.send([{ text: repeatingPrompt }]);
+                    const allResponses = allResponsesRef.current;
+                    liveAPIClient.send([{ text: "Past conversation: \n" + allResponses.join("\n") + "\n\n" + repeatingPrompt }]);
+                    console.log(allResponses);
                 }
             }, 5000);
         }
@@ -667,7 +677,9 @@ export default function WorkFlow(props: WorkFlowProps) {
         };
     }, [isConnected]); 
     
-    
+    useEffect(() => {
+        allResponsesRef.current = allResponses;
+    }, [allResponses]);
 
     return (
         <Stack spacing={1}>
