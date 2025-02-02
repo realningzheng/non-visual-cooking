@@ -19,7 +19,7 @@ import {
 	MultimodalLiveAPIClientConnection,
 	MultimodalLiveClient,
 } from "../lib/multimodal-live-client";
-import { LiveConfig, ModelTurn, ServerContent } from "../multimodal-live-types";
+import { LiveConfig, ModelTurn, ServerContent, FunctionDeclaration } from "../multimodal-live-types";
 import { AudioStreamer } from "../lib/audio-streamer";
 import { audioContext } from "../lib/utils";
 import VolMeterWorket from "../lib/worklets/vol-meter";
@@ -36,6 +36,34 @@ export type UseLiveAPIResults = {
 	turnComplete: boolean;
 };
 
+const procedureCheckingFunctionDeclaration: FunctionDeclaration = {
+	name: "checkProcedureAlignment",
+	description: "Based on the video procedure and user's stream input, determine if the user is following the correct order based on a given image and conversation context.",
+	parameters: {
+		type: "OBJECT",
+		properties: {
+			realityImageVideoRelevance: {
+				type: "BOOLEAN",
+				description: "Return true if the reality image is relevant to the cooking video description.",
+			},
+			realityImageDescription: {
+				type: "STRING",
+				description: "A brief description of the current reality image, and which procedure in the cooking video description it fits into.",
+			},
+			isNewProcedure: {
+				type: "BOOLEAN",
+				description: "Return true if the user has started a new procedure different from the last procedure.",
+			},
+			isCorrectOrder: {
+				type: "BOOLEAN",
+				description: "Return true if the user is following the correct order based on the given image and conversation context.",
+			},
+		},
+		required: ["realityImageVideoRelevance", "realityImageDescription", "isNewProcedure", "isCorrectOrder"],
+	},
+};
+  
+  
 export function useLiveAPI({
 	url,
 	apiKey,
@@ -49,6 +77,11 @@ export function useLiveAPI({
 	const [connected, setConnected] = useState(false);
 	const [config, setConfig] = useState<LiveConfig>({
 		model: "models/gemini-2.0-flash-exp",
+		tools: [
+			{
+				functionDeclarations: [procedureCheckingFunctionDeclaration],
+			},
+		],
 	});
 	const [volume, setVolume] = useState(0);
 	const [content, setContent] = useState("");

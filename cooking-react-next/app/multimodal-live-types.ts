@@ -34,11 +34,27 @@ import type {
 /**
  * the config to initiate the session
  */
+export type FunctionDeclaration = {
+  name: string;
+  description: string; // Ensure description is included at the function level
+  parameters: {
+    type: "OBJECT";
+    properties: Record<string, { type: string; description: string }>;
+    required: string[];
+  };
+};
+
+
 export type LiveConfig = {
   model: string;
   systemInstruction?: { parts: Part[] };
   generationConfig?: Partial<LiveGenerationConfig>;
-  tools?: Array<Tool | { googleSearch: {} } | { codeExecution: {} }>;
+  tools?: Array<
+    | Tool
+    | { googleSearch: {} }
+    | { codeExecution: {} }
+    | { functionDeclarations: FunctionDeclaration[] }
+  >;
 };
 
 export type LiveGenerationConfig = GenerationConfig & {
