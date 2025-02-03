@@ -48,7 +48,11 @@ const procedureCheckingFunctionDeclaration: FunctionDeclaration = {
 			},
 			realityImageDescription: {
 				type: "STRING",
-				description: "A brief description of the current reality image, and which procedure in the cooking video description it fits into.",
+				description: "A brief description of the current reality image。",
+			},
+			procedureName: {
+				type: "STRING",
+				description: "The name of the new procedure that the user is currently following.",
 			},
 			isNewProcedure: {
 				type: "BOOLEAN",
@@ -59,11 +63,47 @@ const procedureCheckingFunctionDeclaration: FunctionDeclaration = {
 				description: "Return true if the user is following the correct order based on the given image and conversation context.",
 			},
 		},
-		required: ["realityImageVideoRelevance", "realityImageDescription", "isNewProcedure", "isCorrectOrder"],
+		required: ["realityImageVideoRelevance", "realityImageDescription", "procedureName", "isNewProcedure", "isCorrectOrder"],
 	},
 };
   
+async function setFunctionCallValues(realityImageVideoRelevance: boolean, realityImageDescription: string, procedureName: string, isNewProcedure: boolean, isCorrectOrder: boolean) {
+	return {
+		"realityImageVideoRelevance": realityImageVideoRelevance,
+		"realityImageDescription": realityImageDescription,
+		"procedureName": procedureName,
+		"isNewProcedure": isNewProcedure,
+		"isCorrectOrder": isCorrectOrder,
+	};
+}
+// Define the expected parameter structure
+interface CheckProcedureAlignmentParams {
+	realityImageVideoRelevance: boolean;
+	realityImageDescription: string;
+	procedureName: string;
+	isNewProcedure: boolean;
+	isCorrectOrder: boolean;
+}
   
+// Define the function map with explicit types
+const functions: Record<string, (params: CheckProcedureAlignmentParams) => void> = {
+	checkProcedureAlignment: ({
+	  realityImageVideoRelevance,
+	  realityImageDescription,
+	  procedureName,
+	  isNewProcedure,
+	  isCorrectOrder
+	}: CheckProcedureAlignmentParams) => {
+	  return setFunctionCallValues(
+		realityImageVideoRelevance,
+		realityImageDescription,
+		procedureName,
+		isNewProcedure,
+		isCorrectOrder
+	  );
+	}
+};
+
 export function useLiveAPI({
 	url,
 	apiKey,
