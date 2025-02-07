@@ -23,6 +23,7 @@ import { LiveConfig, ModelTurn, ServerContent, FunctionDeclaration } from "../mu
 import { AudioStreamer } from "../lib/audio-streamer";
 import { audioContext } from "../lib/utils";
 import VolMeterWorket from "../lib/worklets/vol-meter";
+import { Part } from '@google/generative-ai';
 
 export type UseLiveAPIResults = {
 	client: MultimodalLiveClient;
@@ -36,7 +37,7 @@ export type UseLiveAPIResults = {
 	turnComplete: boolean;
 };
 
-const procedureCheckingFunctionDeclaration: FunctionDeclaration = {
+export const procedureCheckingFunctionDeclaration: FunctionDeclaration = {
 	name: "checkProcedureAlignment",
 	description: "Based on the video procedure and user's stream input, determine if the user is following the correct order based on a given image and conversation context.",
 	parameters: {
@@ -94,6 +95,11 @@ const functions: Record<string, (params: CheckProcedureAlignmentParams) => void>
 	  isNewProcedure,
 	  isCorrectOrder
 	}: CheckProcedureAlignmentParams) => {
+	  console.log("realityImageVideoRelevance", realityImageVideoRelevance);
+	  console.log("realityImageDescription", realityImageDescription);
+	  console.log("procedureName", procedureName);
+	  console.log("isNewProcedure", isNewProcedure);
+	  console.log("isCorrectOrder", isCorrectOrder);
 	  return setFunctionCallValues(
 		realityImageVideoRelevance,
 		realityImageDescription,
@@ -117,12 +123,39 @@ export function useLiveAPI({
 	const [connected, setConnected] = useState(false);
 	const [config, setConfig] = useState<LiveConfig>({
 		model: "models/gemini-2.0-flash-exp",
+		generationConfig: {
+			responseMimeType: "application/json",
+			responseSchema: procedureCheckingFunctionDeclaration,
+		},
 		tools: [
 			{
 				functionDeclarations: [procedureCheckingFunctionDeclaration],
 			},
 		],
 	});
+
+	// // Define the function to call the Gemini API
+    // const callGeminiAPI = async () => {
+    //     try {
+    //         const parts: Part[] = [
+    //             {
+    //                 text: "Your text content here",
+    //             },
+    //         ];
+    //         client.send(parts, true); // Use the send method to send the content
+    //         console.log('API request sent');
+    //     } catch (error) {
+    //         console.error('Error calling Gemini API:', error);
+    //     }
+    // };
+
+    // // Use useEffect to call the function when the component mounts or dependencies change
+    // useEffect(() => {
+    //     if (connected) {
+    //         callGeminiAPI();
+    //     }
+    // }, [connected, config]);
+	
 	const [volume, setVolume] = useState(0);
 	const [content, setContent] = useState("");
 	const [turnComplete, setTurnComplete] = useState(false);

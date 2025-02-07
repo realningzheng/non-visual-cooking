@@ -640,17 +640,17 @@ export default function WorkFlow(props: WorkFlowProps) {
             "6. Flip the burger patties on the grill and cook.\n" +
             "7. Slice the tomatoes, spread the sauce on the burger base, and place tomato and spinach on top.\n" +
             "8. Place the patties in between the buns.\n\n";
-            // "Based on the video description, the past conversation, and the current reality image, " +
-            // "please try to align the reality with the procedures in the video description.\n" +
-            // "If you are not sure, don't respond anything. " +
-            // "Is the image related to the video description? " +
-            // "If no, please don't respond anything. " +  
-            // "If yes, don't answer `Yes`, but consider the following questions:\n" +
-            // "Is the user still in the same procedure as the last detected procedure? " + 
-            // "If yes, please don't respond anything. " +
-            // "If no, please respond with \"new procedure: procedure name\" and answer the following questions:\n" + 
-            // "Is this new procedure in the correct order according to the video description? Or is there any step missing? " + 
-            // "If the order is correct, please respond with \"correct order\". If no, please respond with \"incorrect order, the next procedure should be: ...\".\n";
+            "Based on the video description, the past conversation, and the current reality image, " +
+            "please try to align the reality with the procedures in the video description.\n" +
+            "If you are not sure, don't respond anything. " +
+            "Is the image related to the video description? " +
+            "If no, please don't respond anything. " +  
+            "If yes, don't answer `Yes`, but consider the following questions:\n" +
+            "Is the user still in the same procedure as the last detected procedure? " + 
+            "If yes, please don't respond anything. " +
+            "If no, please respond with \"new procedure: procedure name\" and answer the following questions:\n" + 
+            "Is this new procedure in the correct order according to the video description? Or is there any step missing? " + 
+            "If the order is correct, please respond with \"correct order\". If no, please respond with \"incorrect order, the next procedure should be: ...\".\n";
 
         let intervalId: NodeJS.Timeout | null = null;
         let hasSentFirstPrompt = false;  // Track whether the first prompt has been sent

@@ -29,7 +29,6 @@ import AudioPulse from "../audio-pulse/AudioPulse";
 import { systemPromptEventDetection, systemPromptDefault } from "../../prompt";
 // import { getPromptForPossibleNextEvents } from "../../WorkFlow/stateMachine";
 
-
 export type ControlTrayProps = {
 	videoRef: RefObject<HTMLVideoElement>;
 	children?: ReactNode;
@@ -103,9 +102,11 @@ function ControlTray(props: ControlTrayProps) {
 
 	/** Configure multimodal session client, response with audio */
 	useEffect(() => {
+		console.log('liveAPIConfig', liveAPIConfig)
 		liveAPISetConfig({
 			...liveAPIConfig,
 			generationConfig: {
+				...liveAPIConfig.generationConfig,
 				responseModalities: "text"
 			},
 			systemInstruction: {
