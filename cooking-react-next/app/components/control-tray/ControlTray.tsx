@@ -27,7 +27,9 @@ import { useWebcam } from "../../hooks/use-webcam";
 import { AudioRecorder } from "../../lib/audio-recorder";
 import AudioPulse from "../audio-pulse/AudioPulse";
 import { systemPromptEventDetection, systemPromptDefault } from "../../prompt";
+import { ToolCall } from "../../multimodal-live-types";
 // import { getPromptForPossibleNextEvents } from "../../WorkFlow/stateMachine";
+import { procedureCheckingFunctionDeclaration } from "@/app/hooks/use-live-api";
 
 export type ControlTrayProps = {
 	videoRef: RefObject<HTMLVideoElement>;
@@ -105,7 +107,7 @@ function ControlTray(props: ControlTrayProps) {
 		liveAPISetConfig({
 			...liveAPIConfig,
 			generationConfig: {
-				// ...liveAPIConfig.generationConfig,
+				...liveAPIConfig.generationConfig,
 				responseModalities: "text"
 			},
 			systemInstruction: {
@@ -124,6 +126,26 @@ function ControlTray(props: ControlTrayProps) {
 		console.log('liveAPIConfig', liveAPIConfig)
 	}, [liveAPISetConfig]);
 
+	useEffect(() => {
+		const onToolCall = (toolCall: ToolCall) => {
+		  console.log(`got toolcall`, toolCall);
+		  const fc = toolCall.functionCalls.find(
+			(fc) => fc.name === procedureCheckingFunctionDeclaration.name,
+		  );
+		  if (fc) {
+			console.log(`realityImageVideoRelevance:`, (fc.args as any).realityImageVideoRelevance);
+			console.log(`realityImageDescription:`, (fc.args as any).realityImageDescription);
+			console.log(`procedureName:`, (fc.args as any).procedureName);
+			console.log(`isNewProcedure:`, (fc.args as any).isNewProcedure);
+			console.log(`isCorrectOrder:`, (fc.args as any).isCorrectOrder);
+		  }
+		};
+	
+		liveAPIClient.on("toolcall", onToolCall);
+		return () => {
+			liveAPIClient.off("toolcall", onToolCall);
+		};
+	}, [liveAPIClient]);
 
 	useEffect(() => {
 		document.documentElement.style.setProperty(

@@ -19,10 +19,11 @@ import {
 	MultimodalLiveAPIClientConnection,
 	MultimodalLiveClient,
 } from "../lib/multimodal-live-client";
-import { LiveConfig, ModelTurn, ServerContent, FunctionDeclaration } from "../multimodal-live-types";
+import { LiveConfig, ModelTurn, ServerContent } from "../multimodal-live-types";
 import { AudioStreamer } from "../lib/audio-streamer";
 import { audioContext } from "../lib/utils";
 import VolMeterWorket from "../lib/worklets/vol-meter";
+import { type FunctionDeclaration, SchemaType } from "@google/generative-ai";
 
 export type UseLiveAPIResults = {
 	client: MultimodalLiveClient;
@@ -40,26 +41,26 @@ export const procedureCheckingFunctionDeclaration: FunctionDeclaration = {
 	name: "checkProcedureAlignment",
 	description: "Based on the video procedure and user's stream input, determine if the user is following the correct order based on a given image and conversation context.",
 	parameters: {
-		type: "OBJECT",
+		type: SchemaType.OBJECT,
 		properties: {
 			realityImageVideoRelevance: {
-				type: "BOOLEAN",
+				type: SchemaType.BOOLEAN,
 				description: "Return true if the reality image is relevant to the cooking video description.",
 			},
 			realityImageDescription: {
-				type: "STRING",
+				type: SchemaType.STRING,
 				description: "A brief description of the current reality image。",
 			},
 			procedureName: {
-				type: "STRING",
+				type: SchemaType.STRING,
 				description: "The name of the new procedure that the user is currently following.",
 			},
 			isNewProcedure: {
-				type: "BOOLEAN",
+				type: SchemaType.BOOLEAN,
 				description: "Return true if the user has started a new procedure different from the last procedure.",
 			},
 			isCorrectOrder: {
-				type: "BOOLEAN",
+				type: SchemaType.BOOLEAN,
 				description: "Return true if the user is following the correct order based on the given image and conversation context.",
 			},
 		},
@@ -67,47 +68,47 @@ export const procedureCheckingFunctionDeclaration: FunctionDeclaration = {
 	},
 };
   
-async function setFunctionCallValues(realityImageVideoRelevance: boolean, realityImageDescription: string, procedureName: string, isNewProcedure: boolean, isCorrectOrder: boolean) {
-	return {
-		"realityImageVideoRelevance": realityImageVideoRelevance,
-		"realityImageDescription": realityImageDescription,
-		"procedureName": procedureName,
-		"isNewProcedure": isNewProcedure,
-		"isCorrectOrder": isCorrectOrder,
-	};
-}
-// Define the expected parameter structure
-interface CheckProcedureAlignmentParams {
-	realityImageVideoRelevance: boolean;
-	realityImageDescription: string;
-	procedureName: string;
-	isNewProcedure: boolean;
-	isCorrectOrder: boolean;
-}
+// async function setFunctionCallValues(realityImageVideoRelevance: boolean, realityImageDescription: string, procedureName: string, isNewProcedure: boolean, isCorrectOrder: boolean) {
+// 	return {
+// 		"realityImageVideoRelevance": realityImageVideoRelevance,
+// 		"realityImageDescription": realityImageDescription,
+// 		"procedureName": procedureName,
+// 		"isNewProcedure": isNewProcedure,
+// 		"isCorrectOrder": isCorrectOrder,
+// 	};
+// }
+// // Define the expected parameter structure
+// interface CheckProcedureAlignmentParams {
+// 	realityImageVideoRelevance: boolean;
+// 	realityImageDescription: string;
+// 	procedureName: string;
+// 	isNewProcedure: boolean;
+// 	isCorrectOrder: boolean;
+// }
   
-// Define the function map with explicit types
-const functions: Record<string, (params: CheckProcedureAlignmentParams) => void> = {
-	checkProcedureAlignment: ({
-	  realityImageVideoRelevance,
-	  realityImageDescription,
-	  procedureName,
-	  isNewProcedure,
-	  isCorrectOrder
-	}: CheckProcedureAlignmentParams) => {
-	  console.log("realityImageVideoRelevance", realityImageVideoRelevance);
-	  console.log("realityImageDescription", realityImageDescription);
-	  console.log("procedureName", procedureName);
-	  console.log("isNewProcedure", isNewProcedure);
-	  console.log("isCorrectOrder", isCorrectOrder);
-	  return setFunctionCallValues(
-		realityImageVideoRelevance,
-		realityImageDescription,
-		procedureName,
-		isNewProcedure,
-		isCorrectOrder
-	  );
-	}
-};
+// // Define the function map with explicit types
+// const functions: Record<string, (params: CheckProcedureAlignmentParams) => void> = {
+// 	checkProcedureAlignment: ({
+// 	  realityImageVideoRelevance,
+// 	  realityImageDescription,
+// 	  procedureName,
+// 	  isNewProcedure,
+// 	  isCorrectOrder
+// 	}: CheckProcedureAlignmentParams) => {
+// 	  console.log("realityImageVideoRelevance", realityImageVideoRelevance);
+// 	  console.log("realityImageDescription", realityImageDescription);
+// 	  console.log("procedureName", procedureName);
+// 	  console.log("isNewProcedure", isNewProcedure);
+// 	  console.log("isCorrectOrder", isCorrectOrder);
+// 	  return setFunctionCallValues(
+// 		realityImageVideoRelevance,
+// 		realityImageDescription,
+// 		procedureName,
+// 		isNewProcedure,
+// 		isCorrectOrder
+// 	  );
+// 	}
+// };
 
 export function useLiveAPI({
 	url,
@@ -124,36 +125,12 @@ export function useLiveAPI({
 		model: "models/gemini-2.0-flash-exp",
 		generationConfig: {
 			responseMimeType: "application/json",
-			responseSchema: procedureCheckingFunctionDeclaration,
 		},
-		// tools: [
-		// 	{
-		// 		functionDeclarations: [procedureCheckingFunctionDeclaration],
-		// 	},
-		// ],
+		tools: [
+			// { googleSearch: {} },
+			{ functionDeclarations: [procedureCheckingFunctionDeclaration] },
+		],
 	});
-
-	// // Define the function to call the Gemini API
-    // const callGeminiAPI = async () => {
-    //     try {
-    //         const parts: Part[] = [
-    //             {
-    //                 text: "Your text content here",
-    //             },
-    //         ];
-    //         client.send(parts, true); // Use the send method to send the content
-    //         console.log('API request sent');
-    //     } catch (error) {
-    //         console.error('Error calling Gemini API:', error);
-    //     }
-    // };
-
-    // // Use useEffect to call the function when the component mounts or dependencies change
-    // useEffect(() => {
-    //     if (connected) {
-    //         callGeminiAPI();
-    //     }
-    // }, [connected, config]);
 	
 	const [volume, setVolume] = useState(0);
 	const [content, setContent] = useState("");

@@ -53,7 +53,6 @@ export type LiveConfig = {
     | Tool
     | { googleSearch: {} }
     | { codeExecution: {} }
-    | { functionDeclarations: FunctionDeclaration[] }
   >;
 };
 
