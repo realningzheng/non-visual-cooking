@@ -302,6 +302,36 @@ export class MultimodalLiveClient extends EventEmitter<MultimodalLiveClientEvent
 				turns: [content],
 				turnComplete,
 			},
+			// functionCall: {
+			// 	name: "checkProcedureAlignment",
+			// 	description: "Based on the video procedure and user's stream input, determine if the user is following the correct order based on a given image and conversation context.",
+			// 	parameters: {
+			// 		type: "OBJECT",
+			// 		properties: {
+			// 			realityImageVideoRelevance: {
+			// 				type: "BOOLEAN",
+			// 				description: "Return true if the reality image is relevant to the cooking video description.",
+			// 			},
+			// 			realityImageDescription: {
+			// 				type: "STRING",
+			// 				description: "A brief description of the current reality image。",
+			// 			},
+			// 			procedureName: {
+			// 				type: "STRING",
+			// 				description: "The name of the new procedure that the user is currently following.",
+			// 			},
+			// 			isNewProcedure: {
+			// 				type: "BOOLEAN",
+			// 				description: "Return true if the user has started a new procedure different from the last procedure.",
+			// 			},
+			// 			isCorrectOrder: {
+			// 				type: "BOOLEAN",
+			// 				description: "Return true if the user is following the correct order based on the given image and conversation context.",
+			// 			},
+			// 		},
+			// 		required: ["realityImageVideoRelevance", "realityImageDescription", "procedureName", "isNewProcedure", "isCorrectOrder"],
+			// 	},
+			// },
 		};
 		console.log('[send client content request]');
 		console.log(parts);

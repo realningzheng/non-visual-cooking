@@ -102,11 +102,10 @@ function ControlTray(props: ControlTrayProps) {
 
 	/** Configure multimodal session client, response with audio */
 	useEffect(() => {
-		console.log('liveAPIConfig', liveAPIConfig)
 		liveAPISetConfig({
 			...liveAPIConfig,
 			generationConfig: {
-				...liveAPIConfig.generationConfig,
+				// ...liveAPIConfig.generationConfig,
 				responseModalities: "text"
 			},
 			systemInstruction: {
@@ -122,6 +121,7 @@ function ControlTray(props: ControlTrayProps) {
 				],
 			},
 		});
+		console.log('liveAPIConfig', liveAPIConfig)
 	}, [liveAPISetConfig]);
 
 

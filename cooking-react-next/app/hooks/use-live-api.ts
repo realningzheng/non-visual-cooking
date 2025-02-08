@@ -23,7 +23,6 @@ import { LiveConfig, ModelTurn, ServerContent, FunctionDeclaration } from "../mu
 import { AudioStreamer } from "../lib/audio-streamer";
 import { audioContext } from "../lib/utils";
 import VolMeterWorket from "../lib/worklets/vol-meter";
-import { Part } from '@google/generative-ai';
 
 export type UseLiveAPIResults = {
 	client: MultimodalLiveClient;
@@ -127,11 +126,11 @@ export function useLiveAPI({
 			responseMimeType: "application/json",
 			responseSchema: procedureCheckingFunctionDeclaration,
 		},
-		tools: [
-			{
-				functionDeclarations: [procedureCheckingFunctionDeclaration],
-			},
-		],
+		// tools: [
+		// 	{
+		// 		functionDeclarations: [procedureCheckingFunctionDeclaration],
+		// 	},
+		// ],
 	});
 
 	// // Define the function to call the Gemini API
