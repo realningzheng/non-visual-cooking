@@ -67,48 +67,6 @@ export const procedureCheckingFunctionDeclaration: FunctionDeclaration = {
 		required: ["realityImageVideoRelevance", "realityImageDescription", "procedureName", "isNewProcedure", "isCorrectOrder"],
 	},
 };
-  
-// async function setFunctionCallValues(realityImageVideoRelevance: boolean, realityImageDescription: string, procedureName: string, isNewProcedure: boolean, isCorrectOrder: boolean) {
-// 	return {
-// 		"realityImageVideoRelevance": realityImageVideoRelevance,
-// 		"realityImageDescription": realityImageDescription,
-// 		"procedureName": procedureName,
-// 		"isNewProcedure": isNewProcedure,
-// 		"isCorrectOrder": isCorrectOrder,
-// 	};
-// }
-// // Define the expected parameter structure
-// interface CheckProcedureAlignmentParams {
-// 	realityImageVideoRelevance: boolean;
-// 	realityImageDescription: string;
-// 	procedureName: string;
-// 	isNewProcedure: boolean;
-// 	isCorrectOrder: boolean;
-// }
-  
-// // Define the function map with explicit types
-// const functions: Record<string, (params: CheckProcedureAlignmentParams) => void> = {
-// 	checkProcedureAlignment: ({
-// 	  realityImageVideoRelevance,
-// 	  realityImageDescription,
-// 	  procedureName,
-// 	  isNewProcedure,
-// 	  isCorrectOrder
-// 	}: CheckProcedureAlignmentParams) => {
-// 	  console.log("realityImageVideoRelevance", realityImageVideoRelevance);
-// 	  console.log("realityImageDescription", realityImageDescription);
-// 	  console.log("procedureName", procedureName);
-// 	  console.log("isNewProcedure", isNewProcedure);
-// 	  console.log("isCorrectOrder", isCorrectOrder);
-// 	  return setFunctionCallValues(
-// 		realityImageVideoRelevance,
-// 		realityImageDescription,
-// 		procedureName,
-// 		isNewProcedure,
-// 		isCorrectOrder
-// 	  );
-// 	}
-// };
 
 export function useLiveAPI({
 	url,
