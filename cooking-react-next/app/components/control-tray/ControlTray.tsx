@@ -42,6 +42,7 @@ export type ControlTrayProps = {
 	setCurrentState: (state: number) => void;
 	connectConversation: () => Promise<void>;
 	disconnectConversation: () => Promise<void>;
+	videoKnowledgeInput: string;
 };
 
 type MediaStreamButtonProps = {
@@ -113,12 +114,17 @@ function ControlTray(props: ControlTrayProps) {
 			systemInstruction: {
 				parts: [
 					{
-						text:
-							`You are an helpful assistant describe the visual scene in detail. 
-							Pay attention to the main objects in the scene and their relative positions.
-							Also pay attention to the actions of the people in the scene if any.
-							Go straight to the point and do not use any other word such as "here is" or "this is"
-							`,
+						text: `You are a helpful assistant analyzing cooking procedures.
+                        
+                        <VIDEO KNOWLEDGE>
+                        ${props.videoKnowledgeInput}
+
+                        Your task is to analyze the reality image against the video knowledge and determine:
+                        1. If the current scene matches any part of the cooking video
+                        2. Which procedure is being performed
+                        3. If the procedures are being followed in the correct order
+
+                        Be precise and concise in your responses.`
 					},
 				],
 			},

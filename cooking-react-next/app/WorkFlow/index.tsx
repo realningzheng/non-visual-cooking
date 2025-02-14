@@ -59,6 +59,7 @@ interface WorkFlowProps {
 
 
 const openaiClient = new OpenAI({ apiKey: secret.OPENAI_KEY, dangerouslyAllowBrowser: true });
+const INTERVAL_MS = 5000;
 
 
 // Update the interface for the interaction memory items
@@ -625,58 +626,24 @@ export default function WorkFlow(props: WorkFlowProps) {
 
     // liveAPI: system automatic trigger
     useEffect(() => {
-        if (!props.videoKnowledgeInput) return;
-        const firstPrompt = 
-            // "The following is a cooking video description.\n" +
-            // props.videoKnowledgeInput + "\n" + 
-            "Please respond \"video knowledge received\".";
         const repeatingPrompt = 
-            // "Video procedure description in order:\n" +
-            // "1. Divide the blue cheese into pieces.\n" + 
-            // "2. Add salt, black pepper, and flavored salt to ground chopped meat and mix.\n" +
-            // "3. Place the cheese inside the meat.\n" +
-            // "4. Grill the patties.\n" +
-            // "5. Add mayonnaise, red pepper, white wine vinegar, and pepper to a food processor and process it.\n" +
-            // "6. Flip the burger patties on the grill and cook.\n" +
-            // "7. Slice the tomatoes, spread the sauce on the burger base, and place tomato and spinach on top.\n" +
-            // "8. Place the patties in between the buns.\n\n";
             "please make the function call `checkProcedureAlignment` based on the video description and the current reality image.";
-            // "please try to align the reality with the procedures in the video description.\n" +
-            // "please make the function call `checkProcedureAlignment`";
-            // "If you are not sure, don't respond anything. " +
-            // "Is the image related to the video description? " +
-            // "If no, please don't respond anything. " +  
-            // "If yes, don't answer `Yes`, but consider the following questions:\n" +
-            // "Is the user still in the same procedure as the last detected procedure? " + 
-            // "If yes, please don't respond anything. " +
-            // "If no, please respond with \"new procedure: procedure name\" and answer the following questions:\n" + 
-            // "Is this new procedure in the correct order according to the video description? Or is there any step missing? " + 
-            // "If the order is correct, please respond with \"correct order\". If no, please respond with \"incorrect order, the next procedure should be: ...\".\n";
 
         let intervalId: NodeJS.Timeout | null = null;
-        let hasSentFirstPrompt = false;  // Track whether the first prompt has been sent
-    
-        if (isConnected) {
-            // Send the first message immediately
-            console.log('[liveAPI] Sending first prompt');
 
-            liveAPIClient.send([{ text: firstPrompt }]);
-            hasSentFirstPrompt = true;
-    
-            // Start the interval for subsequent messages
+        if (isConnected) {
+            // Start the interval immediately
             intervalId = setInterval(() => {
-                if (hasSentFirstPrompt) {
-                    const allResponses = allResponsesRef.current;
-                    liveAPIClient.send([{ text: "Past conversation: \n" + allResponses.join("\n") + "\n\n" + repeatingPrompt }]);
-                    console.log(allResponses);
-                }
-            }, 5000);
+                const allResponses = allResponsesRef.current;
+                liveAPIClient.send([{ text: "Past conversation: \n" + allResponses.join("\n") + "\n\n" + repeatingPrompt }]);
+                console.log(allResponses);
+            }, INTERVAL_MS);
         }
-    
+
         return () => {
             if (intervalId) clearInterval(intervalId);
         };
-    }, [isConnected]); 
+    }, [isConnected, props.videoKnowledgeInput]); 
     
     useEffect(() => {
         allResponsesRef.current = allResponses;
@@ -1054,6 +1021,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                 setCurrentState={props.setCurrentState}
                 connectConversation={connectConversation}
                 disconnectConversation={disconnectConversation}
+                videoKnowledgeInput={props.videoKnowledgeInput}
             />
         </Stack >
     );
