@@ -627,7 +627,8 @@ export default function WorkFlow(props: WorkFlowProps) {
     // liveAPI: system automatic trigger
     useEffect(() => {
         const repeatingPrompt = 
-            "please make the function call `checkProcedureAlignment` based on the video description and the current reality image.";
+            "Please make the function call `checkProcedureAlignment` based on the video description and the current reality image.\n" + 
+            "If the reality image is irrelevant to the cooking video at all, please DO NOT call the function.\n";
 
         let intervalId: NodeJS.Timeout | null = null;
 

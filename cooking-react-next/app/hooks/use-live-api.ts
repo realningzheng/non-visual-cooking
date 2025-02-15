@@ -39,7 +39,9 @@ export type UseLiveAPIResults = {
 
 export const procedureCheckingFunctionDeclaration: FunctionDeclaration = {
 	name: "checkProcedureAlignment",
-	description: "Based on the video procedure and user's stream input, determine if the user is following the correct order based on a given image and conversation context.",
+	description: 	"Triggered only when the cooking image is related to the video description. " +
+					"Based on the video procedure and user's stream input, " + 
+					"determine if the user is following the correct order based on a given image and conversation context.",
 	parameters: {
 		type: SchemaType.OBJECT,
 		properties: {
