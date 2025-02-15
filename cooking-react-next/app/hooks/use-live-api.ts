@@ -47,26 +47,45 @@ export const procedureCheckingFunctionDeclaration: FunctionDeclaration = {
 		properties: {
 			realityImageVideoRelevance: {
 				type: SchemaType.BOOLEAN,
-				description: "Return true if the reality image is relevant to the cooking video description.",
+				description: "Return true if the reality image is relevant to the cooking video knowledge.",
 			},
-			realityImageDescription: {
+			userActionDescription: {
 				type: SchemaType.STRING,
-				description: "A brief description of the current reality image。",
+				description: "A brief description of the user's action based on current reality image.",
+			},
+			cookingItems: {
+				type: SchemaType.ARRAY,
+				items: {
+					type: SchemaType.STRING,
+				},
+				description: "A list of cooking items visible on current reality image.",
+			},
+			cookingSounds: {
+				type: SchemaType.ARRAY,
+				items: {
+					type: SchemaType.STRING,
+				},
+				description: "A list of cooking sounds heard by the user.",
 			},
 			procedureName: {
 				type: SchemaType.STRING,
-				description: "The name of the new procedure that the user is currently following.",
+				description: 	"The name of the procedure that the user is currently following. " + 
+								"The name should be the same as the procedure name in the cooking video knowledge.",
 			},
 			isNewProcedure: {
 				type: SchemaType.BOOLEAN,
 				description: "Return true if the user has started a new procedure different from the last procedure.",
 			},
-			isCorrectOrder: {
+			isMissingStep: {
 				type: SchemaType.BOOLEAN,
-				description: "Return true if the user is following the correct order based on the given image and conversation context.",
+				description: "Return true if the user is missing a procedure based on the given image and conversation context.",
 			},
+			isDoingWrong: {
+				type: SchemaType.BOOLEAN,
+				description: "Return true if the user is doing the correct procedure but is doing it wrong based on comparing the given image to the video knowledge.",
+			}
 		},
-		required: ["realityImageVideoRelevance", "realityImageDescription", "procedureName", "isNewProcedure", "isCorrectOrder"],
+		required: ["realityImageVideoRelevance", "userActionDescription", "cookingItems", "cookingSounds", "procedureName", "isNewProcedure", "isMissingStep", "isDoingWrong"],
 	},
 };
 
