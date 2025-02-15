@@ -89,7 +89,7 @@ export const procedureCheckingFunctionDeclaration: FunctionDeclaration = {
 				description: "A suggested fix for the user when the user is missing a step or is doing the step incorrectly.",
 			},
 		},
-		required: ["realityImageVideoRelevance", "userActionDescription", "cookingItems", "cookingSounds", "procedureName", "isNewProcedure", "isMissingStep", "isDoingWrong"],
+		required: ["realityImageVideoRelevance", "userActionDescription", "cookingItems", "cookingSounds", "procedureName", "isNewProcedure", "isMissingStep", "isDoingWrong", "suggestedFix"],
 	},
 };
 

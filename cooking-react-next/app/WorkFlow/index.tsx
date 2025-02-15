@@ -397,20 +397,20 @@ export default function WorkFlow(props: WorkFlowProps) {
             setLiveClientResponse(prev => {
                 if (!prev.endsWith(liveAPIContent)) {
                     // Avoid duplicate entries
-                    setAllResponses(prevResponses => {
-                        if (!prevResponses.includes(liveAPIContent)) {
-                            // Check if the previous response ends with space and liveAPIContent starts with space
-                            if (prevResponses.length > 0 && liveAPIContent.startsWith(" ")) {
-                                // Join the last response with liveAPIContent
-                                const updatedResponses = [...prevResponses];
-                                updatedResponses[updatedResponses.length - 1] = updatedResponses[updatedResponses.length - 1] + liveAPIContent;
-                                return updatedResponses;
-                            } else {
-                                return [...prevResponses, liveAPIContent];
-                            }
-                        }
-                        return prevResponses;
-                    });
+                    // setFunctionCallResponses(prevResponses => {
+                    //     if (!prevResponses.includes(liveAPIContent)) {
+                    //         // Check if the previous response ends with space and liveAPIContent starts with space
+                    //         if (prevResponses.length > 0 && liveAPIContent.startsWith(" ")) {
+                    //             // Join the last response with liveAPIContent
+                    //             const updatedResponses = [...prevResponses];
+                    //             updatedResponses[updatedResponses.length - 1] = updatedResponses[updatedResponses.length - 1] + liveAPIContent;
+                    //             return updatedResponses;
+                    //         } else {
+                    //             return [...prevResponses, liveAPIContent];
+                    //         }
+                    //     }
+                    //     return prevResponses;
+                    // });
     
                     return prev + liveAPIContent; // Add space to prevent unwanted newlines
                 }
@@ -420,13 +420,13 @@ export default function WorkFlow(props: WorkFlowProps) {
         prevEventTurnComplete.current = liveAPITurnComplete;
     }, [liveAPIContent, liveAPITurnComplete]);
 
-    /** Save all responses to a file (for testing) */
-    const [allResponses, setAllResponses] = useState<string[]>([]);
+    /** Save function call responses to a file (for testing) */
+    const [FunctionCallResponses, setFunctionCallResponses] = useState<string[]>([]);
     const saveResponsesToFile = () => {
-        const blob = new Blob([allResponses.join("\n")], { type: "text/plain" });
+        const blob = new Blob([JSON.stringify(FunctionCallResponses, null, 2)], { type: "application/json" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = "live_api_responses.txt";
+        a.download = "live_api_responses.json"; 
         a.click();
         URL.revokeObjectURL(a.href);
     };
@@ -622,22 +622,22 @@ export default function WorkFlow(props: WorkFlowProps) {
 
     // Add a reference to the file input
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const allResponsesRef = useRef<string[]>([]);
+    const FunctionCallResponsesRef = useRef<string[]>([]);
 
     // liveAPI: system automatic trigger
     useEffect(() => {
         const repeatingPrompt = 
             "Please make the function call `checkProcedureAlignment` based on the video description and the current reality image.\n" + 
-            "If the reality image is irrelevant to the cooking video at all, please DO NOT call the function.\n";
+            "If the reality image is irrelevant to the cooking video at all, please DON'T trigger the function call.\n";
 
         let intervalId: NodeJS.Timeout | null = null;
 
         if (isConnected) {
             // Start the interval immediately
             intervalId = setInterval(() => {
-                const allResponses = allResponsesRef.current;
-                liveAPIClient.send([{ text: "Past conversation: \n" + allResponses.join("\n") + "\n\n" + repeatingPrompt }]);
-                console.log(allResponses);
+                const FunctionCallResponses = FunctionCallResponsesRef.current;
+                liveAPIClient.send([{ text: "Past conversation: \n" + FunctionCallResponses.join("\n") + "\n\n" + repeatingPrompt }]);
+                console.log(FunctionCallResponses);
             }, INTERVAL_MS);
         }
 
@@ -647,8 +647,8 @@ export default function WorkFlow(props: WorkFlowProps) {
     }, [isConnected, props.videoKnowledgeInput]); 
     
     useEffect(() => {
-        allResponsesRef.current = allResponses;
-    }, [allResponses]);
+        FunctionCallResponsesRef.current = FunctionCallResponses;
+    }, [FunctionCallResponses]);
 
     return (
         <Stack spacing={1}>
@@ -1023,6 +1023,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                 connectConversation={connectConversation}
                 disconnectConversation={disconnectConversation}
                 videoKnowledgeInput={props.videoKnowledgeInput}
+                setFunctionCallResponses={setFunctionCallResponses}
             />
         </Stack >
     );

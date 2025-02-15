@@ -30,6 +30,7 @@ import { systemPromptEventDetection, systemPromptDefault } from "../../prompt";
 import { ToolCall } from "../../multimodal-live-types";
 // import { getPromptForPossibleNextEvents } from "../../WorkFlow/stateMachine";
 import { procedureCheckingFunctionDeclaration } from "@/app/hooks/use-live-api";
+import { set } from "lodash";
 
 export type ControlTrayProps = {
 	videoRef: RefObject<HTMLVideoElement>;
@@ -43,6 +44,7 @@ export type ControlTrayProps = {
 	connectConversation: () => Promise<void>;
 	disconnectConversation: () => Promise<void>;
 	videoKnowledgeInput: string;
+	setFunctionCallResponses: (response: any) => void;
 };
 
 type MediaStreamButtonProps = {
@@ -68,6 +70,15 @@ function ControlTray(props: ControlTrayProps) {
 
 	const [videoFile, setVideoFile] = useState<File | null>(null);	// video input (for testing)
 	const videoURL = useRef<string | null>(null);
+
+	const updateFunctionCallResponses = (response: any) => {
+		props.setFunctionCallResponses((prevResponses: any[]) => {
+			const updatedResponses = [...prevResponses, response];
+			console.log('Updated functionCallResponses:', updatedResponses); // Logs correct value
+			return updatedResponses;
+		});
+	};
+	
 
 	const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
@@ -139,11 +150,8 @@ function ControlTray(props: ControlTrayProps) {
 			(fc) => fc.name === procedureCheckingFunctionDeclaration.name,
 		  );
 		  if (fc) {
-			console.log(`realityImageVideoRelevance:`, (fc.args as any).realityImageVideoRelevance);
-			console.log(`realityImageDescription:`, (fc.args as any).realityImageDescription);
-			console.log(`procedureName:`, (fc.args as any).procedureName);
-			console.log(`isNewProcedure:`, (fc.args as any).isNewProcedure);
-			console.log(`isCorrectOrder:`, (fc.args as any).isCorrectOrder);
+			// console.log(`realityImageVideoRelevance:`, (fc.args as any).realityImageVideoRelevance);
+			updateFunctionCallResponses(fc.args);
 		  }
 		};
 	
