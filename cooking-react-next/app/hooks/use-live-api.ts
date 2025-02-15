@@ -83,7 +83,11 @@ export const procedureCheckingFunctionDeclaration: FunctionDeclaration = {
 			isDoingWrong: {
 				type: SchemaType.BOOLEAN,
 				description: "Return true if the user is doing the correct procedure but is doing it wrong based on comparing the given image to the video knowledge.",
-			}
+			},
+			suggestedFix: {
+				type: SchemaType.STRING,
+				description: "A suggested fix for the user when the user is missing a step or is doing the step incorrectly.",
+			},
 		},
 		required: ["realityImageVideoRelevance", "userActionDescription", "cookingItems", "cookingSounds", "procedureName", "isNewProcedure", "isMissingStep", "isDoingWrong"],
 	},
