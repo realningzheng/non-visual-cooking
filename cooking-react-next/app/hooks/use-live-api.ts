@@ -23,6 +23,7 @@ import { LiveConfig, ModelTurn, ServerContent } from "../multimodal-live-types";
 import { AudioStreamer } from "../lib/audio-streamer";
 import { audioContext } from "../lib/utils";
 import VolMeterWorket from "../lib/worklets/vol-meter";
+import { type FunctionDeclaration, SchemaType } from "@google/generative-ai";
 
 export type UseLiveAPIResults = {
 	client: MultimodalLiveClient;
@@ -34,6 +35,62 @@ export type UseLiveAPIResults = {
 	volume: number;
 	content: string;
 	turnComplete: boolean;
+};
+
+export const procedureCheckingFunctionDeclaration: FunctionDeclaration = {
+	name: "checkProcedureAlignment",
+	description: 	"Triggered only when the cooking image is related to the video description. " +
+					"Based on the video procedure and user's stream input, " + 
+					"determine if the user is following the correct order based on a given image and conversation context.",
+	parameters: {
+		type: SchemaType.OBJECT,
+		properties: {
+			realityImageVideoRelevance: {
+				type: SchemaType.BOOLEAN,
+				description: "Return true if the reality image is relevant to the cooking video knowledge.",
+			},
+			userActionDescription: {
+				type: SchemaType.STRING,
+				description: "A brief description of the user's action based on current reality image.",
+			},
+			cookingItems: {
+				type: SchemaType.ARRAY,
+				items: {
+					type: SchemaType.STRING,
+				},
+				description: "A list of cooking items visible on current reality image.",
+			},
+			cookingSounds: {
+				type: SchemaType.ARRAY,
+				items: {
+					type: SchemaType.STRING,
+				},
+				description: "A list of cooking sounds heard by the user.",
+			},
+			procedureName: {
+				type: SchemaType.STRING,
+				description: 	"The name of the procedure that the user is currently following. " + 
+								"The name should be the same as the procedure name in the cooking video knowledge.",
+			},
+			isNewProcedure: {
+				type: SchemaType.BOOLEAN,
+				description: "Return true if the user has started a new procedure different from the last procedure.",
+			},
+			isMissingStep: {
+				type: SchemaType.BOOLEAN,
+				description: "Return true if the user is missing a procedure based on the given image and conversation context.",
+			},
+			isDoingWrong: {
+				type: SchemaType.BOOLEAN,
+				description: "Return true if the user is doing the correct procedure but is doing it wrong based on comparing the given image to the video knowledge.",
+			},
+			suggestedFix: {
+				type: SchemaType.STRING,
+				description: "A suggested fix for the user when the user is missing a step or is doing the step incorrectly.",
+			},
+		},
+		required: ["realityImageVideoRelevance", "userActionDescription", "cookingItems", "cookingSounds", "procedureName", "isNewProcedure", "isMissingStep", "isDoingWrong", "suggestedFix"],
+	},
 };
 
 export function useLiveAPI({
@@ -49,7 +106,15 @@ export function useLiveAPI({
 	const [connected, setConnected] = useState(false);
 	const [config, setConfig] = useState<LiveConfig>({
 		model: "models/gemini-2.0-flash-exp",
+		generationConfig: {
+			responseMimeType: "application/json",
+		},
+		tools: [
+			// { googleSearch: {} },
+			{ functionDeclarations: [procedureCheckingFunctionDeclaration] },
+		],
 	});
+	
 	const [volume, setVolume] = useState(0);
 	const [content, setContent] = useState("");
 	const [turnComplete, setTurnComplete] = useState(false);
