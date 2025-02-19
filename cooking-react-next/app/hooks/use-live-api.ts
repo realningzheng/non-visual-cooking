@@ -37,60 +37,88 @@ export type UseLiveAPIResults = {
 	turnComplete: boolean;
 };
 
-export const procedureCheckingFunctionDeclaration: FunctionDeclaration = {
-	name: "checkProcedureAlignment",
-	description: 	"Triggered only when the cooking image is related to the video description. " +
-					"Based on the video procedure and user's stream input, " + 
-					"determine if the user is following the correct order based on a given image and conversation context.",
+export const compareStreamWithReferenceVideoKnowledge: FunctionDeclaration = {
+	name: "compareStreamWithReferenceVideoKnowledge",
+	description: "Analyzes live cooking video stream by comparing against reference cooking knowledge set in the system context. " +
+		"Also decide if user is following correct procedure (high-level activities like 'Preparing Burger Sauce') sequence, and making any mistakes in steps (specific actions like 'Mixing mayonnaise with chopped pickles'). " +
+		"Also analyze the procedure, steps, sound, and cooking items in the current scene and compare them to the reference knowledge. " +
+		"Return the results in a JSON object.",
 	parameters: {
 		type: SchemaType.OBJECT,
 		properties: {
-			realityImageVideoRelevance: {
+			isValidCookingStep: {
 				type: SchemaType.BOOLEAN,
-				description: "Return true if the reality image is relevant to the cooking video knowledge.",
+				description: "Indicates if current scene shows a valid cooking step from reference knowledge. " +
+					"TRUE: User performing recognizable cooking step (e.g., 'chopping onions', 'stirring sauce'). " +
+					"FALSE: Non-cooking activities (e.g., walking, checking phone) or unclear/ambiguous actions.",
 			},
-			userActionDescription: {
+			isStepCorrect: {
+				type: SchemaType.BOOLEAN,
+				description: "Indicates if the current step is executed correctly. " +
+					"TRUE: Execution matches reference exactly. " +
+					"FALSE: Execution deviates from reference (e.g., 'Heat too high causing rapid browning', " +
+					"'Cutting size inconsistent, ranging from 1/4 to 1/2 inch pieces').",
+			},
+			isMissingSteps: {
+				type: SchemaType.BOOLEAN,
+				description: "Indicates if user is missing any steps from the current procedure. " +
+					"TRUE: User is missing steps from the current procedure. " +
+					"FALSE: User is following the right procedure against the reference knowledge.",
+			},
+			hasProgressedToProcedure: {
+				type: SchemaType.BOOLEAN,
+				description: "Indicates if user has completed all steps in current procedure and moved to next procedure. " +
+					"TRUE: Current procedure complete and new procedure started. " +
+					"FALSE: Still working on current procedure or between steps of same procedure.",
+			},
+			procedureAnalysis: {
 				type: SchemaType.STRING,
-				description: "A brief description of the user's action based on current reality image.",
+				description: "The high-level cooking procedure being performed at the current time. " +
+					"Examples: 'Preparing Burger Sauce', 'Cooking Beef Patties', 'Assembling Burger'. "
 			},
-			cookingItems: {
-				type: SchemaType.ARRAY,
-				items: {
-					type: SchemaType.STRING,
-				},
-				description: "A list of cooking items visible on current reality image.",
-			},
-			cookingSounds: {
-				type: SchemaType.ARRAY,
-				items: {
-					type: SchemaType.STRING,
-				},
-				description: "A list of cooking sounds heard by the user.",
-			},
-			procedureName: {
+			stepAnalysis: {
 				type: SchemaType.STRING,
-				description: 	"The name of the procedure that the user is currently following. " + 
-								"The name should be the same as the procedure name in the cooking video knowledge.",
+				description: "Precise description of the current step being performed within the current procedure. " +
+					"Examples: 'Mixing mayonnaise with chopped pickles', 'Forming ground beef into 4-ounce patties', " +
+					"'Toasting burger buns until golden brown'. Must match step descriptions from reference.",
 			},
-			isNewProcedure: {
-				type: SchemaType.BOOLEAN,
-				description: "Return true if the user has started a new procedure different from the last procedure.",
-			},
-			isMissingStep: {
-				type: SchemaType.BOOLEAN,
-				description: "Return true if the user is missing a procedure based on the given image and conversation context.",
-			},
-			isDoingWrong: {
-				type: SchemaType.BOOLEAN,
-				description: "Return true if the user is doing the correct procedure but is doing it wrong based on comparing the given image to the video knowledge.",
-			},
-			suggestedFix: {
+			foodAndKitchenwareAnalysis: {
 				type: SchemaType.STRING,
-				description: "A suggested fix for the user when the user is missing a step or is doing the step incorrectly.",
+				description: "Detailed description of visible food, ingredients, kitchenware and their states. Include: " +
+					"1. Ingredients and their conditions (e.g., 'finely diced onions', 'golden-brown chicken') " +
+					"2. Tools and their current use (e.g., 'pan heating with oil', 'knife on cutting board') " +
+					"3. Spatial relationships (e.g., 'ingredients arranged mise en place', 'meat nestled in sauce') " +
+					"Example: 'Diced onions and minced garlic on wooden cutting board', 'raw chicken thighs on paper towels', " +
+					"'large skillet heating on medium-high with shimmering oil', 'half chicken with skin upside and cooked crispy on a pan'",
 			},
+			audioAnalysis: {
+				type: SchemaType.STRING,
+				description: "Description of cooking-related sounds in the scene. Focus on kitchen sounds, not voices. " +
+					"Include intensity and characteristics of sounds. " +
+					"Examples: 'Loud sizzling from meat hitting hot pan', 'Gentle bubbling of simmering sauce', " +
+					"'Rhythmic chopping sound on cutting board', 'Quiet whirring of food processor'",
+			},
+			improvementInstructions: {
+				type: SchemaType.STRING,
+				description: "Clear, actionable guidance when issues found, based on reference knowledge. " +
+					"Include what to correct, how to correct it, and why it matters. " +
+					"Empty string if no issues found. " +
+					"Example: 'Reduce heat to medium-high - current temperature is too hot and will burn the exterior " +
+					"before the chicken is cooked through. Wait 30 seconds before adding the meat.'",
+			}
 		},
-		required: ["realityImageVideoRelevance", "userActionDescription", "cookingItems", "cookingSounds", "procedureName", "isNewProcedure", "isMissingStep", "isDoingWrong", "suggestedFix"],
-	},
+		required: [
+			"isValidCookingStep",
+			"isStepCorrect",
+			"isMissingSteps",
+			"hasProgressedToProcedure",
+			"procedureAnalysis",
+			"stepAnalysis",
+			"foodAndKitchenwareAnalysis",
+			"audioAnalysis",
+			"improvementInstructions"
+		]
+	}
 };
 
 export function useLiveAPI({
@@ -111,10 +139,10 @@ export function useLiveAPI({
 		},
 		tools: [
 			// { googleSearch: {} },
-			{ functionDeclarations: [procedureCheckingFunctionDeclaration] },
+			{ functionDeclarations: [compareStreamWithReferenceVideoKnowledge] },
 		],
 	});
-	
+
 	const [volume, setVolume] = useState(0);
 	const [content, setContent] = useState("");
 	const [turnComplete, setTurnComplete] = useState(false);
