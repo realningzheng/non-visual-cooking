@@ -31,12 +31,10 @@ export default function MainLayout() {
     const [verticalCaptions, setVerticalCaptions] = useState(false);
     const [segmentedVideoPlaying, setSegmentedVideoPlaying] = useState(false);
     const [replaySignal, setReplaySignal] = useState(false);
-    const [isSystemActiveEnabled, setIsSystemActiveEnabled] = useState(false);
 
     // Reality preview states
     const [isVideoPlaying, setIsVideoPlaying] = useState(false);
     const [realityImageBase64, setRealityImageBase64] = useState('');
-    const [enableWebCam, setEnableWebCam] = useState(false);
 
     // Workflow states
     const [stateTransitionToggle, setStateTransitionToggle] = useState(false);
@@ -59,11 +57,6 @@ export default function MainLayout() {
             setIsClient(true);
         }
     }, []);
-
-
-    // useEffect(() => {
-    //     getVideo();
-    // }, [videoRef, !enableWebCam]);
 
 
     useEffect(() => {
@@ -103,24 +96,6 @@ export default function MainLayout() {
             }
         }
     }, [playSeconds]);
-
-
-    // const getVideo = () => {
-    //     navigator.mediaDevices
-    //         .getUserMedia({
-    //             video: { width: 1280, height: 720 }
-    //         })
-    //         .then(stream => {
-    //             let video = videoRef.current;
-    //             if (video) {
-    //                 video.srcObject = stream;
-    //                 video.play();
-    //             }
-    //         })
-    //         .catch(err => {
-    //             console.error(err);
-    //         })
-    // }
 
 
     const captureRealityFrame = async (): Promise<string> => {
@@ -272,8 +247,6 @@ export default function MainLayout() {
                             ttsSpeed={ttsSpeed}
                             replaySignal={replaySignal}
                             videoRef={videoRef}
-                            isSystemActiveEnabled={isSystemActiveEnabled}
-                            setIsSystemActiveEnabled={setIsSystemActiveEnabled}
                             setVideoStream={setVideoStream}
                         />
                     }

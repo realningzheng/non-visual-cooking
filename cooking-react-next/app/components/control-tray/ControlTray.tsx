@@ -37,7 +37,6 @@ export type ControlTrayProps = {
 	children?: ReactNode;
 	supportsVideo: boolean;
 	currentState: number;
-	rtTriggerAudio: string;
 	onVideoStreamChange?: (stream: MediaStream | null) => void;
 	setStateMachineEvent: (event: number) => void;
 	setCurrentState: (state: number) => void;
