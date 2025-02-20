@@ -50,16 +50,16 @@ interface WorkFlowProps {
     isProcessing: boolean;
     ttsSpeed: number;
     replaySignal: boolean;
-    videoRef: React.RefObject<HTMLVideoElement>; 
+    videoRef: React.RefObject<HTMLVideoElement>;
     setVideoStream: (stream: MediaStream | null) => void;
 }
 
 
 const openaiClient = new OpenAI({ apiKey: secret.OPENAI_KEY, dangerouslyAllowBrowser: true });
-const INTERVAL_MS = 5000;
+const INTERVAL_MS = 4000;
 
 
-// Update the interface for the interaction memory items
+// interaction memory items
 interface InteractionMemoryItem {
     index: number;
     user_query?: string;
@@ -69,10 +69,18 @@ interface InteractionMemoryItem {
     memorized_item_value?: string;
 }
 
-// Update the interface for auto agent response items
-interface AutoAgentResponseItem {
-    index: number;
-    response: string;
+// auto agent response items
+export interface AutoAgentResponseItem {
+    timeMS: number;
+    isValidCookingStep: boolean;
+    isStepCorrect: boolean;
+    isMissingSteps: boolean;
+    hasProgressedToProcedure: boolean;
+    procedureAnalysis: string;
+    stepAnalysis: string;
+    foodAndKitchenwareAnalysis: string;
+    audioAnalysis: string;
+    improvementInstructions: string;
 }
 
 
@@ -88,11 +96,9 @@ export default function WorkFlow(props: WorkFlowProps) {
     const [interactionMemoryKv, setInteractionMemoryKv] = useState<InteractionMemoryItem[]>([]);
     const [autoAgentResponseMemoryKv, setAutoAgentResponseMemoryKv] = useState<AutoAgentResponseItem[]>([]);
     const [interactionID, setInteractionID] = useState<number>(0);
-    const [autoAgentResponseID, setAutoAgentResponseID] = useState<number>(0);
     const [isRecording, setIsRecording] = useState(false);
     const [canPushToTalk, setCanPushToTalk] = useState(true);
     const [audioAgentDuty, setAudioAgentDuty] = useState<'chatbot' | 'detect'>('detect');
-    const [systemActivePrompt, setSystemActivePrompt] = useState<string>('');
 
     const possibleNextUserEvents: string[] = useMemo(() => {
         if (props.currentState === -1) return [];
@@ -116,8 +122,6 @@ export default function WorkFlow(props: WorkFlowProps) {
         content: liveAPIContent,
         turnComplete: liveAPITurnComplete,
     } = useLiveAPIContext();
-    const [liveClientResponse, setLiveClientResponse] = useState('');
-    const prevEventTurnComplete = useRef(false);
 
 
     /** Bootstrap functions */
@@ -133,7 +137,6 @@ export default function WorkFlow(props: WorkFlowProps) {
 
         // Set state variables
         startTimeRef.current = new Date().toISOString();
-        setIsConnected(true);
         setItems(client.conversation.getItems());
 
         await wavRecorder.begin();
@@ -142,6 +145,7 @@ export default function WorkFlow(props: WorkFlowProps) {
         if (client.getTurnDetectionType() === 'server_vad') {
             await wavRecorder.record((data) => client.appendInputAudio(data.mono));
         }
+        setIsConnected(true);
     };
 
     /* Disconnect and reset conversation state */
@@ -149,10 +153,9 @@ export default function WorkFlow(props: WorkFlowProps) {
         console.log('[disconnectConversation]');
         props.setStateMachineEvent(-1);
         props.setCurrentState(-1);
-        setIsConnected(false);
         setItems([]);
         setInteractionMemoryKv([]);
-
+        setAutoAgentResponseMemoryKv([]);
         const client = clientRef.current;
         client.disconnect();
 
@@ -161,6 +164,7 @@ export default function WorkFlow(props: WorkFlowProps) {
 
         const wavStreamPlayer = wavStreamPlayerRef.current;
         await wavStreamPlayer.interrupt();
+        setIsConnected(false);
     };
 
 
@@ -344,46 +348,12 @@ export default function WorkFlow(props: WorkFlowProps) {
     }, []);
 
 
-    /** Handle realtime video stream response */
-    /** Listen to event detection content stream */
-    useEffect(() => {
-        if (!liveAPITurnComplete && prevEventTurnComplete.current) {
-            setLiveClientResponse('');
-        }
-        if (liveAPIContent.length > 0 && !liveAPITurnComplete) {
-            setLiveClientResponse(prev => {
-                if (!prev.endsWith(liveAPIContent)) {
-                    // Avoid duplicate entries
-                    // setFunctionCallResponses(prevResponses => {
-                    //     if (!prevResponses.includes(liveAPIContent)) {
-                    //         // Check if the previous response ends with space and liveAPIContent starts with space
-                    //         if (prevResponses.length > 0 && liveAPIContent.startsWith(" ")) {
-                    //             // Join the last response with liveAPIContent
-                    //             const updatedResponses = [...prevResponses];
-                    //             updatedResponses[updatedResponses.length - 1] = updatedResponses[updatedResponses.length - 1] + liveAPIContent;
-                    //             return updatedResponses;
-                    //         } else {
-                    //             return [...prevResponses, liveAPIContent];
-                    //         }
-                    //     }
-                    //     return prevResponses;
-                    // });
-    
-                    return prev + liveAPIContent; // Add space to prevent unwanted newlines
-                }
-                return prev;
-            });
-        }
-        prevEventTurnComplete.current = liveAPITurnComplete;
-    }, [liveAPIContent, liveAPITurnComplete]);
-
     /** Save function call responses to a file (for testing) */
-    const [FunctionCallResponses, setFunctionCallResponses] = useState<string[]>([]);
     const saveResponsesToFile = () => {
-        const blob = new Blob([JSON.stringify(FunctionCallResponses, null, 2)], { type: "application/json" });
+        const blob = new Blob([JSON.stringify(autoAgentResponseMemoryKv, null, 2)], { type: "application/json" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = "live_api_responses.json"; 
+        a.download = "live_api_responses.json";
         a.click();
         URL.revokeObjectURL(a.href);
     };
@@ -473,6 +443,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                     ? JSON.stringify(stateFunctionExeRes, null, 2)
                     : String(stateFunctionExeRes);
 
+                // @TODO: need to do a better job for distinguishing between user / agent response
                 if (stringifiedResponse !== props.stateFunctionExeRes) {
                     props.setStateFunctionExeRes(stringifiedResponse);
                     // store user input and agent response
@@ -488,18 +459,6 @@ export default function WorkFlow(props: WorkFlowProps) {
                                 }
                             ]);
                             setInteractionID(prev => prev + 1);
-                        }
-
-                        // store auto agent response
-                        if (typeof stateFunctionExeRes !== 'object') {
-                            setAutoAgentResponseMemoryKv(prevList => [
-                                ...prevList,
-                                {
-                                    index: autoAgentResponseID,
-                                    response: stringifiedResponse
-                                }
-                            ]);
-                            setAutoAgentResponseID(prev => prev + 1);
                         }
 
                         // play the natural language response from the agent
@@ -550,11 +509,11 @@ export default function WorkFlow(props: WorkFlowProps) {
 
     // Add a reference to the file input
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const FunctionCallResponsesRef = useRef<string[]>([]);
+    const autoAgentResponseMemoryKvRef = useRef<AutoAgentResponseItem[]>([]);
 
     // liveAPI: system automatic trigger
     useEffect(() => {
-        const repeatingPrompt = 
+        const repeatingPrompt =
             "Analyze the current video stream and compare it with the reference cooking knowledge in the system context. " +
             "Using the compareStreamWithReferenceVideoKnowledge function, to decide: \n" +
             "1. if the current scene shows a valid cooking step from reference knowledge. \n" +
@@ -575,21 +534,31 @@ export default function WorkFlow(props: WorkFlowProps) {
 
         if (isConnected) {
             intervalId = setInterval(() => {
-                const FunctionCallResponses = FunctionCallResponsesRef.current;
+                const responses = autoAgentResponseMemoryKvRef.current;
                 console.log('[liveAPI function call responses]');
-                console.log(FunctionCallResponses);
-                liveAPIClient.send([{ text: repeatingPrompt + FunctionCallResponses.join("\n") }]);
+                console.log(responses[responses.length - 1]);
+                liveAPIClient.send([{ text: repeatingPrompt + responses.map(item => JSON.stringify(item)).join("\n") }]);
             }, INTERVAL_MS);
         }
 
         return () => {
             if (intervalId) clearInterval(intervalId);
         };
-    }, [isConnected, props.videoKnowledgeInput]); 
-    
+    }, [isConnected, props.videoKnowledgeInput]);
+
     useEffect(() => {
-        FunctionCallResponsesRef.current = FunctionCallResponses;
-    }, [FunctionCallResponses]);
+        autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
+    }, [autoAgentResponseMemoryKv]);
+
+    // Add this near your other refs
+    const autoResponsesRef = useRef<HTMLDivElement>(null);
+
+    // Add this effect to handle auto-scrolling
+    useEffect(() => {
+        if (autoResponsesRef.current) {
+            autoResponsesRef.current.scrollTop = autoResponsesRef.current.scrollHeight;
+        }
+    }, [autoAgentResponseMemoryKv]); // Scroll when responses update
 
     return (
         <Stack spacing={1}>
@@ -740,7 +709,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                         />
                         <button
                             className="btn btn-outline"
-                            onClick={async () => { 
+                            onClick={async () => {
                                 let event = await asyncNextEventChooser(props.voiceInputTranscript, props.currentState);
                                 if (event >= 0 && (event in stateMachine[props.currentState])) {
                                     props.setStateMachineEvent(event);
@@ -748,27 +717,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                                 }
                             }}
                         >
-                            [Debug use] Send User Initiated Request
-                        </button>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: '20px', pt: '15px', gap: '10px' }}>
-                        <input
-                            type="text"
-                            placeholder="Tell me what you see."
-                            className="input input-bordered w-full"
-                            onChange={(e) => setSystemActivePrompt(e.target.value)}
-                            value={systemActivePrompt}
-                            onKeyDown={async (e) => {
-                                if (e.key === 'Enter') {
-                                    liveAPIClient.send([{ text: systemActivePrompt }])
-                                }
-                            }}
-                        />
-                        <button
-                            className="btn btn-outline"
-                            onClick={() => liveAPIClient.send([{ text: systemActivePrompt }])}
-                        >
-                            [Debug use] Send System Initiated Request
+                            Send User Request
                         </button>
                     </Box>
                 </>
@@ -776,127 +725,6 @@ export default function WorkFlow(props: WorkFlowProps) {
 
             {isConnected &&
                 <>
-                    <div className='flex items-center gap-2'>
-                        <div className='text-lg font-bold'>Live visual client</div>
-                    </div>
-                    {liveClientResponse}
-                    <button onClick={saveResponsesToFile}>Save Responses</button>
-                </>
-                
-            }
-
-            {isConnected &&
-                <>
-                    <div
-                        className="content-block-body"
-                        data-conversation-content
-                        ref={conversationRef}
-                        style={{
-                            maxHeight: `${audioAgentDuty === 'chatbot' ? '50vh' : '200px'}`,
-                            overflowY: 'auto',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            padding: '10px',
-                            marginBottom: '20px'
-                        }}
-                    >
-                        {!items.length && !isConnected && `awaiting connection...`}
-                        {items.map((conversationItem:any, i:any) => {
-                            return (
-                                <div className="conversation-item" key={conversationItem.id}>
-                                    <div className={`speaker-content`}>
-                                        {/* tool response */}
-                                        {conversationItem.type === 'function_call_output' && (
-                                            <div>{conversationItem.formatted.output}</div>
-                                        )}
-                                        {/* tool call */}
-                                        {!!conversationItem.formatted.tool && (
-                                            <div>
-                                                {conversationItem.formatted.tool.name}(
-                                                {conversationItem.formatted.tool.arguments})
-                                            </div>
-                                        )}
-
-                                        {/* Transcript from the user */}
-                                        {!conversationItem.formatted.tool &&
-                                            conversationItem.role === 'user' && (
-                                                <div>
-                                                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-                                                        <FaUser /> <h5 style={{ marginLeft: '10px' }}>
-                                                            {conversationItem.formatted.transcript ||
-                                                                (conversationItem.formatted.audio?.length
-                                                                    ? '(awaiting transcript)'
-                                                                    : conversationItem.formatted.text ||
-                                                                    '(item sent)')
-                                                            }
-                                                        </h5>
-                                                        <div style={{ flexGrow: 1 }} />
-                                                        <div
-                                                            className="close"
-                                                            style={{ cursor: 'pointer' }}
-                                                            onClick={() =>
-                                                                deleteConversationItem(conversationItem.id)
-                                                            }
-                                                        >
-                                                            < XCircle />
-                                                        </div>
-                                                    </div>
-
-                                                </div>
-                                            )
-                                        }
-                                        {!conversationItem.formatted.tool && audioAgentDuty === 'chatbot' &&
-                                            conversationItem.role === 'assistant' && (
-                                                <div>
-                                                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-                                                        <RiRobot2Fill /> <h5 style={{ marginLeft: '10px' }}>
-                                                            {conversationItem.formatted.transcript ||
-                                                                conversationItem.formatted.text ||
-                                                                '(truncated)'
-                                                            }
-                                                        </h5>
-                                                        {/* div flexgrow */}
-                                                        <div style={{ flexGrow: 1 }} />
-                                                        <div
-                                                            className="close"
-                                                            style={{ cursor: 'pointer' }}
-                                                            onClick={() =>
-                                                                deleteConversationItem(conversationItem.id)
-                                                            }
-                                                        >
-                                                            < XCircle />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )
-                                        }
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    <div className='text-lg font-bold'>Possible next events</div>
-                    {props.currentState !== -1 && (
-                        <ul style={{ listStyleType: 'none', padding: 0 }}>
-                            {props.currentState in stateMachine && Object.keys(stateMachine[props.currentState])
-                                .sort((a, b) => Number(a) - Number(b))
-                                .map((event) => (
-                                    <li
-                                        key={`event-${event}`}
-                                        onClick={() => {
-                                            props.setVoiceInputTranscript('[Debug] Respond with Woohoo!');
-                                            props.setStateMachineEvent(Number(event));
-                                        }}
-                                        className='btn btn-outline btn-xs text-left mb-2.5 mr-1 cursor-pointer'
-                                    >
-                                        {event}: {eventTranslator[Number(event)]}
-                                    </li>
-                                ))}
-                        </ul>
-                    )}
-                    <div className="divider"></div>
-
                     <div className='flex items-center gap-2'>
                         <div className='text-lg font-bold'>Agent response</div>
                         {props.currentState !== -1 && (props.isProcessing && <span className="loading loading-dots loading-lg"></span>)}
@@ -915,6 +743,42 @@ export default function WorkFlow(props: WorkFlowProps) {
                             })()}
                         </p>
                     )}
+                    <div className="divider"></div>
+
+                    <div className='flex items-center gap-2'>
+                        <div className='text-lg font-bold'>Real-time visual client responses</div>
+                        <label
+                            className="btn btn-xs btn-outline cursor-pointer"
+                            onClick={saveResponsesToFile}
+                        >
+                            Save
+                        </label>
+                    </div>
+                    <div
+                        ref={autoResponsesRef}
+                        className="content-block-body content-kv"
+                        style={{
+                            height: '300px',
+                            overflowY: 'auto',
+                            padding: '10px',
+                        }}
+                    >
+                        {" [ "}
+                        {props.currentState !== -1 && autoAgentResponseMemoryKv.map((item, idx) => (
+                            <div key={`agent-initiated-response-${idx}`} style={{ marginLeft: '20px' }}>
+                                {"{"}<br />
+                                {Object.entries(item).map(([key, value], index) => (
+                                    <span key={index}>
+                                        &nbsp;&nbsp;&nbsp;&nbsp;{key}: {String(value).length > 70
+                                            ? `${String(value).substring(0, 40)}...${String(value).slice(-30)}`
+                                            : String(value)}<br />
+                                    </span>
+                                ))}
+                                {"}"},
+                            </div>
+                        ))}
+                        {" ] "}
+                    </div>
                     <div className="divider"></div>
 
                     <div className='text-lg font-bold content-block kv'>Interaction history</div>
@@ -936,34 +800,41 @@ export default function WorkFlow(props: WorkFlowProps) {
                         ))}
                         {" ] "}
                     </div>
-                    <div className='text-lg font-bold content-block kv'>Agent initiated response memory</div>
-                    <div className="content-block-body content-kv">
-                        {" [ "}
-                        {props.currentState !== -1 && autoAgentResponseMemoryKv.map((item) => (
-                            <div key={item.index} style={{ marginLeft: '20px' }}>
-                                {"{"}<br />
-                                &nbsp;&nbsp;&nbsp;&nbsp;index: {item.index},<br />
-                                &nbsp;&nbsp;&nbsp;&nbsp;response: {String(item.response).length > 70
-                                    ? `${String(item.response).substring(0, 40)}...${String(item.response).slice(-30)}`
-                                    : String(item.response)}<br />
-                                {"}"},
-                            </div>
-                        ))}
-                        {" ] "}
-                    </div>
+                    <div className="divider"></div>
+
+                    <div className='text-lg font-bold'>Possible next events</div>
+                    {props.currentState !== -1 && (
+                        <ul style={{ listStyleType: 'none', padding: 0 }}>
+                            {props.currentState in stateMachine && Object.keys(stateMachine[props.currentState])
+                                .sort((a, b) => Number(a) - Number(b))
+                                .map((event) => (
+                                    <li
+                                        key={`event-${event}`}
+                                        onClick={() => {
+                                            props.setVoiceInputTranscript('[Debug] Respond with Woohoo!');
+                                            props.setStateMachineEvent(Number(event));
+                                        }}
+                                        className='btn btn-outline btn-xs text-left mb-2.5 mr-1 cursor-pointer'
+                                    >
+                                        {event}: {eventTranslator[Number(event)]}
+                                    </li>
+                                ))}
+                        </ul>
+                    )}
                 </>
             }
             <ControlTray
                 videoRef={props.videoRef}
-                currentState={props.currentState}
                 supportsVideo={true}
+                currentState={props.currentState}
+                videoKnowledgeInput={props.videoKnowledgeInput}
+                autoAgentResponseMemoryKv={autoAgentResponseMemoryKv}
                 onVideoStreamChange={props.setVideoStream}
                 setStateMachineEvent={props.setStateMachineEvent}
                 setCurrentState={props.setCurrentState}
                 connectConversation={connectConversation}
                 disconnectConversation={disconnectConversation}
-                videoKnowledgeInput={props.videoKnowledgeInput}
-                setFunctionCallResponses={setFunctionCallResponses}
+                setAutoAgentResponseMemoryKv={setAutoAgentResponseMemoryKv}
             />
         </Stack >
     );

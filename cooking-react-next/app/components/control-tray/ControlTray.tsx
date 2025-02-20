@@ -31,19 +31,22 @@ import { ToolCall } from "../../multimodal-live-types";
 // import { getPromptForPossibleNextEvents } from "../../WorkFlow/stateMachine";
 import { compareStreamWithReferenceVideoKnowledge } from "@/app/hooks/use-live-api";
 import { set } from "lodash";
+import { AutoAgentResponseItem } from "@/app/WorkFlow";
+
 
 export type ControlTrayProps = {
 	videoRef: RefObject<HTMLVideoElement>;
 	children?: ReactNode;
 	supportsVideo: boolean;
 	currentState: number;
+	videoKnowledgeInput: string;
+	autoAgentResponseMemoryKv: AutoAgentResponseItem[];
 	onVideoStreamChange?: (stream: MediaStream | null) => void;
 	setStateMachineEvent: (event: number) => void;
 	setCurrentState: (state: number) => void;
 	connectConversation: () => Promise<void>;
 	disconnectConversation: () => Promise<void>;
-	videoKnowledgeInput: string;
-	setFunctionCallResponses: (response: any) => void;
+	setAutoAgentResponseMemoryKv: React.Dispatch<React.SetStateAction<AutoAgentResponseItem[]>>;
 };
 
 type MediaStreamButtonProps = {
@@ -71,11 +74,15 @@ function ControlTray(props: ControlTrayProps) {
 	const videoURL = useRef<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
-	const updateFunctionCallResponses = (response: any) => {
-		props.setFunctionCallResponses((prevResponses: any[]) => {
-			const updatedResponses = [...prevResponses, response];
-			return updatedResponses;
-		});
+	const responseCounter = useRef(0);
+
+	const updateAutoAgentResponseMemoryKv = (response: AutoAgentResponseItem) => {
+		const responseWithTimeValue = {
+			...response,
+			timeMS: responseCounter.current * 1000 / 0.5
+		};
+		responseCounter.current += 1;
+		props.setAutoAgentResponseMemoryKv((prevResponses) => [...prevResponses, responseWithTimeValue]);
 	};
 
 
@@ -159,7 +166,7 @@ function ControlTray(props: ControlTrayProps) {
 				(fc) => fc.name === compareStreamWithReferenceVideoKnowledge.name,
 			);
 			if (fc) {
-				updateFunctionCallResponses(fc.args);
+				updateAutoAgentResponseMemoryKv(fc.args as AutoAgentResponseItem);
 			}
 		};
 
@@ -295,15 +302,16 @@ function ControlTray(props: ControlTrayProps) {
 		await props.disconnectConversation();
 		props.setStateMachineEvent(-1);
 		props.setCurrentState(-1);
+		responseCounter.current = 0;
 	};
 
 
 	return (
 		<div>
-			<div className="fixed bottom-12 left-1/2 -translate-x-1/2 bg-base-200 shadow-lg px-4 py-2 rounded-lg flex flex-col items-center">
+			<div className="fixed bottom-12 left-12 bg-base-200 shadow-lg px-4 py-2 rounded-lg flex flex-col items-center">
 				<video ref={props.videoRef} controls width="200" className="rounded-md shadow-md" />
 			</div>
-			<div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-base-200 rounded-full shadow-lg px-6 py-3">
+			<div className="fixed bottom-4 left-12 bg-base-200 rounded-full shadow-lg px-6 py-3">
 				<canvas className="hidden" ref={renderCanvasRef} />
 				<div className="flex items-center gap-2">
 					<div className={cn("flex items-center gap-2", { "opacity-50": !liveAPIConnected })}>
