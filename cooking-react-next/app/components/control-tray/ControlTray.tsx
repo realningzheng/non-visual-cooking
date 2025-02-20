@@ -29,7 +29,7 @@ import AudioPulse from "../audio-pulse/AudioPulse";
 import { systemPromptEventDetection, systemPromptDefault } from "../../prompt";
 import { ToolCall } from "../../multimodal-live-types";
 // import { getPromptForPossibleNextEvents } from "../../WorkFlow/stateMachine";
-import { procedureCheckingFunctionDeclaration } from "@/app/hooks/use-live-api";
+import { compareStreamWithReferenceVideoKnowledge } from "@/app/hooks/use-live-api";
 import { set } from "lodash";
 
 export type ControlTrayProps = {
@@ -78,7 +78,7 @@ function ControlTray(props: ControlTrayProps) {
 			return updatedResponses;
 		});
 	};
-	
+
 
 	const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
@@ -123,38 +123,42 @@ function ControlTray(props: ControlTrayProps) {
 				responseModalities: "text"
 			},
 			systemInstruction: {
-				parts: [
-					{
-						text: `You are a helpful assistant analyzing cooking procedures.
-                        
-                        <VIDEO KNOWLEDGE>
-                        ${props.videoKnowledgeInput}
+				parts: [{
+					text: `You are an AI cooking assistant analyzing real-time cooking procedures from a video stream. 
+					Your high-levelgoal is to analyze the current video stream and compare it with the reference cooking knowledge in the system context given after <VIDEO KNOWLEDGE>.
+					<VIDEO KNOWLEDGE>
+					${props.videoKnowledgeInput}
 
-                        Your task is to analyze the reality image against the video knowledge and determine:
-                        1. If the current scene matches any part of the cooking video
-                        2. Which procedure is being performed
-                        3. If the procedures are being followed in the correct order
+					ROLE:
+					- Monitor cooking activities in real-time video stream
+					- Compare against reference cooking knowledge
+					- Identify deviations from correct procedures
+					- Provide immediate, actionable feedback
 
-                        Be precise and concise in your responses.`
-					},
-				],
-			},
+					RESPONSE GUIDELINES:
+					- Be precise and concise
+					- Prioritize critical safety and quality issues
+					- Consider both visual and audio inputs
+
+					User will also provided previous responses from you as context after <Previous observations for context>
+					`
+				}]
+			}
 		});
 		console.log('liveAPIConfig', liveAPIConfig)
 	}, [liveAPISetConfig]);
 
 	useEffect(() => {
 		const onToolCall = (toolCall: ToolCall) => {
-		  console.log(`got toolcall`, toolCall);
-		  const fc = toolCall.functionCalls.find(
-			(fc) => fc.name === procedureCheckingFunctionDeclaration.name,
-		  );
-		  if (fc) {
-			// console.log(`realityImageVideoRelevance:`, (fc.args as any).realityImageVideoRelevance);
-			updateFunctionCallResponses(fc.args);
-		  }
+			console.log(`got toolcall`, toolCall);
+			const fc = toolCall.functionCalls.find(
+				(fc) => fc.name === compareStreamWithReferenceVideoKnowledge.name,
+			);
+			if (fc) {
+				updateFunctionCallResponses(fc.args);
+			}
 		};
-	
+
 		liveAPIClient.on("toolcall", onToolCall);
 		return () => {
 			liveAPIClient.off("toolcall", onToolCall);
@@ -190,7 +194,7 @@ function ControlTray(props: ControlTrayProps) {
 			audioRecorder.off("data", onData).off("volume", setInVolume);
 		};
 	}, [liveAPIConnected, liveAPIClient, muted, audioRecorder]);
-	  
+
 	// Function to send video frame
 	function sendVideoFrame() {
 		const video = props.videoRef.current;
@@ -259,21 +263,21 @@ function ControlTray(props: ControlTrayProps) {
 
 	useEffect(() => {
 		const video = props.videoRef.current;
-	
+
 		if (!video) return;
-	
+
 		const startSendingFrames = () => {
 			console.log("Video started playing");
 			sendVideoFrame(); // Start capturing frames
 		};
-	
+
 		video.addEventListener("play", startSendingFrames);
-	
+
 		return () => {
 			video.removeEventListener("play", startSendingFrames);
 		};
 	}, [props.videoRef, liveAPIConnected]);
-	
+
 	//handler for swapping from one video-stream to the next
 	const changeStreams = (next?: UseMediaStreamResult) => async () => {
 		if (next) {
@@ -314,8 +318,8 @@ function ControlTray(props: ControlTrayProps) {
 	return (
 		<div>
 			<div className="fixed bottom-12 left-1/2 -translate-x-1/2 bg-base-200 shadow-lg px-4 py-2 rounded-lg flex flex-col items-center">
-				<input type="file" accept="video/mp4" onChange={handleFileChange} className="mb-2" /> 
-				<video ref={props.videoRef} controls width="200" className="rounded-md shadow-md" /> 
+				<input type="file" accept="video/mp4" onChange={handleFileChange} className="mb-2" />
+				<video ref={props.videoRef} controls width="200" className="rounded-md shadow-md" />
 			</div>
 			<div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-base-200 rounded-full shadow-lg px-6 py-3">
 				<canvas className="hidden" ref={renderCanvasRef} />
