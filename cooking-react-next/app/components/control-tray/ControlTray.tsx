@@ -15,7 +15,7 @@
  */
 
 import cn from "classnames";
-import { BiMicrophone, BiMicrophoneOff, BiPlay, BiPause, BiDesktop, BiStopCircle, BiVideo, BiVideoOff } from 'react-icons/bi';
+import { BiMicrophone, BiMicrophoneOff, BiPlay, BiPause, BiDesktop, BiStopCircle, BiVideo, BiVideoOff, BiFilm } from 'react-icons/bi';
 
 import { memo, ReactNode, RefObject, useEffect, useRef, useState } from "react";
 // import { useEventDetectionContext } from "../../contexts/EventDetectionContext";
@@ -37,7 +37,6 @@ export type ControlTrayProps = {
 	children?: ReactNode;
 	supportsVideo: boolean;
 	currentState: number;
-	rtTriggerAudio: string;
 	onVideoStreamChange?: (stream: MediaStream | null) => void;
 	setStateMachineEvent: (event: number) => void;
 	setCurrentState: (state: number) => void;
@@ -70,17 +69,17 @@ function ControlTray(props: ControlTrayProps) {
 
 	const [videoFile, setVideoFile] = useState<File | null>(null);	// video input (for testing)
 	const videoURL = useRef<string | null>(null);
+	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const updateFunctionCallResponses = (response: any) => {
 		props.setFunctionCallResponses((prevResponses: any[]) => {
 			const updatedResponses = [...prevResponses, response];
-			console.log('Updated functionCallResponses:', updatedResponses); // Logs correct value
 			return updatedResponses;
 		});
 	};
 
 
-	const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+	const handleVideoFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
 		if (file && file.type === "video/mp4") {
 			// Revoke previous object URL to free memory
@@ -94,6 +93,12 @@ function ControlTray(props: ControlTrayProps) {
 			alert("Please upload an MP4 video file.");
 		}
 	};
+
+	const triggerFileUpload = () => {
+		fileInputRef.current?.click();
+	};
+
+
 	useEffect(() => {
 		if (videoFile && props.videoRef.current) {
 			props.videoRef.current.src = URL.createObjectURL(videoFile);
@@ -150,7 +155,6 @@ function ControlTray(props: ControlTrayProps) {
 
 	useEffect(() => {
 		const onToolCall = (toolCall: ToolCall) => {
-			console.log(`got toolcall`, toolCall);
 			const fc = toolCall.functionCalls.find(
 				(fc) => fc.name === compareStreamWithReferenceVideoKnowledge.name,
 			);
@@ -229,23 +233,6 @@ function ControlTray(props: ControlTrayProps) {
 			props.videoRef.current.srcObject = activeVideoStream;
 		}
 
-		// let videoTimeoutId = -1;
-		// let audioTimeoutId = -1;
-
-		// Function to send audio data
-		// function sendAudioData() {
-		// 	liveAPIClient.sendRealtimeInput([{
-		// 		mimeType: "audio/pcm;rate=16000",
-		// 		data: props.rtTriggerAudio
-		// 	}]);
-		// 	console.log('send audio data')
-		// 	// Schedule next audio send
-		// 	if (liveAPIConnected) {
-		// 		audioTimeoutId = window.setTimeout(sendAudioData, 1000 * 5 / 0.5);
-		// 	}
-		// }
-
-
 		// Start both video and audio sending if connected
 		if (liveAPIConnected) {
 			if (activeVideoStream !== null) {
@@ -253,13 +240,8 @@ function ControlTray(props: ControlTrayProps) {
 				// requestAnimationFrame(sendAudioData);
 			}
 		}
-
-		// // Cleanup on unmount or dependency change
-		// return () => {
-		// 	clearTimeout(videoTimeoutId);
-		// 	clearTimeout(audioTimeoutId);
-		// };
 	}, [liveAPIConnected, activeVideoStream, liveAPIClient, props.videoRef, muted]);
+
 
 	useEffect(() => {
 		const video = props.videoRef.current;
@@ -278,6 +260,7 @@ function ControlTray(props: ControlTrayProps) {
 		};
 	}, [props.videoRef, liveAPIConnected]);
 
+	
 	//handler for swapping from one video-stream to the next
 	const changeStreams = (next?: UseMediaStreamResult) => async () => {
 		if (next) {
@@ -318,7 +301,6 @@ function ControlTray(props: ControlTrayProps) {
 	return (
 		<div>
 			<div className="fixed bottom-12 left-1/2 -translate-x-1/2 bg-base-200 shadow-lg px-4 py-2 rounded-lg flex flex-col items-center">
-				<input type="file" accept="video/mp4" onChange={handleFileChange} className="mb-2" />
 				<video ref={props.videoRef} controls width="200" className="rounded-md shadow-md" />
 			</div>
 			<div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-base-200 rounded-full shadow-lg px-6 py-3">
@@ -359,6 +341,15 @@ function ControlTray(props: ControlTrayProps) {
 								>
 									{webcam.isStreaming ? <BiVideoOff size={16} /> : <BiVideo size={16} />}
 								</button>
+								<button
+									className={cn("btn btn-sm btn-circle", {
+										"btn-success": videoFile !== null,
+										"btn-ghost": videoFile === null
+									})}
+									onClick={triggerFileUpload}
+								>
+									<BiFilm size={16} />
+								</button>
 							</>
 						)}
 						{props.children}
@@ -378,6 +369,13 @@ function ControlTray(props: ControlTrayProps) {
 					</div>
 				</div>
 			</div>
+			<input
+				type="file"
+				ref={fileInputRef}
+				onChange={handleVideoFileUpload}
+				accept="video/mp4"
+				className="hidden"
+			/>
 		</div>
 	);
 }

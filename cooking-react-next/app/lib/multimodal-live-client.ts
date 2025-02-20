@@ -303,8 +303,8 @@ export class MultimodalLiveClient extends EventEmitter<MultimodalLiveClientEvent
 				turnComplete,
 			}
 		};
-		console.log('[send client content request]');
-		console.log(parts);
+		// console.log('[send client content request]');
+		// console.log(parts);
 		this._sendDirect(clientContentRequest);
 		this.log(`client.send`, clientContentRequest);
 	}
