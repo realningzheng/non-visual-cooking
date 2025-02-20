@@ -648,8 +648,9 @@ export default function WorkFlow(props: WorkFlowProps) {
         if (isConnected) {
             intervalId = setInterval(() => {
                 const FunctionCallResponses = FunctionCallResponsesRef.current;
-                liveAPIClient.send([{ text: repeatingPrompt + FunctionCallResponses.join("\n") }]);
+                console.log('[liveAPI function call responses]');
                 console.log(FunctionCallResponses);
+                liveAPIClient.send([{ text: repeatingPrompt + FunctionCallResponses.join("\n") }]);
             }, INTERVAL_MS);
         }
 

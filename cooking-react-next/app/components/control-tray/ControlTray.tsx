@@ -75,7 +75,6 @@ function ControlTray(props: ControlTrayProps) {
 	const updateFunctionCallResponses = (response: any) => {
 		props.setFunctionCallResponses((prevResponses: any[]) => {
 			const updatedResponses = [...prevResponses, response];
-			console.log('Updated functionCallResponses:', updatedResponses); // Logs correct value
 			return updatedResponses;
 		});
 	};
@@ -157,7 +156,6 @@ function ControlTray(props: ControlTrayProps) {
 
 	useEffect(() => {
 		const onToolCall = (toolCall: ToolCall) => {
-			console.log(`got toolcall`, toolCall);
 			const fc = toolCall.functionCalls.find(
 				(fc) => fc.name === compareStreamWithReferenceVideoKnowledge.name,
 			);
