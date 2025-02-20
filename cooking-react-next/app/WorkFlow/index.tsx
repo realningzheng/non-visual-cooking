@@ -639,8 +639,8 @@ export default function WorkFlow(props: WorkFlowProps) {
             "3. the detailed description of visible food, ingredients, kitchenware and their states. \n" +
             "4. the description of cooking-related sounds in the scene. \n" +
             "5. clear, actionable guidance when issues found, based on reference knowledge. \n" +
-            "A procedure is a high-level cooking activity like 'Preparing Burger Sauce', 'Cooking Beef Patties', 'Assembling Burger'. " +
-            "A step is a specific action like 'Mixing mayonnaise with chopped pickles', 'Forming ground beef into 4-ounce patties', 'Toasting burger buns until golden brown'. " +
+            "A procedure is a high-level cooking activity like 'Preparing Burger Sauce', 'Cooking Beef Patties', 'Assembling Burger'. \n" +
+            "A step is a specific action like 'Mixing mayonnaise with chopped pickles', 'Forming ground beef into 4-ounce patties', 'Toasting burger buns until golden brown'. \n\n" +
             "<Previous observations for context>:\n";
 
         let intervalId: NodeJS.Timeout | null = null;
