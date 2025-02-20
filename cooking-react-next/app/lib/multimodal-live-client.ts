@@ -301,7 +301,7 @@ export class MultimodalLiveClient extends EventEmitter<MultimodalLiveClientEvent
 			clientContent: {
 				turns: [content],
 				turnComplete,
-			},
+			}
 		};
 		console.log('[send client content request]');
 		console.log(parts);

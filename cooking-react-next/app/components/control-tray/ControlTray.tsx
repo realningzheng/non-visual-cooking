@@ -27,8 +27,10 @@ import { useWebcam } from "../../hooks/use-webcam";
 import { AudioRecorder } from "../../lib/audio-recorder";
 import AudioPulse from "../audio-pulse/AudioPulse";
 import { systemPromptEventDetection, systemPromptDefault } from "../../prompt";
+import { ToolCall } from "../../multimodal-live-types";
 // import { getPromptForPossibleNextEvents } from "../../WorkFlow/stateMachine";
-
+import { compareStreamWithReferenceVideoKnowledge } from "@/app/hooks/use-live-api";
+import { set } from "lodash";
 
 export type ControlTrayProps = {
 	videoRef: RefObject<HTMLVideoElement>;
@@ -41,6 +43,8 @@ export type ControlTrayProps = {
 	setCurrentState: (state: number) => void;
 	connectConversation: () => Promise<void>;
 	disconnectConversation: () => Promise<void>;
+	videoKnowledgeInput: string;
+	setFunctionCallResponses: (response: any) => void;
 };
 
 type MediaStreamButtonProps = {
@@ -64,6 +68,40 @@ function ControlTray(props: ControlTrayProps) {
 	const connectButtonRef = useRef<HTMLButtonElement>(null);
 	const audioChunks = useRef<string[]>([]);
 
+	const [videoFile, setVideoFile] = useState<File | null>(null);	// video input (for testing)
+	const videoURL = useRef<string | null>(null);
+
+	const updateFunctionCallResponses = (response: any) => {
+		props.setFunctionCallResponses((prevResponses: any[]) => {
+			const updatedResponses = [...prevResponses, response];
+			console.log('Updated functionCallResponses:', updatedResponses); // Logs correct value
+			return updatedResponses;
+		});
+	};
+
+
+	const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+		const file = event.target.files?.[0];
+		if (file && file.type === "video/mp4") {
+			// Revoke previous object URL to free memory
+			if (videoURL.current) {
+				URL.revokeObjectURL(videoURL.current);
+			}
+
+			videoURL.current = URL.createObjectURL(file);
+			setVideoFile(file);
+		} else {
+			alert("Please upload an MP4 video file.");
+		}
+	};
+	useEffect(() => {
+		if (videoFile && props.videoRef.current) {
+			props.videoRef.current.src = URL.createObjectURL(videoFile);
+			props.videoRef.current.load();
+			props.videoRef.current.play();
+		}
+	}, [videoFile]);
+
 
 	const {
 		client: liveAPIClient,
@@ -81,23 +119,51 @@ function ControlTray(props: ControlTrayProps) {
 		liveAPISetConfig({
 			...liveAPIConfig,
 			generationConfig: {
+				...liveAPIConfig.generationConfig,
 				responseModalities: "text"
 			},
 			systemInstruction: {
-				parts: [
-					{
-						text:
-							`You are an helpful assistant describe the visual scene in detail. 
-							Pay attention to the main objects in the scene and their relative positions.
-							Also pay attention to the actions of the people in the scene if any.
-							Go straight to the point and do not use any other word such as "here is" or "this is"
-							`,
-					},
-				],
-			},
+				parts: [{
+					text: `You are an AI cooking assistant analyzing real-time cooking procedures from a video stream. 
+					Your high-levelgoal is to analyze the current video stream and compare it with the reference cooking knowledge in the system context given after <VIDEO KNOWLEDGE>.
+					<VIDEO KNOWLEDGE>
+					${props.videoKnowledgeInput}
+
+					ROLE:
+					- Monitor cooking activities in real-time video stream
+					- Compare against reference cooking knowledge
+					- Identify deviations from correct procedures
+					- Provide immediate, actionable feedback
+
+					RESPONSE GUIDELINES:
+					- Be precise and concise
+					- Prioritize critical safety and quality issues
+					- Consider both visual and audio inputs
+
+					User will also provided previous responses from you as context after <Previous observations for context>
+					`
+				}]
+			}
 		});
+		console.log('liveAPIConfig', liveAPIConfig)
 	}, [liveAPISetConfig]);
 
+	useEffect(() => {
+		const onToolCall = (toolCall: ToolCall) => {
+			console.log(`got toolcall`, toolCall);
+			const fc = toolCall.functionCalls.find(
+				(fc) => fc.name === compareStreamWithReferenceVideoKnowledge.name,
+			);
+			if (fc) {
+				updateFunctionCallResponses(fc.args);
+			}
+		};
+
+		liveAPIClient.on("toolcall", onToolCall);
+		return () => {
+			liveAPIClient.off("toolcall", onToolCall);
+		};
+	}, [liveAPIClient]);
 
 	useEffect(() => {
 		document.documentElement.style.setProperty(
@@ -129,6 +195,33 @@ function ControlTray(props: ControlTrayProps) {
 		};
 	}, [liveAPIConnected, liveAPIClient, muted, audioRecorder]);
 
+	// Function to send video frame
+	function sendVideoFrame() {
+		const video = props.videoRef.current;
+		const canvas = renderCanvasRef.current;
+
+		// if (!video || !canvas || !activeVideoStream) {
+		// 	return;
+		// }
+		if (!video || !canvas || (!activeVideoStream && (video.paused || video.ended))) {
+			return;
+		}
+
+		const ctx = canvas.getContext("2d")!;
+		canvas.width = video.videoWidth * 0.25;
+		canvas.height = video.videoHeight * 0.25;
+		if (canvas.width + canvas.height > 0) {
+			console.log('send video frame')
+			ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+			const base64 = canvas.toDataURL("image/jpeg", 1.0);
+			const data = base64.slice(base64.indexOf(",") + 1, Infinity);
+			liveAPIClient.sendRealtimeInput([{ mimeType: "image/jpeg", data }]);
+		}
+		if (liveAPIConnected) {
+			window.setTimeout(sendVideoFrame, 1000 / 0.5);
+			// videoTimeoutId = window.setTimeout(sendVideoFrame, 1000 / 0.5);
+		}
+	}
 
 	/** This hook frequently sends video frames to the multimodal state client */
 	useEffect(() => {
@@ -136,8 +229,8 @@ function ControlTray(props: ControlTrayProps) {
 			props.videoRef.current.srcObject = activeVideoStream;
 		}
 
-		let videoTimeoutId = -1;
-		let audioTimeoutId = -1;
+		// let videoTimeoutId = -1;
+		// let audioTimeoutId = -1;
 
 		// Function to send audio data
 		// function sendAudioData() {
@@ -152,29 +245,6 @@ function ControlTray(props: ControlTrayProps) {
 		// 	}
 		// }
 
-		// Function to send video frame
-		function sendVideoFrame() {
-			const video = props.videoRef.current;
-			const canvas = renderCanvasRef.current;
-
-			if (!video || !canvas || !activeVideoStream) {
-				return;
-			}
-
-			const ctx = canvas.getContext("2d")!;
-			canvas.width = video.videoWidth * 0.25;
-			canvas.height = video.videoHeight * 0.25;
-			if (canvas.width + canvas.height > 0) {
-				console.log('send video frame')
-				ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-				const base64 = canvas.toDataURL("image/jpeg", 1.0);
-				const data = base64.slice(base64.indexOf(",") + 1, Infinity);
-				liveAPIClient.sendRealtimeInput([{ mimeType: "image/jpeg", data }]);
-			}
-			if (liveAPIConnected) {
-				videoTimeoutId = window.setTimeout(sendVideoFrame, 1000 / 0.5);
-			}
-		}
 
 		// Start both video and audio sending if connected
 		if (liveAPIConnected) {
@@ -184,13 +254,29 @@ function ControlTray(props: ControlTrayProps) {
 			}
 		}
 
-		// Cleanup on unmount or dependency change
-		return () => {
-			clearTimeout(videoTimeoutId);
-			clearTimeout(audioTimeoutId);
-		};
+		// // Cleanup on unmount or dependency change
+		// return () => {
+		// 	clearTimeout(videoTimeoutId);
+		// 	clearTimeout(audioTimeoutId);
+		// };
 	}, [liveAPIConnected, activeVideoStream, liveAPIClient, props.videoRef, muted]);
 
+	useEffect(() => {
+		const video = props.videoRef.current;
+
+		if (!video) return;
+
+		const startSendingFrames = () => {
+			console.log("Video started playing");
+			sendVideoFrame(); // Start capturing frames
+		};
+
+		video.addEventListener("play", startSendingFrames);
+
+		return () => {
+			video.removeEventListener("play", startSendingFrames);
+		};
+	}, [props.videoRef, liveAPIConnected]);
 
 	//handler for swapping from one video-stream to the next
 	const changeStreams = (next?: UseMediaStreamResult) => async () => {
@@ -230,60 +316,66 @@ function ControlTray(props: ControlTrayProps) {
 
 
 	return (
-		<div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-base-200 rounded-full shadow-lg px-6 py-3">
-			<canvas className="hidden" ref={renderCanvasRef} />
-			<div className="flex items-center gap-2">
-				<div className={cn("flex items-center gap-2", { "opacity-50": !liveAPIConnected })}>
-					<button
-						className={cn("btn btn-sm btn-circle", {
-							"btn-error": !muted && liveAPIConnected,
-							"btn-ghost": muted
-						})}
-						onClick={() => setMuted(!muted)}
-					>
-						{!muted ? <BiMicrophone size={16} /> : <BiMicrophoneOff size={16} />}
-					</button>
+		<div>
+			<div className="fixed bottom-12 left-1/2 -translate-x-1/2 bg-base-200 shadow-lg px-4 py-2 rounded-lg flex flex-col items-center">
+				<input type="file" accept="video/mp4" onChange={handleFileChange} className="mb-2" />
+				<video ref={props.videoRef} controls width="200" className="rounded-md shadow-md" />
+			</div>
+			<div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-base-200 rounded-full shadow-lg px-6 py-3">
+				<canvas className="hidden" ref={renderCanvasRef} />
+				<div className="flex items-center gap-2">
+					<div className={cn("flex items-center gap-2", { "opacity-50": !liveAPIConnected })}>
+						<button
+							className={cn("btn btn-sm btn-circle", {
+								"btn-error": !muted && liveAPIConnected,
+								"btn-ghost": muted
+							})}
+							onClick={() => setMuted(!muted)}
+						>
+							{!muted ? <BiMicrophone size={16} /> : <BiMicrophoneOff size={16} />}
+						</button>
 
-					<div className="btn btn-sm btn-circle btn-ghost no-animation">
-						<AudioPulse volume={liveAPIVolume} active={liveAPIConnected} hover={false} />
+						<div className="btn btn-sm btn-circle btn-ghost no-animation">
+							<AudioPulse volume={liveAPIVolume} active={liveAPIConnected} hover={false} />
+						</div>
+
+						{props.supportsVideo && (
+							<>
+								<button
+									className={cn("btn btn-sm btn-circle", {
+										"btn-neutral": screenCapture.isStreaming,
+										"btn-ghost": !screenCapture.isStreaming
+									})}
+									onClick={screenCapture.isStreaming ? changeStreams() : changeStreams(screenCapture)}
+								>
+									{screenCapture.isStreaming ? <BiStopCircle size={16} /> : <BiDesktop size={16} />}
+								</button>
+								<button
+									className={cn("btn btn-sm btn-circle", {
+										"btn-neutral": webcam.isStreaming,
+										"btn-ghost": !webcam.isStreaming
+									})}
+									onClick={webcam.isStreaming ? changeStreams() : changeStreams(webcam)}
+								>
+									{webcam.isStreaming ? <BiVideoOff size={16} /> : <BiVideo size={16} />}
+								</button>
+							</>
+						)}
+						{props.children}
 					</div>
 
-					{props.supportsVideo && (
-						<>
-							<button
-								className={cn("btn btn-sm btn-circle", {
-									"btn-neutral": screenCapture.isStreaming,
-									"btn-ghost": !screenCapture.isStreaming
-								})}
-								onClick={screenCapture.isStreaming ? changeStreams() : changeStreams(screenCapture)}
-							>
-								{screenCapture.isStreaming ? <BiStopCircle size={16} /> : <BiDesktop size={16} />}
-							</button>
-							<button
-								className={cn("btn btn-sm btn-circle", {
-									"btn-neutral": webcam.isStreaming,
-									"btn-ghost": !webcam.isStreaming
-								})}
-								onClick={webcam.isStreaming ? changeStreams() : changeStreams(webcam)}
-							>
-								{webcam.isStreaming ? <BiVideoOff size={16} /> : <BiVideo size={16} />}
-							</button>
-						</>
-					)}
-					{props.children}
-				</div>
-
-				<div className="flex items-center gap-2 ml-2 pl-2 border-l border-base-300">
-					<button
-						ref={connectButtonRef}
-						className={cn("btn btn-sm btn-circle", {
-							"btn-neutral": liveAPIConnected,
-							"btn-ghost": !liveAPIConnected
-						})}
-						onClick={liveAPIConnected ? disconnectConversation : connectConversation}
-					>
-						{liveAPIConnected ? <BiPause size={16} /> : <BiPlay size={16} />}
-					</button>
+					<div className="flex items-center gap-2 ml-2 pl-2 border-l border-base-300">
+						<button
+							ref={connectButtonRef}
+							className={cn("btn btn-sm btn-circle", {
+								"btn-neutral": liveAPIConnected,
+								"btn-ghost": !liveAPIConnected
+							})}
+							onClick={liveAPIConnected ? disconnectConversation : connectConversation}
+						>
+							{liveAPIConnected ? <BiPause size={16} /> : <BiPlay size={16} />}
+						</button>
+					</div>
 				</div>
 			</div>
 		</div>

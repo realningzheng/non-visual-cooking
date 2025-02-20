@@ -59,6 +59,7 @@ interface WorkFlowProps {
 
 
 const openaiClient = new OpenAI({ apiKey: secret.OPENAI_KEY, dangerouslyAllowBrowser: true });
+const INTERVAL_MS = 5000;
 
 
 // Update the interface for the interaction memory items
@@ -389,26 +390,48 @@ export default function WorkFlow(props: WorkFlowProps) {
     /** Handle realtime video stream response */
     /** Listen to event detection content stream */
     useEffect(() => {
-        // When turnComplete switches from true to false, reset the state
         if (!liveAPITurnComplete && prevEventTurnComplete.current) {
             setLiveClientResponse('');
         }
-
-        // Only process content when we're in the middle of a turn
         if (liveAPIContent.length > 0 && !liveAPITurnComplete) {
             setLiveClientResponse(prev => {
-                // Check if content is already at the end of prev
                 if (!prev.endsWith(liveAPIContent)) {
-                    return prev + liveAPIContent;
+                    // Avoid duplicate entries
+                    // setFunctionCallResponses(prevResponses => {
+                    //     if (!prevResponses.includes(liveAPIContent)) {
+                    //         // Check if the previous response ends with space and liveAPIContent starts with space
+                    //         if (prevResponses.length > 0 && liveAPIContent.startsWith(" ")) {
+                    //             // Join the last response with liveAPIContent
+                    //             const updatedResponses = [...prevResponses];
+                    //             updatedResponses[updatedResponses.length - 1] = updatedResponses[updatedResponses.length - 1] + liveAPIContent;
+                    //             return updatedResponses;
+                    //         } else {
+                    //             return [...prevResponses, liveAPIContent];
+                    //         }
+                    //     }
+                    //     return prevResponses;
+                    // });
+    
+                    return prev + liveAPIContent; // Add space to prevent unwanted newlines
                 }
                 return prev;
             });
         }
-
-        // Update the ref for next render
         prevEventTurnComplete.current = liveAPITurnComplete;
     }, [liveAPIContent, liveAPITurnComplete]);
 
+    /** Save function call responses to a file (for testing) */
+    const [FunctionCallResponses, setFunctionCallResponses] = useState<string[]>([]);
+    const saveResponsesToFile = () => {
+        const blob = new Blob([JSON.stringify(FunctionCallResponses, null, 2)], { type: "application/json" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "live_api_responses.json"; 
+        a.click();
+        URL.revokeObjectURL(a.href);
+    };
+
+    
 
     // Handle user transcript update
     useEffect(() => {
@@ -599,6 +622,45 @@ export default function WorkFlow(props: WorkFlowProps) {
 
     // Add a reference to the file input
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const FunctionCallResponsesRef = useRef<string[]>([]);
+
+    // liveAPI: system automatic trigger
+    useEffect(() => {
+        const repeatingPrompt = 
+            "Analyze the current video stream and compare it with the reference cooking knowledge in the system context. " +
+            "Using the compareStreamWithReferenceVideoKnowledge function, to decide: \n" +
+            "1. if the current scene shows a valid cooking step from reference knowledge. \n" +
+            "2. if the current step is executed correctly. \n" +
+            "3. if the user is missing any steps from the current procedure. \n" +
+            "4. if the user has progressed to the next procedure. \n" +
+            "And analyze the following aspects: \n" +
+            "1. the current cooking procedure being performed at the current time. \n" +
+            "2. the precise description of the current step being performed within the current procedure. \n" +
+            "3. the detailed description of visible food, ingredients, kitchenware and their states. \n" +
+            "4. the description of cooking-related sounds in the scene. \n" +
+            "5. clear, actionable guidance when issues found, based on reference knowledge. \n" +
+            "A procedure is a high-level cooking activity like 'Preparing Burger Sauce', 'Cooking Beef Patties', 'Assembling Burger'. " +
+            "A step is a specific action like 'Mixing mayonnaise with chopped pickles', 'Forming ground beef into 4-ounce patties', 'Toasting burger buns until golden brown'. " +
+            "<Previous observations for context>:\n";
+
+        let intervalId: NodeJS.Timeout | null = null;
+
+        if (isConnected) {
+            intervalId = setInterval(() => {
+                const FunctionCallResponses = FunctionCallResponsesRef.current;
+                liveAPIClient.send([{ text: repeatingPrompt + FunctionCallResponses.join("\n") }]);
+                console.log(FunctionCallResponses);
+            }, INTERVAL_MS);
+        }
+
+        return () => {
+            if (intervalId) clearInterval(intervalId);
+        };
+    }, [isConnected, props.videoKnowledgeInput]); 
+    
+    useEffect(() => {
+        FunctionCallResponsesRef.current = FunctionCallResponses;
+    }, [FunctionCallResponses]);
 
     return (
         <Stack spacing={1}>
@@ -789,7 +851,9 @@ export default function WorkFlow(props: WorkFlowProps) {
                         <div className='text-lg font-bold'>Live visual client</div>
                     </div>
                     {liveClientResponse}
+                    <button onClick={saveResponsesToFile}>Save Responses</button>
                 </>
+                
             }
 
             {isConnected &&
@@ -970,6 +1034,8 @@ export default function WorkFlow(props: WorkFlowProps) {
                 setCurrentState={props.setCurrentState}
                 connectConversation={connectConversation}
                 disconnectConversation={disconnectConversation}
+                videoKnowledgeInput={props.videoKnowledgeInput}
+                setFunctionCallResponses={setFunctionCallResponses}
             />
         </Stack >
     );
