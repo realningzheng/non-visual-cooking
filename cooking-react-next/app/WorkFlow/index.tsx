@@ -535,8 +535,6 @@ export default function WorkFlow(props: WorkFlowProps) {
         if (isConnected) {
             intervalId = setInterval(() => {
                 const responses = autoAgentResponseMemoryKvRef.current;
-                console.log('[liveAPI function call responses]');
-                console.log(responses[responses.length - 1]);
                 liveAPIClient.send([{ text: repeatingPrompt + responses.map(item => JSON.stringify(item)).join("\n") }]);
             }, INTERVAL_MS);
         }
@@ -548,6 +546,19 @@ export default function WorkFlow(props: WorkFlowProps) {
 
     useEffect(() => {
         autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
+        const responses = autoAgentResponseMemoryKvRef.current;
+        const lastResponse = responses[responses.length - 1];
+        console.log('[liveAPI function call response]');
+        // console.log(lastResponse);
+        if (lastResponse && lastResponse.isValidCookingStep) {
+            if (lastResponse.isMissingSteps) {
+                console.log("Missing steps detected. Provide guidance: " + lastResponse.improvementInstructions);
+            } else if (!lastResponse.isStepCorrect) {
+                console.log("Incorrect step detected. Provide guidance: " + lastResponse.improvementInstructions);
+            } else if (lastResponse.hasProgressedToProcedure) {
+                console.log("User has progressed to the next procedure: " + lastResponse.procedureAnalysis);
+            }
+        }
     }, [autoAgentResponseMemoryKv]);
 
     // Add this near your other refs
