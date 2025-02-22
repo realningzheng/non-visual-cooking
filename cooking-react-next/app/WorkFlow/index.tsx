@@ -74,7 +74,7 @@ export interface AutoAgentResponseItem {
     timeMS: number;
     isValidCookingStep: boolean;
     isStepCorrect: boolean;
-    isMissingSteps: boolean;
+    isCorrectProcedureOrder: boolean;
     hasProgressedToProcedure: boolean;
     procedureAnalysis: string;
     stepAnalysis: string;
@@ -528,6 +528,17 @@ export default function WorkFlow(props: WorkFlowProps) {
             "5. clear, actionable guidance when issues found, based on reference knowledge. \n" +
             "A procedure is a high-level cooking activity like 'Preparing Burger Sauce', 'Cooking Beef Patties', 'Assembling Burger'. \n" +
             "A step is a specific action like 'Mixing mayonnaise with chopped pickles', 'Forming ground beef into 4-ounce patties', 'Toasting burger buns until golden brown'. \n\n" +
+            // Hardcoded correct procedures sequence
+            "Correct procedure sequence: \n" +
+            "Divide the blue cheese into pieces\n" + 
+            "Add salt, black pepper, and flavored salt to ground chopped meat and mix\n" + 
+            "Place the cheese inside the meat\n" +
+            "Grill the patties\n" + 
+            "Add mayonnaise, red pepper, white wine vinegar, and pepper to a food processor and process it\n" +
+            "Flip the burger patties on the grill and cook\n" +
+            "Slice the tomatoes, spread the sauce on the burger base, and place tomato and spinach on top\n" +
+            "Place the patties in between the buns\n\n" + 
+
             "<Previous observations for context>:\n";
 
         let intervalId: NodeJS.Timeout | null = null;
@@ -535,7 +546,18 @@ export default function WorkFlow(props: WorkFlowProps) {
         if (isConnected) {
             intervalId = setInterval(() => {
                 const responses = autoAgentResponseMemoryKvRef.current;
-                liveAPIClient.send([{ text: repeatingPrompt + responses.map(item => JSON.stringify(item)).join("\n") }]);
+                if (responses.length === 0) {
+                    liveAPIClient.send([{ text: repeatingPrompt + "No previous action: just started cooking." }]);
+                } else {
+                    const lastResponseInfo = 
+                        "Procedure analysis: " + responses[responses.length - 1].procedureAnalysis + "\n" +
+                        "Step analysis: " + responses[responses.length - 1].stepAnalysis + "\n" +
+                        "Food and kitchenware analysis: " + responses[responses.length - 1].foodAndKitchenwareAnalysis + "\n" +
+                        "Audio analysis: " + responses[responses.length - 1].audioAnalysis + "\n";
+                    // console.log({ text: repeatingPrompt + lastResponseInfo });
+                    liveAPIClient.send([{ text: repeatingPrompt + lastResponseInfo }]);
+                    // liveAPIClient.send([{ text: repeatingPrompt + responses.map(item => JSON.stringify(item)).join("\n") }]);
+                }
             }, INTERVAL_MS);
         }
 
@@ -551,8 +573,8 @@ export default function WorkFlow(props: WorkFlowProps) {
         console.log('[liveAPI function call response]');
         // console.log(lastResponse);
         if (lastResponse && lastResponse.isValidCookingStep) {
-            if (lastResponse.isMissingSteps) {
-                console.log("Missing steps detected. Provide guidance: " + lastResponse.improvementInstructions);
+            if (!lastResponse.isCorrectProcedureOrder) {
+                console.log("Incorrect step order detected. Provide guidance: " + lastResponse.improvementInstructions);
             } else if (!lastResponse.isStepCorrect) {
                 console.log("Incorrect step detected. Provide guidance: " + lastResponse.improvementInstructions);
             } else if (lastResponse.hasProgressedToProcedure) {
