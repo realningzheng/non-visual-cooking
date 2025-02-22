@@ -545,6 +545,8 @@ export default function WorkFlow(props: WorkFlowProps) {
 
         if (isConnected) {
             intervalId = setInterval(() => {
+                if (props.currentState != 0) return;
+
                 const responses = autoAgentResponseMemoryKvRef.current;
                 if (responses.length === 0) {
                     liveAPIClient.send([{ text: repeatingPrompt + "No previous action: just started cooking." }]);
@@ -564,7 +566,7 @@ export default function WorkFlow(props: WorkFlowProps) {
         return () => {
             if (intervalId) clearInterval(intervalId);
         };
-    }, [isConnected, props.videoKnowledgeInput]);
+    }, [isConnected, props.currentState, props.videoKnowledgeInput]);
 
     useEffect(() => {
         autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
@@ -575,8 +577,10 @@ export default function WorkFlow(props: WorkFlowProps) {
         if (lastResponse && lastResponse.isValidCookingStep) {
             if (!lastResponse.isCorrectProcedureOrder) {
                 console.log("Incorrect step order detected. Provide guidance: " + lastResponse.improvementInstructions);
+                props.setCurrentState(3);
             } else if (!lastResponse.isStepCorrect) {
                 console.log("Incorrect step detected. Provide guidance: " + lastResponse.improvementInstructions);
+                props.setCurrentState(3);
             } else if (lastResponse.hasProgressedToProcedure) {
                 console.log("User has progressed to the next procedure: " + lastResponse.procedureAnalysis);
             }
