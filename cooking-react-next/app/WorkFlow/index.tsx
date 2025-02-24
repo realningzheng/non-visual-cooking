@@ -56,7 +56,8 @@ interface WorkFlowProps {
 
 
 const openaiClient = new OpenAI({ apiKey: secret.OPENAI_KEY, dangerouslyAllowBrowser: true });
-const INTERVAL_MS = 4000;
+const VISUAL_ANALYZE_INTERVAL_MS = 4000;
+const AUTO_TIMEOUT_MS = 5000;
 
 
 // interaction memory items
@@ -609,7 +610,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                     liveAPIClient.send([{ text: repeatingPrompt + lastResponseInfo }]);
                     // liveAPIClient.send([{ text: repeatingPrompt + responses.map(item => JSON.stringify(item)).join("\n") }]);
                 }
-            }, INTERVAL_MS);
+            }, VISUAL_ANALYZE_INTERVAL_MS);
         }
 
         return () => {
@@ -659,6 +660,28 @@ export default function WorkFlow(props: WorkFlowProps) {
             autoResponsesRef.current.scrollTop = autoResponsesRef.current.scrollHeight;
         }
     }, [autoAgentResponseMemoryKv]); // Scroll when responses update
+
+    // Add timeout to return to initial state after 5 seconds of inactivity
+    useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
+
+        // Only set timeout when in an active state other than 0 or -1
+        if (props.currentState > 0) {
+            timeoutId = setTimeout(() => {
+                console.log("[Timeout] No user response in 5 seconds, returning to initial state");
+                props.setVoiceInputTranscript('');
+                props.setStateMachineEvent(4); // Trigger event 4 (user agreement)
+                props.setStateTransitionToggle(!props.stateTransitionToggle);
+            }, AUTO_TIMEOUT_MS);
+        }
+
+        // Clear timeout when state changes or component unmounts
+        return () => {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+        };
+    }, [props.currentState, props.voiceInputTranscript]);
 
     return (
         <Stack spacing={1}>
