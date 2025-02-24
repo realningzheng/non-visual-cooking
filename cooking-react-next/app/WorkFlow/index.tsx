@@ -511,8 +511,33 @@ export default function WorkFlow(props: WorkFlowProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const autoAgentResponseMemoryKvRef = useRef<AutoAgentResponseItem[]>([]);
 
+    const extractProcedureSequence = (videoKnowledge: string): string[] => {
+        try {
+            const knowledge = JSON.parse(videoKnowledge);
+            const procedures = new Set<string>();
+            
+            // Extract unique non-empty procedures
+            knowledge.forEach((item: any) => {
+                if (item.procedure_description && item.procedure_description.trim().length > 0) {
+                    procedures.add(item.procedure_description.trim());
+                }
+            });
+
+            // Convert to array and filter out duplicates
+            return Array.from(procedures).filter(Boolean);
+        } catch (error) {
+            console.error('Error parsing video knowledge:', error);
+            return [];
+        }
+    };
+
     // liveAPI: system automatic trigger
     useEffect(() => {
+        const procedures = extractProcedureSequence(props.videoKnowledgeInput);
+        const numberedProcedures = procedures.length > 0 
+            ? procedures.map((proc, idx) => `${idx + 1}. ${proc}`).join('\n')
+            : "No procedures found in video knowledge";
+
         const repeatingPrompt =
             "Analyze the current video stream and compare it with the reference cooking knowledge in the system context. " +
             "Using the compareStreamWithReferenceVideoKnowledge function, to decide: \n" +
@@ -528,17 +553,9 @@ export default function WorkFlow(props: WorkFlowProps) {
             "5. clear, actionable guidance when issues found, based on reference knowledge. \n" +
             "A procedure is a high-level cooking activity like 'Preparing Burger Sauce', 'Cooking Beef Patties', 'Assembling Burger'. \n" +
             "A step is a specific action like 'Mixing mayonnaise with chopped pickles', 'Forming ground beef into 4-ounce patties', 'Toasting burger buns until golden brown'. \n\n" +
-            // Hardcoded correct procedures sequence
+            // Dynamic numbered procedure sequence from video knowledge
             "Correct procedure sequence: \n" +
-            "Divide the blue cheese into pieces\n" + 
-            "Add salt, black pepper, and flavored salt to ground chopped meat and mix\n" + 
-            "Place the cheese inside the meat\n" +
-            "Grill the patties\n" + 
-            "Add mayonnaise, red pepper, white wine vinegar, and pepper to a food processor and process it\n" +
-            "Flip the burger patties on the grill and cook\n" +
-            "Slice the tomatoes, spread the sauce on the burger base, and place tomato and spinach on top\n" +
-            "Place the patties in between the buns\n\n" + 
-
+            numberedProcedures + "\n\n" +
             "<Previous observations for context>:\n";
 
         let intervalId: NodeJS.Timeout | null = null;
