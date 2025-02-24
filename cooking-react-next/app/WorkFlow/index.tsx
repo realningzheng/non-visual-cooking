@@ -35,7 +35,7 @@ interface WorkFlowProps {
     setVoiceInputTranscript: (input: string) => void;
     setVideoKnowledgeInput: (input: string) => void;
     setRealityImageBase64: (input: string) => void;
-    setStateFunctionExeRes: (input: string) => void;
+    setAgentResponse: (input: string) => void;
     setIsProcessing: (input: boolean) => void;
     setTtsSpeed: (input: number) => void;
     setSegmentedVideoPlaying: (input: boolean) => void;
@@ -46,7 +46,7 @@ interface WorkFlowProps {
     currentState: number;
     stateMachineEvent: number;
     realityImageBase64: string;
-    stateFunctionExeRes: string;
+    agentResponse: string;
     isProcessing: boolean;
     ttsSpeed: number;
     replaySignal: boolean;
@@ -90,6 +90,10 @@ export default function WorkFlow(props: WorkFlowProps) {
     const clientRef = useRef<RealtimeClient>(new RealtimeClient({ apiKey: secret.OPENAI_KEY, dangerouslyAllowAPIKeyInBrowser: true }));
     const startTimeRef = useRef<string>(new Date().toISOString());
     const conversationRef = useRef<HTMLDivElement>(null);
+    const autoResponsesRef = useRef<HTMLDivElement>(null);
+    // Add a reference to the file input
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const autoAgentResponseMemoryKvRef = useRef<AutoAgentResponseItem[]>([]);
     const [selectedFileName, setSelectedFileName] = useState<string>('');
     const [isConnected, setIsConnected] = useState(false);
     const [items, setItems] = useState<ItemType[]>([]);
@@ -153,6 +157,7 @@ export default function WorkFlow(props: WorkFlowProps) {
         console.log('[disconnectConversation]');
         props.setStateMachineEvent(-1);
         props.setCurrentState(-1);
+        props.setVoiceInputTranscript('')
         setItems([]);
         setInteractionMemoryKv([]);
         setAutoAgentResponseMemoryKv([]);
@@ -392,6 +397,25 @@ export default function WorkFlow(props: WorkFlowProps) {
         }
     }, [items]);
 
+    /** Handle state transition */
+    useEffect(() => {
+        const executeNextState = async () => {
+            if (props.stateMachineEvent >= 0) {
+                if (props.stateMachineEvent in stateMachine[props.currentState]) {
+                    await gotoNextState(
+                        props.currentState,
+                        props.stateMachineEvent,
+                        props.voiceInputTranscript,
+                        props.videoKnowledgeInput
+                    );
+                    props.setCurrentState(
+                        stateMachine[props.currentState][props.stateMachineEvent]
+                    );
+                }
+            }
+        };
+        executeNextState();
+    }, [props.stateTransitionToggle, props.videoKnowledgeInput]);
 
     /** Handle state transition */
     const gotoNextState = async (
@@ -401,7 +425,8 @@ export default function WorkFlow(props: WorkFlowProps) {
         videoKnowledgeInput: string
     ) => {
         if (event >= 0 && (event in stateMachine[statePrev])) {
-            if (event === 5) {              // handle replay previous interaction 
+            // handle replay previous interaction 
+            if (event === 5) {
                 let retrievedResponse = await repeatPreviousInteraction(
                     voiceInputTranscript,
                     interactionMemoryKv
@@ -413,8 +438,9 @@ export default function WorkFlow(props: WorkFlowProps) {
                 if (agentResponse) {
                     await playTTS(agentResponse, props.ttsSpeed);
                 }
-                props.setStateFunctionExeRes(JSON.stringify({ "response": agentResponse, "video_segment_index": videoSegmentIndex }));
-            } else if (event === 6) {       // handle replay segmented video
+                props.setAgentResponse(JSON.stringify({ "response": agentResponse, "video_segment_index": videoSegmentIndex }));
+                // handle replay segmented video
+            } else if (event === 6) {
                 let response = await getPlaySegmentedVideoFlag(voiceInputTranscript);
                 if (response.response === 0) {
                     props.setSegmentedVideoPlaying(false);
@@ -424,7 +450,31 @@ export default function WorkFlow(props: WorkFlowProps) {
                     props.setSegmentedVideoPlaying(true);
                     props.setReplaySignal(!props.replaySignal);
                 }
-            } else {
+                // user agrees (or system idle) and go back to state 0 (agent-initiated)
+            } else if (event === 4) {
+                props.setSegmentedVideoPlaying(false);
+                // store user response to interaction memory
+                setInteractionMemoryKv(prevList => [
+                    ...prevList,
+                    {
+                        index: interactionID,
+                        user_query: voiceInputTranscript,
+                    }
+                ]);
+                setInteractionID(prev => prev + 1);
+                // play auto agent response for event 10 and 12
+            } else if (event === 10 || event === 12) {
+                let responses = autoAgentResponseMemoryKvRef.current;
+                console.log('[ready to play auto agent response]');
+                let lastResponse = responses[responses.length - 1];
+                console.log('[last response]', lastResponse);
+                if (lastResponse.hasProgressedToProcedure) {
+                    await playTTS(lastResponse.procedureAnalysis, props.ttsSpeed);
+                } else {
+                    await playTTS(lastResponse.improvementInstructions, props.ttsSpeed);
+                }
+            }
+            else {
                 props.setSegmentedVideoPlaying(false);
                 const realityImageBase64 = await props.captureRealityFrame();
                 props.setIsProcessing(true);
@@ -443,9 +493,8 @@ export default function WorkFlow(props: WorkFlowProps) {
                     ? JSON.stringify(stateFunctionExeRes, null, 2)
                     : String(stateFunctionExeRes);
 
-                // @TODO: need to do a better job for distinguishing between user / agent response
-                if (stringifiedResponse !== props.stateFunctionExeRes) {
-                    props.setStateFunctionExeRes(stringifiedResponse);
+                if (stringifiedResponse !== props.agentResponse) {
+                    props.setAgentResponse(stringifiedResponse);
                     // store user input and agent response
                     if (voiceInputTranscript.length > 0) {
                         if (typeof stateFunctionExeRes === 'object') {
@@ -460,7 +509,6 @@ export default function WorkFlow(props: WorkFlowProps) {
                             ]);
                             setInteractionID(prev => prev + 1);
                         }
-
                         // play the natural language response from the agent
                         if (typeof stateFunctionExeRes === 'object') {
                             await playTTS(String(stateFunctionExeRes.response), props.ttsSpeed);
@@ -473,21 +521,6 @@ export default function WorkFlow(props: WorkFlowProps) {
             }
         };
     }
-
-
-    /** Handle state transition */
-    useEffect(() => {
-        const executeNextState = async () => {
-            if (props.stateMachineEvent >= 0) {
-                if (props.voiceInputTranscript.length > 0 && (props.stateMachineEvent in stateMachine[props.currentState])) {
-                    await gotoNextState(props.currentState, props.stateMachineEvent, props.voiceInputTranscript, props.videoKnowledgeInput);
-                    props.setCurrentState(stateMachine[props.currentState][props.stateMachineEvent]);
-                }
-            }
-        };
-        executeNextState();
-    }, [props.stateTransitionToggle, props.videoKnowledgeInput]);
-
 
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -507,15 +540,14 @@ export default function WorkFlow(props: WorkFlowProps) {
         }
     };
 
-    // Add a reference to the file input
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const autoAgentResponseMemoryKvRef = useRef<AutoAgentResponseItem[]>([]);
-
     const extractProcedureSequence = (videoKnowledge: string): string[] => {
         try {
+            if (videoKnowledge.length === 0) {
+                return [];
+            }
             const knowledge = JSON.parse(videoKnowledge);
             const procedures = new Set<string>();
-            
+
             // Extract unique non-empty procedures
             knowledge.forEach((item: any) => {
                 if (item.procedure_description && item.procedure_description.trim().length > 0) {
@@ -534,7 +566,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     // liveAPI: system automatic trigger
     useEffect(() => {
         const procedures = extractProcedureSequence(props.videoKnowledgeInput);
-        const numberedProcedures = procedures.length > 0 
+        const numberedProcedures = procedures.length > 0
             ? procedures.map((proc, idx) => `${idx + 1}. ${proc}`).join('\n')
             : "No procedures found in video knowledge";
 
@@ -568,7 +600,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                 if (responses.length === 0) {
                     liveAPIClient.send([{ text: repeatingPrompt + "No previous action: just started cooking." }]);
                 } else {
-                    const lastResponseInfo = 
+                    const lastResponseInfo =
                         "Procedure analysis: " + responses[responses.length - 1].procedureAnalysis + "\n" +
                         "Step analysis: " + responses[responses.length - 1].stepAnalysis + "\n" +
                         "Food and kitchenware analysis: " + responses[responses.length - 1].foodAndKitchenwareAnalysis + "\n" +
@@ -585,29 +617,43 @@ export default function WorkFlow(props: WorkFlowProps) {
         };
     }, [isConnected, props.currentState, props.videoKnowledgeInput]);
 
+
+    // trigger state transition for event 10 and 12 when auto agent detects issues
     useEffect(() => {
-        autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
-        const responses = autoAgentResponseMemoryKvRef.current;
-        const lastResponse = responses[responses.length - 1];
-        console.log('[liveAPI function call response]');
-        // console.log(lastResponse);
-        if (lastResponse && lastResponse.isValidCookingStep) {
-            if (!lastResponse.isCorrectProcedureOrder) {
-                console.log("Incorrect step order detected. Provide guidance: " + lastResponse.improvementInstructions);
-                props.setCurrentState(3);
-            } else if (!lastResponse.isStepCorrect) {
-                console.log("Incorrect step detected. Provide guidance: " + lastResponse.improvementInstructions);
-                props.setCurrentState(3);
-            } else if (lastResponse.hasProgressedToProcedure) {
-                console.log("User has progressed to the next procedure: " + lastResponse.procedureAnalysis);
+        if (props.currentState === 0) {
+            autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
+            const responses = autoAgentResponseMemoryKvRef.current;
+            const lastResponse = responses[responses.length - 1];
+            // console.log('[liveAPI function call response]');
+            if (lastResponse?.isValidCookingStep) {
+                const hasInstructions = lastResponse.improvementInstructions.length > 0;
+                const needsCorrection = !lastResponse.isCorrectProcedureOrder || !lastResponse.isStepCorrect;
+
+                if (needsCorrection && hasInstructions) {
+                    console.log("[Instruction]: " + lastResponse.improvementInstructions);
+                    if (!lastResponse.isStepCorrect) {
+                        props.setStateMachineEvent(10); // 10: System automatically detects food state misalignment
+                    } else {
+                        props.setStateMachineEvent(12); // 12: System automatically detects missing previous steps
+                    }
+                    props.setAgentResponse(JSON.stringify({ "response": lastResponse.improvementInstructions }));
+                    // @TODO: debug only
+                    props.videoRef.current?.pause();
+                    props.setStateTransitionToggle(!props.stateTransitionToggle);
+                } else if (needsCorrection) {
+                    console.log("[Incorrect detected, but no instruction provided]");
+                }
+
+                if (lastResponse.hasProgressedToProcedure) {
+                    console.log("[new procedure]: " + lastResponse.procedureAnalysis);
+                    // props.setAgentResponse(JSON.stringify({ "response": lastResponse.procedureAnalysis }));
+                    // props.setStateTransitionToggle(!props.stateTransitionToggle);
+                }
             }
         }
     }, [autoAgentResponseMemoryKv]);
 
-    // Add this near your other refs
-    const autoResponsesRef = useRef<HTMLDivElement>(null);
-
-    // Add this effect to handle auto-scrolling
+    // Add this effect to handl e auto-scrolling
     useEffect(() => {
         if (autoResponsesRef.current) {
             autoResponsesRef.current.scrollTop = autoResponsesRef.current.scrollHeight;
@@ -731,152 +777,131 @@ export default function WorkFlow(props: WorkFlowProps) {
                 <p className={props.isProcessing ? 'text-gray-400' : ''}><span className='text-lg font-bold'>Current state:</span> {props.isProcessing && <span className="loading loading-dots loading-xs"></span>} {props.currentState} : {stateTranslator[Number(props.currentState)]}</p>
             </div>
 
-            {isConnected && (
-                <>
-                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: '20px', pt: '15px', gap: '10px' }}>
-                        {isConnected && canPushToTalk && (
-                            <button
-                                className={`btn btn-m ${isRecording ? 'btn-error' : 'btn-active'} 
+            <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: '20px', pt: '15px', gap: '10px' }}>
+                <button
+                    className={`btn btn-m ${isRecording ? 'btn-error' : 'btn-active'} 
                                     ${(!isConnected || !canPushToTalk) ? 'btn-disabled' : ''}`}
-                                onMouseDown={startRecording}
-                                onMouseUp={stopRecording}
-                                disabled={!isConnected || !canPushToTalk}
+                    onMouseDown={startRecording}
+                    onMouseUp={stopRecording}
+                    disabled={!isConnected || !canPushToTalk}
+                >
+                    {isRecording ? 'release to send' : 'push to talk'}
+                </button>
+                <input
+                    type="text"
+                    placeholder="User command. Press 'enter' to submit..."
+                    className="input input-bordered w-full"
+                    onChange={(e) => props.setVoiceInputTranscript(e.target.value)}
+                    value={props.voiceInputTranscript}
+                    onKeyDown={async (e) => {
+                        if (e.key === 'Enter') {
+                            let event = await asyncNextEventChooser(props.voiceInputTranscript, props.currentState);
+                            if (event >= 0 && (event in stateMachine[props.currentState])) {
+                                props.setStateMachineEvent(event);
+                                props.setStateTransitionToggle(!props.stateTransitionToggle);
+                            }
+                        }
+                    }}
+                />
+            </Box>
+
+            <div className='flex items-center gap-2'>
+                <div className='text-lg font-bold'>Agent response</div>
+                {props.currentState !== -1 && (props.isProcessing && <span className="loading loading-dots loading-lg"></span>)}
+            </div>
+            {props.currentState !== -1 && (
+                <p style={{ whiteSpace: 'pre-line' }}>
+                    {(() => {
+                        try {
+                            const parsed = typeof props.agentResponse === 'string'
+                                ? JSON.parse(props.agentResponse)
+                                : props.agentResponse;
+                            return parsed.response || props.agentResponse;
+                        } catch {
+                            return props.agentResponse;
+                        }
+                    })()}
+                </p>
+            )}
+            <div className="divider"></div>
+
+            <div className='flex items-center gap-2'>
+                <div className='text-lg font-bold'>Real-time visual agent responses</div>
+                <label
+                    className="btn btn-xs btn-outline cursor-pointer"
+                    onClick={saveResponsesToFile}
+                >
+                    Save
+                </label>
+            </div>
+            <div
+                ref={autoResponsesRef}
+                className="content-block-body content-kv"
+                style={{
+                    height: '300px',
+                    overflowY: 'auto',
+                    padding: '10px',
+                }}
+            >
+                {" [ "}
+                {props.currentState !== -1 && autoAgentResponseMemoryKv.map((item, idx) => (
+                    <div key={`agent-initiated-response-${idx}`} style={{ marginLeft: '20px' }}>
+                        {"{"}<br />
+                        {Object.entries(item).map(([key, value], index) => (
+                            <span key={index}>
+                                &nbsp;&nbsp;&nbsp;&nbsp;{key}: {String(value).length > 70
+                                    ? `${String(value).substring(0, 40)}...${String(value).slice(-30)}`
+                                    : String(value)}<br />
+                            </span>
+                        ))}
+                        {"}"},
+                    </div>
+                ))}
+                {" ] "}
+            </div>
+            <div className="divider"></div>
+
+            <div className='text-lg font-bold content-block kv'>Interaction history</div>
+            <div className="content-block-body content-kv">
+                {" [ "}
+                {props.currentState !== -1 && interactionMemoryKv.map((item, idx) => (
+                    <div key={item.index} style={{ marginLeft: '20px' }}>
+                        {"{"}<br />
+                        &nbsp;&nbsp;&nbsp;&nbsp;index: {item.index},<br />
+                        &nbsp;&nbsp;&nbsp;&nbsp;user_query: {String(item.user_query).length > 70
+                            ? `${String(item.user_query).substring(0, 40)}...${String(item.user_query).slice(-30)}`
+                            : String(item.user_query)},<br />
+                        &nbsp;&nbsp;&nbsp;&nbsp;agent_response: {String(item.agent_response).length > 70
+                            ? `${String(item.agent_response).substring(0, 40)}...${String(item.agent_response).slice(-30)}`
+                            : String(item.agent_response)}<br />
+                        &nbsp;&nbsp;&nbsp;&nbsp;video_segment_index: {String(item.video_segment_index)}<br />
+                        {"}"},
+                    </div>
+                ))}
+                {" ] "}
+            </div>
+            <div className="divider"></div>
+
+            <div className='text-lg font-bold'>Possible next events</div>
+            {props.currentState !== -1 && (
+                <ul style={{ listStyleType: 'none', padding: 0 }}>
+                    {props.currentState in stateMachine && Object.keys(stateMachine[props.currentState])
+                        .sort((a, b) => Number(a) - Number(b))
+                        .map((event) => (
+                            <li
+                                key={`event-${event}`}
+                                onClick={() => {
+                                    props.setVoiceInputTranscript('[Debug] Respond with Woohoo!');
+                                    props.setStateMachineEvent(Number(event));
+                                }}
+                                className='btn btn-outline btn-xs text-left mb-2.5 mr-1 cursor-pointer'
                             >
-                                {isRecording ? 'release to send' : 'push to talk'}
-                            </button>
-                        )}
-                        <input
-                            type="text"
-                            placeholder="Latest user command"
-                            className="input input-bordered w-full"
-                            onChange={(e) => props.setVoiceInputTranscript(e.target.value)}
-                            value={props.voiceInputTranscript}
-                            onKeyDown={async (e) => {
-                                if (e.key === 'Enter') {
-                                    let event = await asyncNextEventChooser(props.voiceInputTranscript, props.currentState);
-                                    if (event >= 0 && (event in stateMachine[props.currentState])) {
-                                        props.setStateMachineEvent(event);
-                                        props.setStateTransitionToggle(!props.stateTransitionToggle);
-                                    }
-                                }
-                            }}
-                        />
-                        <button
-                            className="btn btn-outline"
-                            onClick={async () => {
-                                let event = await asyncNextEventChooser(props.voiceInputTranscript, props.currentState);
-                                if (event >= 0 && (event in stateMachine[props.currentState])) {
-                                    props.setStateMachineEvent(event);
-                                    props.setStateTransitionToggle(!props.stateTransitionToggle);
-                                }
-                            }}
-                        >
-                            Send User Request
-                        </button>
-                    </Box>
-                </>
+                                {event}: {eventTranslator[Number(event)]}
+                            </li>
+                        ))}
+                </ul>
             )}
 
-            {isConnected &&
-                <>
-                    <div className='flex items-center gap-2'>
-                        <div className='text-lg font-bold'>Agent response</div>
-                        {props.currentState !== -1 && (props.isProcessing && <span className="loading loading-dots loading-lg"></span>)}
-                    </div>
-                    {props.currentState !== -1 && (
-                        <p style={{ whiteSpace: 'pre-line' }}>
-                            {(() => {
-                                try {
-                                    const parsed = typeof props.stateFunctionExeRes === 'string'
-                                        ? JSON.parse(props.stateFunctionExeRes)
-                                        : props.stateFunctionExeRes;
-                                    return parsed.response || props.stateFunctionExeRes;
-                                } catch {
-                                    return props.stateFunctionExeRes;
-                                }
-                            })()}
-                        </p>
-                    )}
-                    <div className="divider"></div>
-
-                    <div className='flex items-center gap-2'>
-                        <div className='text-lg font-bold'>Real-time visual client responses</div>
-                        <label
-                            className="btn btn-xs btn-outline cursor-pointer"
-                            onClick={saveResponsesToFile}
-                        >
-                            Save
-                        </label>
-                    </div>
-                    <div
-                        ref={autoResponsesRef}
-                        className="content-block-body content-kv"
-                        style={{
-                            height: '300px',
-                            overflowY: 'auto',
-                            padding: '10px',
-                        }}
-                    >
-                        {" [ "}
-                        {props.currentState !== -1 && autoAgentResponseMemoryKv.map((item, idx) => (
-                            <div key={`agent-initiated-response-${idx}`} style={{ marginLeft: '20px' }}>
-                                {"{"}<br />
-                                {Object.entries(item).map(([key, value], index) => (
-                                    <span key={index}>
-                                        &nbsp;&nbsp;&nbsp;&nbsp;{key}: {String(value).length > 70
-                                            ? `${String(value).substring(0, 40)}...${String(value).slice(-30)}`
-                                            : String(value)}<br />
-                                    </span>
-                                ))}
-                                {"}"},
-                            </div>
-                        ))}
-                        {" ] "}
-                    </div>
-                    <div className="divider"></div>
-
-                    <div className='text-lg font-bold content-block kv'>Interaction history</div>
-                    <div className="content-block-body content-kv">
-                        {" [ "}
-                        {props.currentState !== -1 && interactionMemoryKv.map((item, idx) => (
-                            <div key={item.index} style={{ marginLeft: '20px' }}>
-                                {"{"}<br />
-                                &nbsp;&nbsp;&nbsp;&nbsp;index: {item.index},<br />
-                                &nbsp;&nbsp;&nbsp;&nbsp;user_query: {String(item.user_query).length > 70
-                                    ? `${String(item.user_query).substring(0, 40)}...${String(item.user_query).slice(-30)}`
-                                    : String(item.user_query)},<br />
-                                &nbsp;&nbsp;&nbsp;&nbsp;agent_response: {String(item.agent_response).length > 70
-                                    ? `${String(item.agent_response).substring(0, 40)}...${String(item.agent_response).slice(-30)}`
-                                    : String(item.agent_response)}<br />
-                                &nbsp;&nbsp;&nbsp;&nbsp;video_segment_index: {String(item.video_segment_index)}<br />
-                                {"}"},
-                            </div>
-                        ))}
-                        {" ] "}
-                    </div>
-                    <div className="divider"></div>
-
-                    <div className='text-lg font-bold'>Possible next events</div>
-                    {props.currentState !== -1 && (
-                        <ul style={{ listStyleType: 'none', padding: 0 }}>
-                            {props.currentState in stateMachine && Object.keys(stateMachine[props.currentState])
-                                .sort((a, b) => Number(a) - Number(b))
-                                .map((event) => (
-                                    <li
-                                        key={`event-${event}`}
-                                        onClick={() => {
-                                            props.setVoiceInputTranscript('[Debug] Respond with Woohoo!');
-                                            props.setStateMachineEvent(Number(event));
-                                        }}
-                                        className='btn btn-outline btn-xs text-left mb-2.5 mr-1 cursor-pointer'
-                                    >
-                                        {event}: {eventTranslator[Number(event)]}
-                                    </li>
-                                ))}
-                        </ul>
-                    )}
-                </>
-            }
             <ControlTray
                 videoRef={props.videoRef}
                 supportsVideo={true}
@@ -889,6 +914,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                 connectConversation={connectConversation}
                 disconnectConversation={disconnectConversation}
                 setAutoAgentResponseMemoryKv={setAutoAgentResponseMemoryKv}
+                setVoiceInputTranscript={props.setVoiceInputTranscript}
             />
         </Stack >
     );

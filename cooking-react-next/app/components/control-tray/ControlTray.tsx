@@ -47,14 +47,7 @@ export type ControlTrayProps = {
 	connectConversation: () => Promise<void>;
 	disconnectConversation: () => Promise<void>;
 	setAutoAgentResponseMemoryKv: React.Dispatch<React.SetStateAction<AutoAgentResponseItem[]>>;
-};
-
-type MediaStreamButtonProps = {
-	isStreaming: boolean;
-	onIcon: string;
-	offIcon: string;
-	start: () => Promise<any>;
-	stop: () => any;
+	setVoiceInputTranscript: (transcript: string) => void;
 };
 
 
@@ -302,6 +295,7 @@ function ControlTray(props: ControlTrayProps) {
 		await props.disconnectConversation();
 		props.setStateMachineEvent(-1);
 		props.setCurrentState(-1);
+		props.setVoiceInputTranscript('');
 		responseCounter.current = 0;
 	};
 

@@ -1,5 +1,4 @@
 import {
-	comparingVideoRealityAlignment,
 	explainCurrentFoodState,
 	respondWithStepRelatedQuestions,
 	respondWithHowToFix,
@@ -141,13 +140,8 @@ export const eventDetailedExplanation: StateMachineTranslator = {
         - Examples:
           * Detecting a wrong food state`,
 
-	// 11: `System automatically detects a new action/step
-	//     - AI recognizes transition to new cooking phase
-	//     - Examples:
-	//       * Detecting user has started mixing ingredients
-	//       * Noticing transition to cooking phase
-	//       * Identifying completion of preparation
-	//       * Recognizing start of new recipe section`,
+	// 11: `System automatically detects user on moving to a new procedure
+	//     - AI identifies completion of preparation`,
 
 	12: `System detects missing previous steps
         - AI identifies skipped or incomplete steps
@@ -233,7 +227,7 @@ export const stateFunctions: {
 		autoAgentResponseMemoryKv: { [key: string]: any }
 	) => Promise<string | { response: string; video_segment_index: number[] }>
 } = {
-	0: comparingVideoRealityAlignment,
+	// 0: comparingVideoRealityAlignment,
 	1: explainCurrentFoodState,
 	2: respondWithStepRelatedQuestions,
 	3: respondWithHowToFix,

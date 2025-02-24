@@ -8,7 +8,6 @@ import VideoPreview from '../VideoPreview';
 import WorkFlow from '../WorkFlow';
 import ImageUploader from '../RealityPreview/ImageUploader';
 import RealityPreview from '../RealityPreview/RealityPreview';
-import EvalResVis from '../EvalResVis';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import SegVideoPlayerComp from '../SegVideoPlayerComp/SegVideoPlayerComp';
 
@@ -21,7 +20,6 @@ interface TransriptSentenceItemProps {
 }
 
 export default function MainLayout() {
-    const [evalMode, setEvalMode] = useState(false);
     // original and segmented video states
     const [videoUrl, setVideoUrl] = useState('rwYaDqXFH88.mp4');
     const [videoSegments, setVideoSegments] = useState<TransriptSentenceItemProps[]>([]);
@@ -43,7 +41,7 @@ export default function MainLayout() {
     const [videoKnowledgeInput, setVideoKnowledgeInput] = useState("");
     const [currentState, setCurrentState] = useState(-1);
     const [stateMachineEvent, setStateMachineEvent] = useState(-1);
-    const [stateFunctionExeRes, setStateFunctionExeRes] = useState("");
+    const [agentResponse, setAgentResponse] = useState("");
     const [ttsSpeed, setTtsSpeed] = useState(2);
 
     const [isClient, setIsClient] = useState(false);
@@ -61,7 +59,7 @@ export default function MainLayout() {
 
     useEffect(() => {
         try {
-            let parsedRes = JSON.parse(stateFunctionExeRes);
+            let parsedRes = JSON.parse(agentResponse);
             let videoSegments = parsedRes.video_segment_index
                 .sort((a: number, b: number) => a - b)
                 .map((item: number) => {
@@ -79,7 +77,7 @@ export default function MainLayout() {
             setVideoSegments([]);
             setPlaySeconds(0);
         }
-    }, [stateFunctionExeRes, currentState]);
+    }, [agentResponse, currentState]);
 
 
     useEffect(() => {
@@ -120,10 +118,10 @@ export default function MainLayout() {
 
     return (
         <>
-            <Box 
-                sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
+            <Box
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
                     padding: '0.75rem',
                     background: 'linear-gradient(to right, #fff, #f5f5f5)',
                     boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
@@ -131,16 +129,16 @@ export default function MainLayout() {
                     marginBottom: '1rem',
                 }}
             >
-                <RestaurantIcon 
-                    sx={{ 
-                        fontSize: '2rem', 
+                <RestaurantIcon
+                    sx={{
+                        fontSize: '2rem',
                         marginRight: '0.5rem',
                         color: '#d85a5a'
-                    }} 
+                    }}
                 />
-                <Typography 
-                    variant="h5" 
-                    sx={{ 
+                <Typography
+                    variant="h5"
+                    sx={{
                         fontWeight: 'bold',
                         color: '#000',
                         letterSpacing: '0.5px',
@@ -194,18 +192,7 @@ export default function MainLayout() {
 
                     <div className='text-xl font-bold flex items-center gap-2 p-1'>
                         REALITY PREVIEW
-                        {/* <button
-                            className={`btn btn-xs ${enableWebCam ? 'btn-primary' : 'btn-outline'}`}
-                            onClick={() => setEnableWebCam(!enableWebCam)}
-                        >
-                            web cam
-                        </button> */}
-                        <button
-                            className={`btn btn-xs ${evalMode ? 'btn-error' : 'btn-outline'}`}
-                            onClick={() => setEvalMode(!evalMode)}
-                        >
-                            eval mode
-                        </button>
+
                     </div>
                     {!videoStream ?
                         <ImageUploader
@@ -221,35 +208,32 @@ export default function MainLayout() {
                     }
                 </Grid>
                 <Grid size={7} style={{ height: '100vh', overflow: 'scroll' }}>
-                    {evalMode ?
-                        <EvalResVis /> :
-                        <WorkFlow
-                            setStateTransitionToggle={setStateTransitionToggle}
-                            setIsProcessing={setIsProcessing}
-                            setStateMachineEvent={setStateMachineEvent}
-                            setCurrentState={setCurrentState}
-                            setVoiceInputTranscript={setVoiceInputTranscript}
-                            setVideoKnowledgeInput={setVideoKnowledgeInput}
-                            setRealityImageBase64={setRealityImageBase64}
-                            setStateFunctionExeRes={setStateFunctionExeRes}
-                            captureRealityFrame={captureRealityFrame}
-                            setTtsSpeed={setTtsSpeed}
-                            setSegmentedVideoPlaying={setSegmentedVideoPlaying}
-                            setReplaySignal={setReplaySignal}
-                            stateTransitionToggle={stateTransitionToggle}
-                            isProcessing={isProcessing}
-                            voiceInputTranscript={voiceInputTranscript}
-                            videoKnowledgeInput={videoKnowledgeInput}
-                            currentState={currentState}
-                            stateMachineEvent={stateMachineEvent}
-                            realityImageBase64={realityImageBase64}
-                            stateFunctionExeRes={stateFunctionExeRes}
-                            ttsSpeed={ttsSpeed}
-                            replaySignal={replaySignal}
-                            videoRef={videoRef}
-                            setVideoStream={setVideoStream}
-                        />
-                    }
+                    <WorkFlow
+                        setStateTransitionToggle={setStateTransitionToggle}
+                        setIsProcessing={setIsProcessing}
+                        setStateMachineEvent={setStateMachineEvent}
+                        setCurrentState={setCurrentState}
+                        setVoiceInputTranscript={setVoiceInputTranscript}
+                        setVideoKnowledgeInput={setVideoKnowledgeInput}
+                        setRealityImageBase64={setRealityImageBase64}
+                        setAgentResponse={setAgentResponse}
+                        captureRealityFrame={captureRealityFrame}
+                        setTtsSpeed={setTtsSpeed}
+                        setSegmentedVideoPlaying={setSegmentedVideoPlaying}
+                        setReplaySignal={setReplaySignal}
+                        stateTransitionToggle={stateTransitionToggle}
+                        isProcessing={isProcessing}
+                        voiceInputTranscript={voiceInputTranscript}
+                        videoKnowledgeInput={videoKnowledgeInput}
+                        currentState={currentState}
+                        stateMachineEvent={stateMachineEvent}
+                        realityImageBase64={realityImageBase64}
+                        agentResponse={agentResponse}
+                        ttsSpeed={ttsSpeed}
+                        replaySignal={replaySignal}
+                        videoRef={videoRef}
+                        setVideoStream={setVideoStream}
+                    />
                 </Grid>
             </Grid>
         </>
