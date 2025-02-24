@@ -57,7 +57,7 @@ interface WorkFlowProps {
 
 const openaiClient = new OpenAI({ apiKey: secret.OPENAI_KEY, dangerouslyAllowBrowser: true });
 const VISUAL_ANALYZE_INTERVAL_MS = 4000;
-const AUTO_TIMEOUT_MS = 5000;
+const AUTO_TIMEOUT_MS = 10000;
 
 
 // interaction memory items
@@ -259,7 +259,30 @@ export default function WorkFlow(props: WorkFlowProps) {
             });
             const arrayBuffer = await mp3Response.arrayBuffer();
             await wavStreamPlayer.connect();
+            const pcmView = new Int16Array(arrayBuffer);
+            const durationMs = (pcmView.length / 24000) * 1000 / speed;
             await wavStreamPlayer.add16BitPCM(arrayBuffer);
+            console.log("[TTS Duration]", durationMs);
+
+            // Store the current event to check if it changes
+            const currentEvent = props.stateMachineEvent;
+            
+            // Create the timeout
+            const timeoutId = setTimeout(() => {
+                // Only proceed if the event hasn't changed
+                if (currentEvent === props.stateMachineEvent) {
+                    console.log("[TTS Complete] Returning to initial state");
+                    props.setVoiceInputTranscript('');
+                    props.setStateMachineEvent(4); // Trigger event 4 (user agreement)
+                    props.setStateTransitionToggle(!props.stateTransitionToggle);
+                } else {
+                    console.log("[TTS Complete] Event changed, skipping state transition");
+                }
+            }, durationMs + AUTO_TIMEOUT_MS);
+
+            // Clean up the timeout if the component unmounts or if the event changes
+            return () => clearTimeout(timeoutId);
+
         } catch (error) {
             console.error("Error generating or playing TTS:", error);
         }
@@ -661,27 +684,6 @@ export default function WorkFlow(props: WorkFlowProps) {
         }
     }, [autoAgentResponseMemoryKv]); // Scroll when responses update
 
-    // Add timeout to return to initial state after 5 seconds of inactivity
-    useEffect(() => {
-        let timeoutId: NodeJS.Timeout;
-
-        // Only set timeout when in an active state other than 0 or -1
-        if (props.currentState > 0) {
-            timeoutId = setTimeout(() => {
-                console.log("[Timeout] No user response in 5 seconds, returning to initial state");
-                props.setVoiceInputTranscript('');
-                props.setStateMachineEvent(4); // Trigger event 4 (user agreement)
-                props.setStateTransitionToggle(!props.stateTransitionToggle);
-            }, AUTO_TIMEOUT_MS);
-        }
-
-        // Clear timeout when state changes or component unmounts
-        return () => {
-            if (timeoutId) {
-                clearTimeout(timeoutId);
-            }
-        };
-    }, [props.currentState, props.voiceInputTranscript]);
 
     return (
         <Stack spacing={1}>
