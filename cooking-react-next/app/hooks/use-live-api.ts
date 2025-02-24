@@ -59,11 +59,11 @@ export const compareStreamWithReferenceVideoKnowledge: FunctionDeclaration = {
 					"FALSE: Execution deviates from reference (e.g., 'Heat too high causing rapid browning', " +
 					"'Cutting size inconsistent, ranging from 1/4 to 1/2 inch pieces').",
 			},
-			isMissingSteps: {
+			isCorrectProcedureOrder: {
 				type: SchemaType.BOOLEAN,
-				description: "Indicates if user is missing any steps from the current procedure. " +
-					"TRUE: User is missing steps from the current procedure. " +
-					"FALSE: User is following the right procedure against the reference knowledge.",
+				description: "As the user has moved to the next procedure, indicates if the user is following the correct order according to the video knowledge. " +
+					"TRUE: The new step's order is correct. " +
+					"FALSE: User is not following the right procedure.",
 			},
 			hasProgressedToProcedure: {
 				type: SchemaType.BOOLEAN,
@@ -73,8 +73,8 @@ export const compareStreamWithReferenceVideoKnowledge: FunctionDeclaration = {
 			},
 			procedureAnalysis: {
 				type: SchemaType.STRING,
-				description: "The high-level cooking procedure being performed at the current time. " +
-					"Examples: 'Preparing Burger Sauce', 'Cooking Beef Patties', 'Assembling Burger'. "
+				description: "The high-level cooking procedure being performed at the current time based on the reality image. " + 
+					"This should be in one of the procedures in the correct procedure sequence in the prompt.",
 			},
 			stepAnalysis: {
 				type: SchemaType.STRING,
@@ -100,7 +100,8 @@ export const compareStreamWithReferenceVideoKnowledge: FunctionDeclaration = {
 			},
 			improvementInstructions: {
 				type: SchemaType.STRING,
-				description: "Clear, actionable guidance when issues found, based on reference knowledge. " +
+				description: "Should only be provided if the user is doing the step wrong or not following the procedure correctly. " +
+					"Clear, actionable guidance when issues found, based on reference knowledge. " +
 					"Include what to correct, how to correct it, and why it matters. " +
 					"Empty string if no issues found. " +
 					"Example: 'Reduce heat to medium-high - current temperature is too hot and will burn the exterior " +
@@ -110,7 +111,7 @@ export const compareStreamWithReferenceVideoKnowledge: FunctionDeclaration = {
 		required: [
 			"isValidCookingStep",
 			"isStepCorrect",
-			"isMissingSteps",
+			"isCorrectProcedureOrder",
 			"hasProgressedToProcedure",
 			"procedureAnalysis",
 			"stepAnalysis",
