@@ -279,9 +279,8 @@ export async function decideCategoryFromUserRequest(
                             type: "object",
                             properties: {
                                 response: {
-                                    type: "array",
-                                    items: { type: "number" },
-                                    description: "the category index of the user request"
+                                    type: "number",
+                                    description: "the category index of the user request (a single number)"
                                 },
                             },
                             required: ["response"]
@@ -306,7 +305,11 @@ export async function decideCategoryFromUserRequest(
         if (response.choices[0]?.message?.tool_calls?.[0]?.function?.arguments) {
             console.log(`[gpt tool call]: ${response.choices[0].message.tool_calls[0].function.name}`);
             console.log(response.choices[0].message.tool_calls[0].function.arguments);
-            return JSON.parse(response.choices[0].message.tool_calls[0].function.arguments);
+            const parsed = JSON.parse(response.choices[0].message.tool_calls[0].function.arguments);
+            // Handle case where response might be an array
+            return { 
+                response: Array.isArray(parsed.response) ? parsed.response[0] : parsed.response 
+            };
         }
 
         return { response: -1 };

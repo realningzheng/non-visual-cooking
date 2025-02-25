@@ -47,14 +47,7 @@ export type ControlTrayProps = {
 	connectConversation: () => Promise<void>;
 	disconnectConversation: () => Promise<void>;
 	setAutoAgentResponseMemoryKv: React.Dispatch<React.SetStateAction<AutoAgentResponseItem[]>>;
-};
-
-type MediaStreamButtonProps = {
-	isStreaming: boolean;
-	onIcon: string;
-	offIcon: string;
-	start: () => Promise<any>;
-	stop: () => any;
+	setVoiceInputTranscript: (transcript: string) => void;
 };
 
 
@@ -125,6 +118,8 @@ function ControlTray(props: ControlTrayProps) {
 		config: liveAPIConfig
 	} = useLiveAPIContext();
 
+	// Reference to track previous connection state for reconnection detection
+	const prevConnectedRef = useRef(false);
 
 	/** Configure multimodal session client, response with audio */
 	useEffect(() => {
@@ -249,6 +244,24 @@ function ControlTray(props: ControlTrayProps) {
 		}
 	}, [liveAPIConnected, activeVideoStream, liveAPIClient, props.videoRef, muted]);
 
+	// Monitor for reconnection events
+	useEffect(() => {
+		// If we were disconnected and now we're connected, it's a reconnection
+		if (!prevConnectedRef.current && liveAPIConnected) {
+			console.log("liveAPIClient reconnected, restarting video frame sending");
+			// Restart video frame sending
+			if (props.videoRef.current && activeVideoStream) {
+				requestAnimationFrame(sendVideoFrame);
+			}
+		}
+		
+		// Update the previous connection state
+		prevConnectedRef.current = liveAPIConnected;
+		
+		return () => {
+			prevConnectedRef.current = false;
+		};
+	}, [liveAPIConnected, activeVideoStream, props.videoRef]);
 
 	useEffect(() => {
 		const video = props.videoRef.current;
@@ -302,6 +315,7 @@ function ControlTray(props: ControlTrayProps) {
 		await props.disconnectConversation();
 		props.setStateMachineEvent(-1);
 		props.setCurrentState(-1);
+		props.setVoiceInputTranscript('');
 		responseCounter.current = 0;
 	};
 
