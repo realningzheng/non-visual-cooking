@@ -131,6 +131,8 @@ export function useLiveAPI({
 		[url, apiKey],
 	);
 	const audioStreamerRef = useRef<AudioStreamer | null>(null);
+	const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+	const isReconnectingRef = useRef(false);
 
 	const [connected, setConnected] = useState(false);
 	const [config, setConfig] = useState<LiveConfig>({
@@ -147,6 +149,7 @@ export function useLiveAPI({
 	const [volume, setVolume] = useState(0);
 	const [content, setContent] = useState("");
 	const [turnComplete, setTurnComplete] = useState(false);
+	
 	// register audio for streaming server -> speakers
 	useEffect(() => {
 		if (!audioStreamerRef.current) {
@@ -163,9 +166,73 @@ export function useLiveAPI({
 		}
 	}, [audioStreamerRef]);
 
+	const connect = useCallback(async () => {
+		if (!config) {
+			throw new Error("config has not been set");
+		}
+		
+		// Clear any existing reconnect timeout
+		if (reconnectTimeoutRef.current) {
+			clearTimeout(reconnectTimeoutRef.current);
+			reconnectTimeoutRef.current = null;
+		}
+		
+		client.disconnect();
+		await client.connect(config);
+		setConnected(true);
+	}, [client, setConnected, config]);
+
+	const disconnect = useCallback(async () => {
+		// Clear any existing reconnect timeout
+		if (reconnectTimeoutRef.current) {
+			clearTimeout(reconnectTimeoutRef.current);
+			reconnectTimeoutRef.current = null;
+		}
+		
+		client.disconnect();
+		setConnected(false);
+	}, [setConnected, client]);
+
 	useEffect(() => {
-		const onClose = () => {
+		const onClose = (event: CloseEvent) => {
 			setConnected(false);
+			
+			// Check if the close was due to exceeding time limit
+			const reason = event.reason || "";
+			const isTimeoutError = 
+				reason.toLowerCase().includes("time limit") || 
+				reason.toLowerCase().includes("timeout") ||
+				reason.toLowerCase().includes("deadline_exceeded");
+			
+			// If it was a timeout error, attempt to reconnect
+			if (isTimeoutError) {
+				console.log("WebSocket closed due to time limit, attempting to reconnect...");
+				
+				// Set the reconnecting flag
+				isReconnectingRef.current = true;
+				
+				// Clear any existing reconnect timeout
+				if (reconnectTimeoutRef.current) {
+					clearTimeout(reconnectTimeoutRef.current);
+				}
+				
+				console.log("Setting up reconnection timeout...");
+				
+				// Set a timeout to reconnect after a short delay (2 seconds)
+				reconnectTimeoutRef.current = setTimeout(() => {
+					console.log("Reconnection timeout triggered, attempting to reconnect...");
+					
+					connect().then(() => {
+						console.log("Successfully reconnected to WebSocket");
+						isReconnectingRef.current = false;
+					}).catch((error) => {
+						console.error("Failed to reconnect to WebSocket:", error);
+						isReconnectingRef.current = false;
+					});
+				}, 2000);
+				
+				console.log("Reconnection timeout set:", reconnectTimeoutRef.current);
+			}
 		};
 
 		const onInterrupted = () => {
@@ -202,6 +269,12 @@ export function useLiveAPI({
 			.on("turnnotcomplete", onTurnNotComplete)
 
 		return () => {
+			// Only clear the timeout if we're not in the process of reconnecting
+			if (reconnectTimeoutRef.current && !isReconnectingRef.current) {
+				clearTimeout(reconnectTimeoutRef.current);
+				reconnectTimeoutRef.current = null;
+			}
+			
 			client
 				.off("close", onClose)
 				.off("interrupted", onInterrupted)
@@ -211,20 +284,6 @@ export function useLiveAPI({
 				.off("turnnotcomplete", onTurnNotComplete);
 		};
 	}, [client]);
-
-	const connect = useCallback(async () => {
-		if (!config) {
-			throw new Error("config has not been set");
-		}
-		client.disconnect();
-		await client.connect(config);
-		setConnected(true);
-	}, [client, setConnected, config]);
-
-	const disconnect = useCallback(async () => {
-		client.disconnect();
-		setConnected(false);
-	}, [setConnected, client]);
 
 	return {
 		client,

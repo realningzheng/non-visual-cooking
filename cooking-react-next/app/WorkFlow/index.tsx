@@ -128,7 +128,6 @@ export default function WorkFlow(props: WorkFlowProps) {
         turnComplete: liveAPITurnComplete,
     } = useLiveAPIContext();
 
-
     /** Bootstrap functions */
     /** Connect to conversation */
     const connectConversation = async () => {
@@ -616,9 +615,14 @@ export default function WorkFlow(props: WorkFlowProps) {
 
         let intervalId: NodeJS.Timeout | null = null;
 
-        if (isConnected) {
+        // Only start the interval if we're connected and in the correct state
+        if (isConnected && liveAPIConnected && props.currentState === 0) {
+            console.log("Starting visual analysis interval");
             intervalId = setInterval(() => {
-                if (props.currentState != 0) return;
+                // Double-check we're still connected before sending
+                if (!liveAPIConnected || props.currentState !== 0) {
+                    return;
+                }
 
                 const responses = autoAgentResponseMemoryKvRef.current;
                 if (responses.length === 0) {
@@ -629,17 +633,18 @@ export default function WorkFlow(props: WorkFlowProps) {
                         "Step analysis: " + responses[responses.length - 1].stepAnalysis + "\n" +
                         "Food and kitchenware analysis: " + responses[responses.length - 1].foodAndKitchenwareAnalysis + "\n" +
                         "Audio analysis: " + responses[responses.length - 1].audioAnalysis + "\n";
-                    // console.log({ text: repeatingPrompt + lastResponseInfo });
                     liveAPIClient.send([{ text: repeatingPrompt + lastResponseInfo }]);
-                    // liveAPIClient.send([{ text: repeatingPrompt + responses.map(item => JSON.stringify(item)).join("\n") }]);
                 }
             }, VISUAL_ANALYZE_INTERVAL_MS);
         }
 
         return () => {
-            if (intervalId) clearInterval(intervalId);
+            if (intervalId) {
+                console.log("Clearing visual analysis interval");
+                clearInterval(intervalId);
+            }
         };
-    }, [isConnected, props.currentState, props.videoKnowledgeInput]);
+    }, [isConnected, liveAPIConnected, props.currentState, props.videoKnowledgeInput, liveAPIClient]);
 
 
     // trigger state transition for event 10 and 12 when auto agent detects issues
