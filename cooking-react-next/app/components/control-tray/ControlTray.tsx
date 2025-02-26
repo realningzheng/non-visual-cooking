@@ -137,10 +137,9 @@ function ControlTray(props: ControlTrayProps) {
 					${props.videoKnowledgeInput}
 
 					ROLE:
-					- Monitor cooking activities in real-time video stream
-					- Compare against reference cooking knowledge
-					- Identify deviations from correct procedures
-					- Provide immediate, actionable feedback
+					- Continuously analyze cooking activities from the video stream
+					- Raise an alert if the current step is wrong
+					- Raise an alert if missing any steps
 
 					RESPONSE GUIDELINES:
 					- Be precise and concise
@@ -153,7 +152,7 @@ function ControlTray(props: ControlTrayProps) {
 			}
 		});
 		console.log('liveAPIConfig', liveAPIConfig)
-	}, [liveAPISetConfig]);
+	}, [liveAPISetConfig, props.videoKnowledgeInput]);
 
 	useEffect(() => {
 		const onToolCall = (toolCall: ToolCall) => {

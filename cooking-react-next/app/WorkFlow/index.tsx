@@ -104,7 +104,8 @@ export default function WorkFlow(props: WorkFlowProps) {
     const [isRecording, setIsRecording] = useState(false);
     const [canPushToTalk, setCanPushToTalk] = useState(true);
     const [audioAgentDuty, setAudioAgentDuty] = useState<'chatbot' | 'detect'>('detect');
-
+    const [autoResetToInitialState, setAutoResetToInitialState] = useState(false);
+    
     const possibleNextUserEvents: string[] = useMemo(() => {
         if (props.currentState === -1) return [];
         try {
@@ -160,6 +161,10 @@ export default function WorkFlow(props: WorkFlowProps) {
         props.setVoiceInputTranscript('')
         setItems([]);
         setInteractionMemoryKv([]);
+        
+        // Make sure to update the ref with the latest responses before clearing
+        autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
+        
         setAutoAgentResponseMemoryKv([]);
         const client = clientRef.current;
         client.disconnect();
@@ -263,24 +268,29 @@ export default function WorkFlow(props: WorkFlowProps) {
             await wavStreamPlayer.add16BitPCM(arrayBuffer);
             console.log("[TTS Duration]", durationMs);
 
-            // Store the current event to check if it changes
-            const currentEvent = props.stateMachineEvent;
-            
-            // Create the timeout
-            const timeoutId = setTimeout(() => {
-                // Only proceed if the event hasn't changed
-                if (currentEvent === props.stateMachineEvent) {
-                    console.log("[TTS Complete] Returning to initial state");
-                    props.setVoiceInputTranscript('');
-                    props.setStateMachineEvent(4); // Trigger event 4 (user agreement)
-                    props.setStateTransitionToggle(!props.stateTransitionToggle);
-                } else {
-                    console.log("[TTS Complete] Event changed, skipping state transition");
-                }
-            }, durationMs + AUTO_TIMEOUT_MS);
+            if (autoResetToInitialState) {
+                // Store the current event to check if it changes
+                const currentEvent = props.stateMachineEvent;
+                
+                // Make sure to update the ref with the latest responses
+                autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
 
-            // Clean up the timeout if the component unmounts or if the event changes
-            return () => clearTimeout(timeoutId);
+                // Create the timeout
+                const timeoutId = setTimeout(() => {
+                    // Only proceed if the event hasn't changed
+                    if (currentEvent === props.stateMachineEvent) {
+                        console.log("[TTS Complete] Returning to initial state");
+                        props.setVoiceInputTranscript('');
+                        props.setStateMachineEvent(4); // Trigger event 4 (user agreement)
+                        props.setStateTransitionToggle(!props.stateTransitionToggle);
+                    } else {
+                        console.log("[TTS Complete] Event changed, skipping state transition");
+                    }
+                }, durationMs + AUTO_TIMEOUT_MS);
+
+                // Clean up the timeout if the component unmounts or if the event changes
+                return () => clearTimeout(timeoutId);
+            }
 
         } catch (error) {
             console.error("Error generating or playing TTS:", error);
@@ -431,6 +441,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                         props.voiceInputTranscript,
                         props.videoKnowledgeInput
                     );
+                    props.setVoiceInputTranscript('');
                     props.setCurrentState(
                         stateMachine[props.currentState][props.stateMachineEvent]
                     );
@@ -595,32 +606,43 @@ export default function WorkFlow(props: WorkFlowProps) {
 
         const repeatingPrompt =
             "Analyze the current video stream and compare it with the reference cooking knowledge in the system context. " +
-            "Using the compareStreamWithReferenceVideoKnowledge function, to decide: \n" +
-            "1. if the current scene shows a valid cooking step from reference knowledge. \n" +
-            "2. if the current step is executed correctly. \n" +
-            "3. if the user is missing any steps from the current procedure. \n" +
-            "4. if the user has progressed to the next procedure. \n" +
-            "And analyze the following aspects: \n" +
-            "1. the current cooking procedure being performed at the current time. \n" +
-            "2. the precise description of the current step being performed within the current procedure. \n" +
-            "3. the detailed description of visible food, ingredients, kitchenware and their states. \n" +
-            "4. the description of cooking-related sounds in the scene. \n" +
-            "5. clear, actionable guidance when issues found, based on reference knowledge. \n" +
-            "A procedure is a high-level cooking activity like 'Preparing Burger Sauce', 'Cooking Beef Patties', 'Assembling Burger'. \n" +
-            "A step is a specific action like 'Mixing mayonnaise with chopped pickles', 'Forming ground beef into 4-ounce patties', 'Toasting burger buns until golden brown'. \n\n" +
+            "Using the compareStreamWithReferenceVideoKnowledge function, to analyze the following aspects of the current scene: \n" +
+            "1. the procedure being performed at the moment. \n" +
+            "2. the step being performed at the moment. \n" +
+            "3. the states and relationships of current visible food, ingredients, kitchenware. \n" +
+            "4. cooking-related sounds in the scene. \n" +
+            "These analysis should be strictly based on the video stream not the reference knowledge. \n\n" +
+            "Addtionally, you should give boolean answers to the following questions based on the analysis above: \n" +
+            "1. if the current scene shows a valid cooking step from reference knowledge; \n" +
+            "2. if the current step is executed correctly; \n" +
+            "3. if the user is missing any procedures from the reference knowledge; \n" +
+            "4. if the user has progressed to the next procedure; \n" +
+            "Addtionally, if the user is missing any procedures or wrong steps, you should suggest how to fix the issues; \n" +
+            // "A procedure is a high-level cooking activity like 'Preparing Burger Sauce', 'Cooking Beef Patties', 'Assembling Burger'. \n" +
+            // "A step is a specific action like 'Mixing mayonnaise with chopped pickles', 'Forming ground beef into 4-ounce patties', 'Toasting burger buns until golden brown'. \n\n" +
             // Dynamic numbered procedure sequence from video knowledge
-            "Correct procedure sequence: \n" +
+            "To detect missing procedures, compare the current one with the reference knowledge. \n" +
+            "The correct procedure sequence is: \n" +
             numberedProcedures + "\n\n" +
-            "<Previous observations for context>:\n";
+            "For your reference, the previous observation is: \n";
 
         let intervalId: NodeJS.Timeout | null = null;
 
         // Only start the interval if we're connected and in the correct state
-        if (isConnected && liveAPIConnected && props.currentState === 0) {
+        // If autoResetToInitialState is enabled, we should be more lenient about the state check
+        const shouldRunAnalysis = isConnected && liveAPIConnected && 
+            (props.currentState === 0 || (autoResetToInitialState && props.currentState >= 0));
+            
+        if (shouldRunAnalysis) {
             console.log("Starting visual analysis interval");
             intervalId = setInterval(() => {
                 // Double-check we're still connected before sending
-                if (!liveAPIConnected || props.currentState !== 0) {
+                // If autoResetToInitialState is enabled, we should be more lenient about the state check
+                const stillShouldRunAnalysis = liveAPIConnected && 
+                    (props.currentState === 0 || (autoResetToInitialState && props.currentState >= 0));
+                    
+                if (!stillShouldRunAnalysis) {
+                    console.log("Not connected or not in the correct state");
                     return;
                 }
 
@@ -629,8 +651,8 @@ export default function WorkFlow(props: WorkFlowProps) {
                     liveAPIClient.send([{ text: repeatingPrompt + "No previous action: just started cooking." }]);
                 } else {
                     const lastResponseInfo =
-                        "Procedure analysis: " + responses[responses.length - 1].procedureAnalysis + "\n" +
-                        "Step analysis: " + responses[responses.length - 1].stepAnalysis + "\n" +
+                        "Procedure: " + responses[responses.length - 1].procedureAnalysis + "\n" +
+                        "Step: " + responses[responses.length - 1].stepAnalysis + "\n" +
                         "Food and kitchenware analysis: " + responses[responses.length - 1].foodAndKitchenwareAnalysis + "\n" +
                         "Audio analysis: " + responses[responses.length - 1].audioAnalysis + "\n";
                     liveAPIClient.send([{ text: repeatingPrompt + lastResponseInfo }]);
@@ -644,13 +666,15 @@ export default function WorkFlow(props: WorkFlowProps) {
                 clearInterval(intervalId);
             }
         };
-    }, [isConnected, liveAPIConnected, props.currentState, props.videoKnowledgeInput, liveAPIClient]);
+    }, [isConnected, liveAPIConnected, props.currentState, props.videoKnowledgeInput, liveAPIClient, autoResetToInitialState]);
 
 
     // trigger state transition for event 10 and 12 when auto agent detects issues
     useEffect(() => {
+        // Always update the ref with the latest responses, regardless of state
+        autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
+        
         if (props.currentState === 0) {
-            autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
             const responses = autoAgentResponseMemoryKvRef.current;
             const lastResponse = responses[responses.length - 1];
             // console.log('[liveAPI function call response]');
@@ -754,6 +778,18 @@ export default function WorkFlow(props: WorkFlowProps) {
                                 />
                             </label>
                         </li>
+                        <li className="menu-title">Auto Reset</li>
+                        <li>
+                            <label className="label cursor-pointer">
+                                <span className="label-text">Auto reset to initial state</span>
+                                <input
+                                    type="checkbox"
+                                    className={`toggle toggle-sm ${autoResetToInitialState ? 'toggle-base' : 'toggle-neutral'}`}
+                                    checked={autoResetToInitialState}
+                                    onChange={() => setAutoResetToInitialState(!autoResetToInitialState)}
+                                />
+                            </label>
+                        </li>
                         <li className="menu-title">TTS Speed</li>
                         <li>
                             <label className="label cursor-pointer">
@@ -835,6 +871,8 @@ export default function WorkFlow(props: WorkFlowProps) {
                 />
             </Box>
 
+            <div className="divider"></div>
+
             <div className='flex items-center gap-2'>
                 <div className='text-lg font-bold'>Agent response</div>
                 {props.currentState !== -1 && (props.isProcessing && <span className="loading loading-dots loading-lg"></span>)}
@@ -889,7 +927,6 @@ export default function WorkFlow(props: WorkFlowProps) {
                 ))}
                 {" ] "}
             </div>
-            <div className="divider"></div>
 
             <div className='text-lg font-bold content-block kv'>Interaction history</div>
             <div className="content-block-body content-kv">
