@@ -1,5 +1,5 @@
 import { Stack, Box } from "@mui/material";
-import { RealityPreviewProps } from "../types/common";
+import { RealityPreviewProps } from "../../types/common";
 
 /**
  * RealityPreview component displays the video feed and captured image

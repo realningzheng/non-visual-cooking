@@ -31,7 +31,7 @@ import { ToolCall } from "../../multimodal-live-types";
 // import { getPromptForPossibleNextEvents } from "../../WorkFlow/stateMachine";
 import { compareStreamWithReferenceVideoKnowledge } from "@/app/hooks/use-live-api";
 import { set } from "lodash";
-import { AutoAgentResponseItem } from "@/app/WorkFlow";
+import { AutoAgentResponseItem } from "../workflow";
 
 
 export type ControlTrayProps = {

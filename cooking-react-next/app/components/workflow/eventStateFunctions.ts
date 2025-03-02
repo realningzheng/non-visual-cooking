@@ -8,7 +8,7 @@ import {
 	systemPromptDefault,
 	systemPromptCtxFollowUp,
 	systemPromptErrorHandling
-} from '../prompt';
+} from '../../prompt';
 
 
 /** State functions */

@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import axios from "axios";
-import credential from '../../secret.json';
+import credential from '../../../secret.json';
 
 
 const apiKey = credential.OPENAI_KEY;

@@ -1,7 +1,7 @@
 "use client";
 import './globals.css'
 import { LiveAPIProvider } from './contexts/LiveAPIContext';
-import MainLayout from './MainLayout';
+import MainLayout from './components/main-layout/MainLayout';
 import secret from '../secret.json';
 
 const host = "generativelanguage.googleapis.com";

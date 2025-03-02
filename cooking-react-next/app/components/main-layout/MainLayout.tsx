@@ -3,12 +3,12 @@
 import React, { useState } from 'react';
 import { Box, Typography } from "@mui/material";
 import Grid from '@mui/material/Grid2';
-import VideoPreview from '../VideoPreview';
-import WorkFlow from '../WorkFlow';
-import ImageUploader from '../RealityPreview/ImageUploader';
-import RealityPreview from '../RealityPreview/RealityPreview';
+import VideoPreview from '../video-preview';
+import WorkFlow from '../workflow';
+import ImageUploader from '../reality-preview/ImageUploader';
+import RealityPreview from '../reality-preview/RealityPreview';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
-import SegVideoPlayerComp from '../SegVideoPlayerComp/SegVideoPlayerComp';
+import SegVideoPlayerComp from '../seg-video-player/SegVideoPlayerComp';
 
 // Import constants
 import { 
@@ -16,11 +16,11 @@ import {
     INITIAL_STATE, 
     DEFAULT_EVENT,
     APP_TITLE 
-} from '../constants';
+} from '../../constants';
 
 // Import custom hooks
-import { useVideoState } from '../hooks/use-video-state';
-import { useRealityPreview } from '../hooks/use-reality-preview';
+import { useVideoState } from '../../hooks/use-video-state';
+import { useRealityPreview } from '../../hooks/use-reality-preview';
 
 export default function MainLayout() {
     // Workflow state management

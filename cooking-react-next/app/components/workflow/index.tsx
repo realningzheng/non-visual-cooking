@@ -11,20 +11,20 @@ import {
     executeStateFunction,
     eventDetailedExplanation
 } from './stateMachine';
-import { WavRecorder, WavStreamPlayer } from '../wavtools/index.js';
+import { WavRecorder, WavStreamPlayer } from '../../wavtools/index.js';
 import { XCircle } from 'react-feather';
 import DeleteIcon from '@mui/icons-material/Delete';
 // @ts-ignore
 import { RealtimeClient } from '@openai/realtime-api-beta';
 // @ts-ignore
 import { ItemType } from "@openai/realtime-api-beta/dist/lib/client";
-import secret from '../../secret.json';
+import secret from '../../../secret.json';
 import { FaUser } from "react-icons/fa";
 import { RiRobot2Fill } from "react-icons/ri";
 import OpenAI from "openai";
 import { repeatPreviousInteraction, getPlaySegmentedVideoFlag } from "./eventStateFunctions";
-import { useLiveAPIContext } from "../contexts/LiveAPIContext";
-import ControlTray from "../components/control-tray/ControlTray";
+import { useLiveAPIContext } from "../../contexts/LiveAPIContext";
+import ControlTray from "../control-tray/ControlTray";
 
 
 interface WorkFlowProps {
