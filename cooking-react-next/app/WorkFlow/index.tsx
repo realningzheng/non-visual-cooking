@@ -105,7 +105,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     const [canPushToTalk, setCanPushToTalk] = useState(true);
     const [audioAgentDuty, setAudioAgentDuty] = useState<'chatbot' | 'detect'>('detect');
     const [autoResetToInitialState, setAutoResetToInitialState] = useState(false);
-    
+
     const possibleNextUserEvents: string[] = useMemo(() => {
         if (props.currentState === -1) return [];
         try {
@@ -161,10 +161,10 @@ export default function WorkFlow(props: WorkFlowProps) {
         props.setVoiceInputTranscript('')
         setItems([]);
         setInteractionMemoryKv([]);
-        
+
         // Make sure to update the ref with the latest responses before clearing
         autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
-        
+
         setAutoAgentResponseMemoryKv([]);
         const client = clientRef.current;
         client.disconnect();
@@ -271,7 +271,7 @@ export default function WorkFlow(props: WorkFlowProps) {
             if (autoResetToInitialState) {
                 // Store the current event to check if it changes
                 const currentEvent = props.stateMachineEvent;
-                
+
                 // Make sure to update the ref with the latest responses
                 autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
 
@@ -605,42 +605,47 @@ export default function WorkFlow(props: WorkFlowProps) {
             : "No procedures found in video knowledge";
 
         const repeatingPrompt =
-            "Analyze the current video stream and compare it with the reference cooking knowledge in the system context. " +
-            "Using the compareStreamWithReferenceVideoKnowledge function, to analyze the following aspects of the current scene: \n" +
-            "1. the procedure being performed at the moment. \n" +
-            "2. the step being performed at the moment. \n" +
-            "3. the states and relationships of current visible food, ingredients, kitchenware. \n" +
-            "4. cooking-related sounds in the scene. \n" +
-            "These analysis should be strictly based on the video stream not the reference knowledge. \n\n" +
-            "Addtionally, you should give boolean answers to the following questions based on the analysis above: \n" +
-            "1. if the current scene shows a valid cooking step from reference knowledge; \n" +
-            "2. if the current step is executed correctly; \n" +
-            "3. if the user is missing any procedures from the reference knowledge; \n" +
-            "4. if the user has progressed to the next procedure; \n" +
-            "Addtionally, if the user is missing any procedures or wrong steps, you should suggest how to fix the issues; \n" +
-            // "A procedure is a high-level cooking activity like 'Preparing Burger Sauce', 'Cooking Beef Patties', 'Assembling Burger'. \n" +
-            // "A step is a specific action like 'Mixing mayonnaise with chopped pickles', 'Forming ground beef into 4-ounce patties', 'Toasting burger buns until golden brown'. \n\n" +
-            // Dynamic numbered procedure sequence from video knowledge
-            "To detect missing procedures, compare the current one with the reference knowledge. \n" +
-            "The correct procedure sequence is: \n" +
+            "You are a cooking assistant that analyzes video streams. Use compareStreamWithReferenceVideoKnowledge tool to analyze the video stream. " +
+            "Your task has two distinct parts:\n\n" +
+            "PART 1 - OBJECTIVE OBSERVATION (what you actually see):\n" +
+            "First, analyze ONLY what you can directly observe in the current video stream:\n" +
+            "1. Describe the specific cooking procedure being performed at this moment\n" +
+            "2. Describe the specific step being performed at this moment\n" +
+            "3. Describe the visible food items, ingredients, and kitchenware\n" +
+            "4. Describe any cooking-related sounds\n\n" +
+
+            "IMPORTANT: In Part 1, do NOT reference or compare with the reference knowledge. Only describe what you actually observe.\n\n" +
+
+            "PART 2 - COMPARISON WITH REFERENCE (after observation):\n" +
+            "After completing your objective observation, compare what you observed with the reference cooking knowledge:\n" +
+            "1. Is the observed cooking step valid according to reference knowledge? (true/false)\n" +
+            "2. Is the observed step being executed correctly? (true/false)\n" +
+            "3. Is the user missing any procedures from the reference knowledge? (true/false)\n" +
+            "4. Has the user progressed to a new procedure? (true/false)\n\n" +
+
+            "If the user is missing procedures or performing steps incorrectly, provide specific improvement instructions.\n\n" +
+
+            "REFERENCE KNOWLEDGE (do not hallucinate this as being in the video):\n" +
+            "The correct procedure sequence according to the reference is:\n" +
             numberedProcedures + "\n\n" +
-            "For your reference, the previous observation is: \n";
+
+            "PREVIOUS OBSERVATION:\n";
 
         let intervalId: NodeJS.Timeout | null = null;
 
         // Only start the interval if we're connected and in the correct state
         // If autoResetToInitialState is enabled, we should be more lenient about the state check
-        const shouldRunAnalysis = isConnected && liveAPIConnected && 
+        const shouldRunAnalysis = isConnected && liveAPIConnected &&
             (props.currentState === 0 || (autoResetToInitialState && props.currentState >= 0));
-            
+
         if (shouldRunAnalysis) {
             console.log("Starting visual analysis interval");
             intervalId = setInterval(() => {
                 // Double-check we're still connected before sending
                 // If autoResetToInitialState is enabled, we should be more lenient about the state check
-                const stillShouldRunAnalysis = liveAPIConnected && 
+                const stillShouldRunAnalysis = liveAPIConnected &&
                     (props.currentState === 0 || (autoResetToInitialState && props.currentState >= 0));
-                    
+
                 if (!stillShouldRunAnalysis) {
                     console.log("Not connected or not in the correct state");
                     return;
@@ -673,7 +678,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     useEffect(() => {
         // Always update the ref with the latest responses, regardless of state
         autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
-        
+
         if (props.currentState === 0) {
             const responses = autoAgentResponseMemoryKvRef.current;
             const lastResponse = responses[responses.length - 1];
