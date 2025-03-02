@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useRef } from 'react';
-import { useState, useEffect } from 'react';
-import { Button, Stack, Box, TextField, Typography } from "@mui/material";
+import React, { useState } from 'react';
+import { Box, Typography } from "@mui/material";
 import Grid from '@mui/material/Grid2';
 import VideoPreview from '../VideoPreview';
 import WorkFlow from '../WorkFlow';
@@ -11,113 +10,41 @@ import RealityPreview from '../RealityPreview/RealityPreview';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import SegVideoPlayerComp from '../SegVideoPlayerComp/SegVideoPlayerComp';
 
+// Import constants
+import { 
+    DEFAULT_TTS_SPEED, 
+    INITIAL_STATE, 
+    DEFAULT_EVENT,
+    APP_TITLE 
+} from '../constants';
 
-interface TransriptSentenceItemProps {
-    sentenceIndex: number;
-    text: string;
-    startTime: string;
-    endTime: string;
-}
+// Import custom hooks
+import { useVideoState } from '../hooks/use-video-state';
+import { useRealityPreview } from '../hooks/use-reality-preview';
 
 export default function MainLayout() {
-    // original and segmented video states
-    const [videoUrl, setVideoUrl] = useState('rwYaDqXFH88.mp4');
-    const [videoSegments, setVideoSegments] = useState<TransriptSentenceItemProps[]>([]);
-    const [playSeconds, setPlaySeconds] = useState<number>(0);
-    const [currentSentenceIndex, setCurrentSentenceIndex] = useState<number>(0);
-    const [showRawVideo, setShowRawVideo] = useState(true);
-    const [verticalCaptions, setVerticalCaptions] = useState(false);
-    const [segmentedVideoPlaying, setSegmentedVideoPlaying] = useState(false);
-    const [replaySignal, setReplaySignal] = useState(false);
+    // Workflow state management
+    const [stateTransitionToggle, setStateTransitionToggle] = useState<boolean>(false);
+    const [isProcessing, setIsProcessing] = useState<boolean>(false);
+    const [voiceInputTranscript, setVoiceInputTranscript] = useState<string>("");
+    const [videoKnowledgeInput, setVideoKnowledgeInput] = useState<string>("");
+    const [currentState, setCurrentState] = useState<number>(INITIAL_STATE);
+    const [stateMachineEvent, setStateMachineEvent] = useState<number>(DEFAULT_EVENT);
+    const [agentResponse, setAgentResponse] = useState<string>("");
+    const [ttsSpeed, setTtsSpeed] = useState<number>(DEFAULT_TTS_SPEED);
 
-    // Reality preview states
-    const [isVideoPlaying, setIsVideoPlaying] = useState(false);
-    const [realityImageBase64, setRealityImageBase64] = useState('');
+    // Use custom hooks for video and reality preview
+    const videoState = useVideoState({
+        agentResponse,
+        videoKnowledgeInput,
+        currentState
+    });
 
-    // Workflow states
-    const [stateTransitionToggle, setStateTransitionToggle] = useState(false);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [voiceInputTranscript, setVoiceInputTranscript] = useState("");
-    const [videoKnowledgeInput, setVideoKnowledgeInput] = useState("");
-    const [currentState, setCurrentState] = useState(-1);
-    const [stateMachineEvent, setStateMachineEvent] = useState(-1);
-    const [agentResponse, setAgentResponse] = useState("");
-    const [ttsSpeed, setTtsSpeed] = useState(2);
-
-    const [isClient, setIsClient] = useState(false);
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-
-    const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            setIsClient(true);
-        }
-    }, []);
-
-
-    useEffect(() => {
-        try {
-            let parsedRes = JSON.parse(agentResponse);
-            let videoSegments = parsedRes.video_segment_index
-                .sort((a: number, b: number) => a - b)
-                .map((item: number) => {
-                    let clip = JSON.parse(videoKnowledgeInput).find((s: any) => s.index === item);
-                    let text = clip.video_transcript;
-                    let startTime = clip.segment[0];
-                    let endTime = clip.segment[1];
-                    return { sentenceIndex: item, text: text, startTime: startTime, endTime: endTime };
-                });
-            console.log('[set video segments]');
-            console.log(videoSegments);
-            setVideoSegments(videoSegments);
-            setPlaySeconds(0);
-        } catch (error) {
-            setVideoSegments([]);
-            setPlaySeconds(0);
-        }
-    }, [agentResponse, currentState]);
-
-
-    useEffect(() => {
-        if (videoSegments.length > 0) {
-            const currentSentence = videoSegments.find((item: TransriptSentenceItemProps) => {
-                return item &&
-                    playSeconds >= Number(item.startTime) / 1000 &&
-                    playSeconds <= Number(item.endTime) / 1000;
-            });
-            if (currentSentence) {
-                setCurrentSentenceIndex(currentSentence.sentenceIndex);
-                const element = document.getElementById(`sentence-${currentSentence.sentenceIndex}`);
-                element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }
-    }, [playSeconds]);
-
-
-    const captureRealityFrame = async (): Promise<string> => {
-        if (!videoStream) {
-            return realityImageBase64;
-        } else {
-            const canvas = canvasRef.current;
-            const video = videoRef.current;
-            if (canvas && video) {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
-                // save the image to base64 string
-                const base64data = canvas.toDataURL('image/png');
-                setRealityImageBase64(base64data);
-                return base64data;
-            }
-        }
-        return '';
-    };
-
+    const realityPreview = useRealityPreview();
 
     return (
         <>
+            {/* Header */}
             <Box
                 sx={{
                     display: 'flex',
@@ -145,68 +72,80 @@ export default function MainLayout() {
                         fontFamily: '"Lucida Console", "Courier New"'
                     }}
                 >
-                    Better than Gordan Ramsay
+                    {APP_TITLE}
                 </Typography>
             </Box>
+            
+            {/* Main Content */}
             <Grid container spacing={3}>
+                {/* Left Column - Video and Reality Preview */}
                 <Grid size={5}>
+                    {/* Video Preview Section */}
                     <div className='text-xl font-bold flex items-center gap-2 p-1'>
                         VIDEO PREVIEW
                         <button
-                            className={`btn btn-xs ${showRawVideo ? 'btn-primary' : 'btn-outline'}`}
-                            onClick={() => setShowRawVideo(!showRawVideo)}
+                            className={`btn btn-xs ${videoState.showRawVideo ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => videoState.setShowRawVideo(!videoState.showRawVideo)}
                         >
                             show raw video
                         </button>
                         <button
-                            className={`btn btn-xs ${verticalCaptions ? 'btn-primary' : 'btn-outline'}`}
-                            onClick={() => setVerticalCaptions(!verticalCaptions)}
+                            className={`btn btn-xs ${videoState.verticalCaptions ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => videoState.setVerticalCaptions(!videoState.verticalCaptions)}
                         >
                             vertical captions
                         </button>
                     </div>
+                    
+                    {/* Raw Video Player */}
                     <div style={{ width: '70%', margin: '0 auto' }}>
-                        {showRawVideo &&
+                        {videoState.showRawVideo &&
                             <VideoPreview
-                                vurl={videoUrl}
-                                isVideoPlaying={isVideoPlaying}
-                                setIsVideoPlaying={setIsVideoPlaying}
+                                vurl={videoState.videoUrl}
+                                isVideoPlaying={realityPreview.isVideoPlaying}
+                                setIsVideoPlaying={realityPreview.setIsVideoPlaying}
                             />
                         }
                     </div>
                     <div className='p-1.5' />
+                    
+                    {/* Segmented Video Player */}
                     <div>
                         <SegVideoPlayerComp
-                            sourceUrl={videoUrl}
-                            videoSegments={videoSegments}
-                            currentSentenceIndex={currentSentenceIndex}
-                            verticalCaptions={verticalCaptions}
+                            sourceUrl={videoState.videoUrl}
+                            videoSegments={videoState.videoSegments}
+                            currentSentenceIndex={videoState.currentSentenceIndex}
+                            verticalCaptions={videoState.verticalCaptions}
                             currentState={currentState}
-                            segmentedVideoPlaying={segmentedVideoPlaying}
-                            replaySignal={replaySignal}
-                            setPlaySeconds={setPlaySeconds}
+                            segmentedVideoPlaying={videoState.segmentedVideoPlaying}
+                            replaySignal={videoState.replaySignal}
+                            setPlaySeconds={videoState.setPlaySeconds}
                         />
                     </div>
 
                     <div className='divider'></div>
 
+                    {/* Reality Preview Section */}
                     <div className='text-xl font-bold flex items-center gap-2 p-1'>
                         REALITY PREVIEW
-
                     </div>
-                    {!videoStream ?
+                    
+                    {!realityPreview.videoStream ? (
                         <ImageUploader
-                            realityImageBase64={realityImageBase64}
-                            setRealityImageBase64={setRealityImageBase64}
-                        /> :
-                        <RealityPreview
-                            isClient={isClient}
-                            videoRef={videoRef}
-                            canvasRef={canvasRef}
-                            realityImageBase64={realityImageBase64}
+                            realityImageBase64={realityPreview.realityImageBase64}
+                            setRealityImageBase64={realityPreview.setRealityImageBase64}
                         />
-                    }
+                    ) : (
+                        <RealityPreview
+                            isClient={realityPreview.isClient}
+                            videoRef={realityPreview.videoRef}
+                            canvasRef={realityPreview.canvasRef}
+                            realityImageBase64={realityPreview.realityImageBase64}
+                        />
+                    )}
                 </Grid>
+                
+                {/* Right Column - Workflow */}
                 <Grid size={7} style={{ height: '100vh', overflow: 'scroll' }}>
                     <WorkFlow
                         setStateTransitionToggle={setStateTransitionToggle}
@@ -215,27 +154,27 @@ export default function MainLayout() {
                         setCurrentState={setCurrentState}
                         setVoiceInputTranscript={setVoiceInputTranscript}
                         setVideoKnowledgeInput={setVideoKnowledgeInput}
-                        setRealityImageBase64={setRealityImageBase64}
+                        setRealityImageBase64={realityPreview.setRealityImageBase64}
                         setAgentResponse={setAgentResponse}
-                        captureRealityFrame={captureRealityFrame}
+                        captureRealityFrame={realityPreview.captureRealityFrame}
                         setTtsSpeed={setTtsSpeed}
-                        setSegmentedVideoPlaying={setSegmentedVideoPlaying}
-                        setReplaySignal={setReplaySignal}
+                        setSegmentedVideoPlaying={videoState.setSegmentedVideoPlaying}
+                        setReplaySignal={videoState.setReplaySignal}
                         stateTransitionToggle={stateTransitionToggle}
                         isProcessing={isProcessing}
                         voiceInputTranscript={voiceInputTranscript}
                         videoKnowledgeInput={videoKnowledgeInput}
                         currentState={currentState}
                         stateMachineEvent={stateMachineEvent}
-                        realityImageBase64={realityImageBase64}
+                        realityImageBase64={realityPreview.realityImageBase64}
                         agentResponse={agentResponse}
                         ttsSpeed={ttsSpeed}
-                        replaySignal={replaySignal}
-                        videoRef={videoRef}
-                        setVideoStream={setVideoStream}
+                        replaySignal={videoState.replaySignal}
+                        videoRef={realityPreview.videoRef}
+                        setVideoStream={realityPreview.setVideoStream}
                     />
                 </Grid>
             </Grid>
         </>
-    )
+    );
 }

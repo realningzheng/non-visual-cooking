@@ -1,17 +1,14 @@
 import { Stack, Box } from "@mui/material";
-import { RefObject } from "react";
+import { RealityPreviewProps } from "../types/common";
 
-interface RealityPreviewProps {
-    isClient: boolean;
-    videoRef: RefObject<HTMLVideoElement>;
-    canvasRef: RefObject<HTMLCanvasElement>;
-    realityImageBase64: string;
-}
-
+/**
+ * RealityPreview component displays the video feed and captured image
+ */
 export default function RealityPreview(props: RealityPreviewProps) {
     return (
         <>
             <div style={{ display: 'flex', flexDirection: 'row', gap: '20px', alignItems: 'flex-start' }}>
+                {/* Video feed display */}
                 <Stack spacing={0} justifyContent={'center'} sx={{ flex: 1 }}>
                     {props.isClient &&
                         <div style={{
@@ -36,11 +33,14 @@ export default function RealityPreview(props: RealityPreviewProps) {
                             />
                         </div>
                     }
+                    {/* Hidden canvas for image capture */}
                     <canvas
                         ref={props.canvasRef}
                         style={{ display: 'none' }}
                     />
                 </Stack>
+                
+                {/* Captured image display */}
                 <div style={{ flex: 1 }}>
                     {props.realityImageBase64 ? (
                         <img
@@ -72,28 +72,14 @@ export default function RealityPreview(props: RealityPreviewProps) {
                     )}
                 </div>
             </div>
+            
+            {/* Control buttons - currently commented out */}
             <Box
                 display={'flex'}
                 justifyContent={'center'}
                 width={'100%'}
                 marginTop={'10px'}
             >
-                {/* <button
-                    className='btn btn-outline btn-sm'
-                    color="primary"
-                    onClick={() => { props.videoRef.current?.play() }}
-                    style={{ marginRight: 1 }}
-                >
-                    Reality Play
-                </button>
-                <button
-                    className='btn btn-outline btn-sm'
-                    color="primary"
-                    onClick={() => { props.videoRef.current?.pause() }}
-                    style={{ marginRight: 1, marginLeft: 1 }}
-                >
-                    Reality Pause
-                </button> */}
             </Box>
         </>
     );
