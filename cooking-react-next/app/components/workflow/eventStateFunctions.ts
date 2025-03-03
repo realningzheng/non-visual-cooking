@@ -8,46 +8,10 @@ import {
 	systemPromptDefault,
 	systemPromptCtxFollowUp,
 	systemPromptErrorHandling
-} from '../../prompt';
+} from '../../prompts';
 
 
 /** State functions */
-// state 0 is agent-initiated
-// export const comparingVideoRealityAlignment = async (	
-// 	videoKnowledgeInput: string,
-// 	realityImageBase64: string,
-// 	voiceInputTranscript: string,
-// 	interactionMemoryKv: { [key: string]: any },
-// 	autoAgentResponseMemoryKv: { [key: string]: any }
-// ) => {
-// 	const timeout = 1000;
-// 	await new Promise(resolve => setTimeout(resolve, timeout));
-
-// 	console.log(`[executing]: Comparing video-reality alignment (simulated timeout: ${timeout}ms)`);
-// 	// TODO: compare video and reality
-// 	// 10: "System automatically detects misalignment",
-// 	// 11: "System automatically detects a new action/step",
-// 	// 12: "System automatically detects missing previous steps",
-// 	// 20: "System automatically evaluates reality"
-// 	// const prompt = `
-// 	// 	${basePrompt}
-// 	// 	Video knowledge:
-// 	// 	${videoKnowledgeInput}
-// 	// 	Memory:
-// 	// 	${memory}
-// 	// 	Based on the reality image provided and the video knowledge and memory, please select the most appropriate category:
-// 	// 	10: "System automatically detects misalignment",
-// 	//     11: "System automatically detects a new action/step",
-// 	//     12: "System automatically detects missing previous steps",
-// 	//     20: "System automatically evaluates reality"
-// 	// 	Please reply ONLY the index of the most appropriate category.
-// 	// `;
-// 	// const response = await callChatGPT(prompt, [realityImageBase64]);
-// 	// return response.gptResponse;
-// 	return `<System automatically compares video-reality alignment> (simulated timeout: ${timeout}ms)`;
-// };
-
-
 export const explainCurrentFoodState = async (				// state 1
 	videoKnowledgeInput: string,
 	realityImageBase64: string,

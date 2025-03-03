@@ -1,5 +1,6 @@
 "use client";
-
+import { WorkFlowProps } from "../../types/props";
+import { InteractionMemoryItem, AutoAgentResponseItem } from "../../types/common";
 import { Stack, Box, TextField, IconButton } from "@mui/material";
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
@@ -19,76 +20,21 @@ import { RealtimeClient } from '@openai/realtime-api-beta';
 // @ts-ignore
 import { ItemType } from "@openai/realtime-api-beta/dist/lib/client";
 import secret from '../../../secret.json';
-import { FaUser } from "react-icons/fa";
-import { RiRobot2Fill } from "react-icons/ri";
 import OpenAI from "openai";
 import { repeatPreviousInteraction, getPlaySegmentedVideoFlag } from "./eventStateFunctions";
 import { useLiveAPIContext } from "../../contexts/LiveAPIContext";
 import ControlTray from "../control-tray/ControlTray";
-
-
-interface WorkFlowProps {
-    setStateTransitionToggle: (input: boolean) => void;
-    captureRealityFrame: () => Promise<string>;
-    setStateMachineEvent: (event: number) => void;
-    setCurrentState: (state: number) => void;
-    setVoiceInputTranscript: (input: string) => void;
-    setVideoKnowledgeInput: (input: string) => void;
-    setRealityImageBase64: (input: string) => void;
-    setAgentResponse: (input: string) => void;
-    setIsProcessing: (input: boolean) => void;
-    setTtsSpeed: (input: number) => void;
-    setSegmentedVideoPlaying: (input: boolean) => void;
-    setReplaySignal: (input: boolean) => void;
-    stateTransitionToggle: boolean;
-    voiceInputTranscript: string;
-    videoKnowledgeInput: string;
-    currentState: number;
-    stateMachineEvent: number;
-    realityImageBase64: string;
-    agentResponse: string;
-    isProcessing: boolean;
-    ttsSpeed: number;
-    replaySignal: boolean;
-    videoRef: React.RefObject<HTMLVideoElement>;
-    setVideoStream: (stream: MediaStream | null) => void;
-}
+import { VISUAL_ANALYZE_INTERVAL_MS, AUTO_TIMEOUT_MS } from "../../constants";
+import * as utils from "./utils";
 
 
 const openaiClient = new OpenAI({ apiKey: secret.OPENAI_KEY, dangerouslyAllowBrowser: true });
-const VISUAL_ANALYZE_INTERVAL_MS = 4000;
-const AUTO_TIMEOUT_MS = 10000;
-
-
-// interaction memory items
-interface InteractionMemoryItem {
-    index: number;
-    user_query?: string;
-    agent_response?: string;
-    video_segment_index?: number[];
-    memorized_item_key?: string;
-    memorized_item_value?: string;
-}
-
-// auto agent response items
-export interface AutoAgentResponseItem {
-    timeMS: number;
-    isValidCookingStep: boolean;
-    isStepCorrect: boolean;
-    isCorrectProcedureOrder: boolean;
-    hasProgressedToProcedure: boolean;
-    procedureAnalysis: string;
-    stepAnalysis: string;
-    foodAndKitchenwareAnalysis: string;
-    audioAnalysis: string;
-    improvementInstructions: string;
-}
 
 
 export default function WorkFlow(props: WorkFlowProps) {
     const wavRecorderRef = useRef<WavRecorder>(new WavRecorder({ sampleRate: 24000 }));
     const wavStreamPlayerRef = useRef<WavStreamPlayer>(new WavStreamPlayer({ sampleRate: 24000 }));
-    const clientRef = useRef<RealtimeClient>(new RealtimeClient({ apiKey: secret.OPENAI_KEY, dangerouslyAllowAPIKeyInBrowser: true }));
+    const openaiRTClientRef = useRef<RealtimeClient>(new RealtimeClient({ apiKey: secret.OPENAI_KEY, dangerouslyAllowAPIKeyInBrowser: true }));
     const startTimeRef = useRef<string>(new Date().toISOString());
     const conversationRef = useRef<HTMLDivElement>(null);
     const autoResponsesRef = useRef<HTMLDivElement>(null);
@@ -136,19 +82,19 @@ export default function WorkFlow(props: WorkFlowProps) {
         // initiate automatic checking for video-reality alignment
         props.setStateMachineEvent(20);
         props.setCurrentState(0);
-        const client = clientRef.current;
+        const openaiRTClient = openaiRTClientRef.current;
         const wavRecorder = wavRecorderRef.current;
         const wavStreamPlayer = wavStreamPlayerRef.current;
 
         // Set state variables
         startTimeRef.current = new Date().toISOString();
-        setItems(client.conversation.getItems());
+        setItems(openaiRTClient.conversation.getItems());
 
         await wavRecorder.begin();
         await wavStreamPlayer.connect();
-        await client.connect();
-        if (client.getTurnDetectionType() === 'server_vad') {
-            await wavRecorder.record((data) => client.appendInputAudio(data.mono));
+        await openaiRTClient.connect();
+        if (openaiRTClient.getTurnDetectionType() === 'server_vad') {
+            await wavRecorder.record((data) => openaiRTClient.appendInputAudio(data.mono));
         }
         setIsConnected(true);
     };
@@ -166,7 +112,7 @@ export default function WorkFlow(props: WorkFlowProps) {
         autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
 
         setAutoAgentResponseMemoryKv([]);
-        const client = clientRef.current;
+        const client = openaiRTClientRef.current;
         client.disconnect();
 
         const wavRecorder = wavRecorderRef.current;
@@ -178,30 +124,23 @@ export default function WorkFlow(props: WorkFlowProps) {
     };
 
 
-    /** Delete a conversation item */
-    const deleteConversationItem = async (id: string) => {
-        const client = clientRef.current;
-        client.deleteItem(id);
-    };
-
-
     /**
      * In push-to-talk mode, start recording
      * .appendInputAudio() for each sample
      */
     const startRecording = async () => {
         setIsRecording(true);
-        const client = clientRef.current;
+        const openaiRTClient =  openaiRTClientRef.current;
         const wavRecorder = wavRecorderRef.current;
         const wavStreamPlayer = wavStreamPlayerRef.current;
         const trackSampleOffset = await wavStreamPlayer.interrupt();
         if (audioAgentDuty === 'chatbot') {
             if (trackSampleOffset?.trackId) {
                 const { trackId, offset } = trackSampleOffset;
-                await client.cancelResponse(trackId, offset);
+                await openaiRTClient.cancelResponse(trackId, offset);
             }
         }
-        await wavRecorder.record((data) => client.appendInputAudio(data.mono));
+        await wavRecorder.record((data) => openaiRTClient.appendInputAudio(data.mono));
     };
 
     /**
@@ -209,12 +148,12 @@ export default function WorkFlow(props: WorkFlowProps) {
      */
     const stopRecording = async () => {
         setIsRecording(false);
-        const client = clientRef.current;
+        const openaiRTClient = openaiRTClientRef.current;
         const wavRecorder = wavRecorderRef.current;
         await wavRecorder.pause();
         if (audioAgentDuty === 'detect') {
             // @TODO: should be a better way to append this message at the beginning of the conversation
-            client.sendUserMessageContent([
+            openaiRTClient.sendUserMessageContent([
                 {
                     type: `input_text`,
                     text: `Please decide the sentence I just said falls under which type of the following categories:\n\n
@@ -224,7 +163,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                 }
             ]);
         } else if (audioAgentDuty === 'chatbot') {
-            client.createResponse();
+            openaiRTClient.createResponse();
         } else {
             console.error("Invalid audio agent duty");
         }
@@ -235,16 +174,16 @@ export default function WorkFlow(props: WorkFlowProps) {
      * Switch between Manual <> VAD mode for communication
      */
     const changeTurnEndType = async (value: string) => {
-        const client = clientRef.current;
+        const openaiRTClient = openaiRTClientRef.current;
         const wavRecorder = wavRecorderRef.current;
         if (value === 'none' && wavRecorder.getStatus() === 'recording') {
             await wavRecorder.pause();
         }
-        client.updateSession({
+        openaiRTClient.updateSession({
             turn_detection: value === 'none' ? null : { type: 'server_vad' },
         });
-        if (value === 'server_vad' && client.isConnected()) {
-            await wavRecorder.record((data) => client.appendInputAudio(data.mono));
+        if (value === 'server_vad' && openaiRTClient.isConnected()) {
+            await wavRecorder.record((data) => openaiRTClient.appendInputAudio(data.mono));
         }
         setCanPushToTalk(value === 'none');
     };
@@ -303,22 +242,22 @@ export default function WorkFlow(props: WorkFlowProps) {
     useEffect(() => {
         // Get refs
         const wavStreamPlayer = wavStreamPlayerRef.current;
-        const client = clientRef.current;
+        const openaiRTClient = openaiRTClientRef.current;
         // Set instructions
-        client.updateSession({
+        openaiRTClient.updateSession({
             instructions: `System settings:
             Tool use: enabled.
             `
         });
 
         // Set transcription, otherwise we don't get user transcriptions back
-        client.updateSession({
+        openaiRTClient.updateSession({
             input_audio_transcription: { model: 'whisper-1' },
             modalities: ['text', 'audio']
         });
 
         // Add tools
-        client.addTool(
+        openaiRTClient.addTool(
             {
                 name: 'set_memory',
                 description: 'Saves important data about the user into memory.',
@@ -353,8 +292,8 @@ export default function WorkFlow(props: WorkFlowProps) {
         );
 
         // handle realtime events from client + server for event logging
-        client.on('conversation.updated', async ({ item, delta }: any) => {
-            const items = client.conversation.getItems();
+        openaiRTClient.on('conversation.updated', async ({ item, delta }: any) => {
+            const items = openaiRTClient.conversation.getItems();
             // if (delta?.audio) {
             //     wavStreamPlayer.add16BitPCM(delta.audio, item.id);
             // }
@@ -368,20 +307,20 @@ export default function WorkFlow(props: WorkFlowProps) {
             }
             setItems(items);
         });
-        client.on('conversation.interrupted', async () => {
+        openaiRTClient.on('conversation.interrupted', async () => {
             const trackSampleOffset = await wavStreamPlayer.interrupt();
             if (trackSampleOffset?.trackId) {
                 const { trackId, offset } = trackSampleOffset;
-                await client.cancelResponse(trackId, offset);
+                await openaiRTClient.cancelResponse(trackId, offset);
             }
         });
-        client.on('error', (event: any) => console.error(event));
+        openaiRTClient.on('error', (event: any) => console.error(event));
 
-        setItems(client.conversation.getItems());
+        setItems(openaiRTClient.conversation.getItems());
 
         return () => {
             // cleanup; resets to defaults
-            client.reset();
+            openaiRTClient.reset();
         };
     }, []);
 
@@ -430,6 +369,7 @@ export default function WorkFlow(props: WorkFlowProps) {
         }
     }, [items]);
 
+
     /** Handle state transition */
     useEffect(() => {
         const executeNextState = async () => {
@@ -450,6 +390,7 @@ export default function WorkFlow(props: WorkFlowProps) {
         };
         executeNextState();
     }, [props.stateTransitionToggle, props.videoKnowledgeInput]);
+
 
     /** Handle state transition */
     const gotoNextState = async (
@@ -574,32 +515,10 @@ export default function WorkFlow(props: WorkFlowProps) {
         }
     };
 
-    const extractProcedureSequence = (videoKnowledge: string): string[] => {
-        try {
-            if (videoKnowledge.length === 0) {
-                return [];
-            }
-            const knowledge = JSON.parse(videoKnowledge);
-            const procedures = new Set<string>();
-
-            // Extract unique non-empty procedures
-            knowledge.forEach((item: any) => {
-                if (item.procedure_description && item.procedure_description.trim().length > 0) {
-                    procedures.add(item.procedure_description.trim());
-                }
-            });
-
-            // Convert to array and filter out duplicates
-            return Array.from(procedures).filter(Boolean);
-        } catch (error) {
-            console.error('Error parsing video knowledge:', error);
-            return [];
-        }
-    };
 
     // liveAPI: system automatic trigger
     useEffect(() => {
-        const procedures = extractProcedureSequence(props.videoKnowledgeInput);
+        const procedures = utils.extractProcedureSequence(props.videoKnowledgeInput);
         const numberedProcedures = procedures.length > 0
             ? procedures.map((proc, idx) => `${idx + 1}. ${proc}`).join('\n')
             : "No procedures found in video knowledge";

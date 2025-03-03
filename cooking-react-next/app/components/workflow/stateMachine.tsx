@@ -7,7 +7,7 @@ import {
 	followUpWithDetails,
 } from './eventStateFunctions';
 import { decideCategoryFromUserRequest } from './utils';
-import { systemPromptEventDetection } from '../../prompt';
+import { systemPromptEventDetection } from '../../prompts';
 
 // define states and transitions
 type StateMachineTranslator = {

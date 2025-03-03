@@ -26,29 +26,12 @@ import { useScreenCapture } from "../../hooks/use-screen-capture";
 import { useWebcam } from "../../hooks/use-webcam";
 import { AudioRecorder } from "../../lib/audio-recorder";
 import AudioPulse from "../audio-pulse/AudioPulse";
-import { systemPromptEventDetection, systemPromptDefault } from "../../prompt";
+import { systemPromptEventDetection, systemPromptDefault } from "../../prompts";
 import { ToolCall } from "../../multimodal-live-types";
 // import { getPromptForPossibleNextEvents } from "../../WorkFlow/stateMachine";
 import { compareStreamWithReferenceVideoKnowledge } from "@/app/hooks/use-live-api";
-import { set } from "lodash";
-import { AutoAgentResponseItem } from "../workflow";
-
-
-export type ControlTrayProps = {
-	videoRef: RefObject<HTMLVideoElement>;
-	children?: ReactNode;
-	supportsVideo: boolean;
-	currentState: number;
-	videoKnowledgeInput: string;
-	autoAgentResponseMemoryKv: AutoAgentResponseItem[];
-	onVideoStreamChange?: (stream: MediaStream | null) => void;
-	setStateMachineEvent: (event: number) => void;
-	setCurrentState: (state: number) => void;
-	connectConversation: () => Promise<void>;
-	disconnectConversation: () => Promise<void>;
-	setAutoAgentResponseMemoryKv: React.Dispatch<React.SetStateAction<AutoAgentResponseItem[]>>;
-	setVoiceInputTranscript: (transcript: string) => void;
-};
+import { AutoAgentResponseItem } from "../../types/common";
+import { ControlTrayProps } from "../../types/props";
 
 
 function ControlTray(props: ControlTrayProps) {

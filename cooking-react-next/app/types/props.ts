@@ -1,7 +1,8 @@
 /**
  * Component props definitions
  */
-import { RefObject } from 'react';
+import { ReactNode, RefObject } from 'react';
+import { AutoAgentResponseItem } from './common';
 
 // WorkFlow component props
 export interface WorkFlowProps {
@@ -62,3 +63,20 @@ export interface LiveAPIProviderProps {
     url?: string;
     apiKey: string;
 } 
+
+// Control Tray component props
+export type ControlTrayProps = {
+	videoRef: RefObject<HTMLVideoElement>;
+	children?: ReactNode;
+	supportsVideo: boolean;
+	currentState: number;
+	videoKnowledgeInput: string;
+	autoAgentResponseMemoryKv: AutoAgentResponseItem[];
+	onVideoStreamChange?: (stream: MediaStream | null) => void;
+	setStateMachineEvent: (event: number) => void;
+	setCurrentState: (state: number) => void;
+	connectConversation: () => Promise<void>;
+	disconnectConversation: () => Promise<void>;
+	setAutoAgentResponseMemoryKv: React.Dispatch<React.SetStateAction<AutoAgentResponseItem[]>>;
+	setVoiceInputTranscript: (transcript: string) => void;
+};

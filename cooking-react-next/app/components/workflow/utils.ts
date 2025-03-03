@@ -322,3 +322,27 @@ export async function decideCategoryFromUserRequest(
         return { response: -1 };
     }
 }
+
+
+export const extractProcedureSequence = (videoKnowledge: string): string[] => {
+    try {
+        if (videoKnowledge.length === 0) {
+            return [];
+        }
+        const knowledge = JSON.parse(videoKnowledge);
+        const procedures = new Set<string>();
+
+        // Extract unique non-empty procedures
+        knowledge.forEach((item: any) => {
+            if (item.procedure_description && item.procedure_description.trim().length > 0) {
+                procedures.add(item.procedure_description.trim());
+            }
+        });
+
+        // Convert to array and filter out duplicates
+        return Array.from(procedures).filter(Boolean);
+    } catch (error) {
+        console.error('Error parsing video knowledge:', error);
+        return [];
+    }
+};
