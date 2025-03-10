@@ -19,8 +19,8 @@ export async function respondAndProvideVideoSegmentIndex(
     try {
         // delete empty lines in prompt
         prompt = prompt.replace(/\n\s*\n/g, '\n');
-        console.log(`[agent response and provide video segment index]: system prompt: ...`);
-        console.log(`[agent response and provide video segment index]: user prompt: ...`);
+        // console.log(`[agent response and provide video segment index]: system prompt: ...`);
+        // console.log(`[agent response and provide video segment index]: user prompt: ...`);
         // Construct content array with text prompt and any provided images
         const content: Array<{ type: string } & Record<string, any>> = [
             { type: "text", text: prompt }
@@ -82,8 +82,8 @@ export async function respondAndProvideVideoSegmentIndex(
 
         // Handle both tool_calls and direct content responses
         if (response.choices[0]?.message?.tool_calls?.[0]?.function?.arguments) {
-            console.log(`[gpt tool call]: ${response.choices[0].message.tool_calls[0].function.name}`);
-            console.log(response.choices[0].message.tool_calls[0].function.arguments);
+            // console.log(`[gpt tool call]: ${response.choices[0].message.tool_calls[0].function.name}`);
+            // console.log(response.choices[0].message.tool_calls[0].function.arguments);
             return JSON.parse(response.choices[0].message.tool_calls[0].function.arguments);
         } else if (response.choices[0]?.message?.content) {
             console.log(`[gpt direct content response]: ${response.choices[0].message.content}`);

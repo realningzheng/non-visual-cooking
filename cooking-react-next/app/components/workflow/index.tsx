@@ -194,27 +194,26 @@ export default function WorkFlow(props: WorkFlowProps) {
         try {
             console.log('[TTS play]', text);
             const wavStreamPlayer = wavStreamPlayerRef.current;
-            const mp3Response = await openaiClient.audio.speech.create({
+            const audioResponse = await openaiClient.audio.speech.create({
                 model: "tts-1",
                 voice: "alloy",
                 input: text,
                 response_format: 'pcm',
                 speed: speed,
             });
-            const arrayBuffer = await mp3Response.arrayBuffer();
-            await wavStreamPlayer.connect();
+            const arrayBuffer = await audioResponse.arrayBuffer();
             const pcmView = new Int16Array(arrayBuffer);
             const durationMs = (pcmView.length / 24000) * 1000 / speed;
             await wavStreamPlayer.add16BitPCM(arrayBuffer);
             console.log("[TTS Duration]", durationMs);
-
+            
             if (autoResetToInitialState) {
                 // Store the current event to check if it changes
                 const currentEvent = props.stateMachineEvent;
-
+                
                 // Make sure to update the ref with the latest responses
                 autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
-
+                        
                 // Create the timeout
                 const timeoutId = setTimeout(() => {
                     // Only proceed if the event hasn't changed
@@ -226,10 +225,10 @@ export default function WorkFlow(props: WorkFlowProps) {
                         console.log("[TTS Complete] Event changed, skipping state transition");
                     }
                 }, durationMs + AUTO_TIMEOUT_MS);
-
+                        
                 // Clean up the timeout if the component unmounts or if the event changes
                 return () => clearTimeout(timeoutId);
-            }
+                    }
 
         } catch (error) {
             console.error("Error generating or playing TTS:", error);
@@ -352,13 +351,11 @@ export default function WorkFlow(props: WorkFlowProps) {
                     if (items[i].formatted.transcript) {
                         if (Object.keys(stateMachine[props.currentState]).includes(Number(items[i].formatted.transcript).toString())) {
                             let userRequestCategory = Number(items[i].formatted.transcript);
-                            console.log('[user request category res]', userRequestCategory);
                             props.setStateMachineEvent(userRequestCategory);
                         }
                     } else if (items[i].formatted.text) {
                         if (Object.keys(stateMachine[props.currentState]).includes(Number(items[i].formatted.text).toString())) {
                             let userRequestCategory = Number(items[i].formatted.text);
-                            console.log('[user request category res]', userRequestCategory);
                             props.setStateMachineEvent(userRequestCategory);
                         }
                     }
@@ -373,11 +370,12 @@ export default function WorkFlow(props: WorkFlowProps) {
     const previousEventRef = useRef<number>(-1);
     useEffect(() => {
         // Only toggle state transition if the event actually changed
-        if (previousEventRef.current !== props.stateMachineEvent) {
+        if (previousEventRef.current !== props.stateMachineEvent && props.voiceInputTranscript.length > 0) {
+            console.log('[stable! state transition toggle]');
             props.setStateTransitionToggle(!props.stateTransitionToggle);
             previousEventRef.current = props.stateMachineEvent;
         }
-    }, [props.stateMachineEvent]);
+    }, [props.stateMachineEvent, props.voiceInputTranscript]);
 
 
     /** Handle state transition */
@@ -462,6 +460,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                 props.setSegmentedVideoPlaying(false);
                 const realityImageBase64 = await props.captureRealityFrame();
                 props.setIsProcessing(true);
+                console.log('[state function exe input] state: ', stateMachine[statePrev][event], 'voiceInputTranscript: ', voiceInputTranscript);
                 let stateFunctionExeRes = await executeStateFunction(
                     stateMachine[statePrev][event],
                     videoKnowledgeInput,
@@ -471,6 +470,8 @@ export default function WorkFlow(props: WorkFlowProps) {
                     autoAgentResponseMemoryKv
                 );
                 props.setIsProcessing(false);
+                console.log('[state function exe res]');
+                console.log(stateFunctionExeRes);
 
                 // Convert object response to string if necessary
                 const stringifiedResponse = typeof stateFunctionExeRes === 'object'
@@ -499,6 +500,8 @@ export default function WorkFlow(props: WorkFlowProps) {
                         } else {
                             await playTTS(stringifiedResponse, props.ttsSpeed);
                         }
+                    } else {
+                        console.log('[no voice input transcript]');
                     }
                 }
                 return;
