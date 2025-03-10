@@ -19,8 +19,8 @@ export async function respondAndProvideVideoSegmentIndex(
     try {
         // delete empty lines in prompt
         prompt = prompt.replace(/\n\s*\n/g, '\n');
-        console.log(`[callChatGPT system prompt]: ${systemPrompt}`);
-        console.log(`[callChatGPT user prompt]: ${prompt}`);
+        console.log(`[agent response and provide video segment index]: system prompt: ...`);
+        console.log(`[agent response and provide video segment index]: user prompt: ...`);
         // Construct content array with text prompt and any provided images
         const content: Array<{ type: string } & Record<string, any>> = [
             { type: "text", text: prompt }

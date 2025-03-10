@@ -78,7 +78,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     /** Bootstrap functions */
     /** Connect to conversation */
     const connectConversation = async () => {
-        console.log('[connectConversation]');
+        console.log('[openai realtime client] connected');
         // initiate automatic checking for video-reality alignment
         props.setStateMachineEvent(20);
         props.setCurrentState(0);
@@ -101,7 +101,7 @@ export default function WorkFlow(props: WorkFlowProps) {
 
     /* Disconnect and reset conversation state */
     const disconnectConversation = async () => {
-        console.log('[disconnectConversation]');
+        console.log('[openai realtime client] disconnected');
         props.setStateMachineEvent(-1);
         props.setCurrentState(-1);
         props.setVoiceInputTranscript('')
@@ -130,7 +130,7 @@ export default function WorkFlow(props: WorkFlowProps) {
      */
     const startRecording = async () => {
         setIsRecording(true);
-        const openaiRTClient =  openaiRTClientRef.current;
+        const openaiRTClient = openaiRTClientRef.current;
         const wavRecorder = wavRecorderRef.current;
         const wavStreamPlayer = wavStreamPlayerRef.current;
         const trackSampleOffset = await wavStreamPlayer.interrupt();
@@ -152,14 +152,15 @@ export default function WorkFlow(props: WorkFlowProps) {
         const wavRecorder = wavRecorderRef.current;
         await wavRecorder.pause();
         if (audioAgentDuty === 'detect') {
-            // @TODO: should be a better way to append this message at the beginning of the conversation
+            let promptForUserRequestClassification = `Use classify_voice_input function to analyze the user's voice input and classify it into exactly one of the following categories:\n\n
+                            ${possibleNextUserEvents.join("\n")}\n
+                            Consider the intent behind the user's words, not just the literal meaning. Each category has examples to guide your classification.
+                            Respond with ONLY the numerical index (e.g., 0, 1, 2) of the most appropriate category. Do not include any explanation or additional text in your response.`;
+            console.log('[user request classification]', promptForUserRequestClassification);
             openaiRTClient.sendUserMessageContent([
                 {
                     type: `input_text`,
-                    text: `Please decide the sentence I just said falls under which type of the following categories:\n\n
-                    ${possibleNextUserEvents.join("\n")}\n
-
-                    Please reply ONLY the index of the most appropriate category.`
+                    text: promptForUserRequestClassification
                 }
             ]);
         } else if (audioAgentDuty === 'chatbot') {
@@ -247,7 +248,38 @@ export default function WorkFlow(props: WorkFlowProps) {
         openaiRTClient.updateSession({
             instructions: `System settings:
             Tool use: enabled.
-            `
+
+            You are a specialized intent classifier for a cooking assistance application. 
+            Your primary role is to analyze user voice inputs and accurately categorize them into predefined categories use the tool classify_voice_input.
+
+            When presented with a user's speech:
+            1. Listen carefully to understand the user's primary intent
+            2. Match their request to the most appropriate category from the options provided
+            3. Respond ONLY with the numerical index (e.g., 0, 1, 2) of the best matching category
+            4. DO NOT include any explanations, descriptions, or additional text
+            5. If the request seems ambiguous or could fit multiple categories, select the one that best captures the core intent
+            
+            Context: The user is following a cooking procedure and may ask questions about steps, ingredients, troubleshooting, or request video playback control. Each category represents a different type of user intent within the cooking workflow.
+            
+            This classification is critical for routing the user's request through the correct state machine path, so accuracy is essential.`,
+            tools: [
+                {
+                    type: 'function',
+                    name: 'classify_voice_input',
+                    description: `User will provide a request and possible categories. Analyze the user's voice input and classify it into exactly one of the categories provided by the user`,
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            user_request_category: {
+                                type: 'number',
+                                description: 'The index of the category of the user\'s voice input',
+                            },
+                        },
+                        required: ['user_request_category'],
+                    },
+                },
+            ],
+            tool_choice: { type: 'function', name: 'classify_voice_input' }
         });
 
         // Set transcription, otherwise we don't get user transcriptions back
@@ -255,41 +287,6 @@ export default function WorkFlow(props: WorkFlowProps) {
             input_audio_transcription: { model: 'whisper-1' },
             modalities: ['text', 'audio']
         });
-
-        // Add tools
-        openaiRTClient.addTool(
-            {
-                name: 'set_memory',
-                description: 'Saves important data about the user into memory.',
-                parameters: {
-                    type: 'object',
-                    properties: {
-                        key: {
-                            type: 'string',
-                            description:
-                                'The key of the memory value. Always use lowercase and underscores, no other characters.',
-                        },
-                        value: {
-                            type: 'string',
-                            description: 'Value can be anything represented as a string',
-                        },
-                    },
-                    required: ['key', 'value'],
-                },
-            },
-            async ({ key, value }: { [key: string]: any }) => {
-                setInteractionMemoryKv(prevList => [
-                    ...prevList,
-                    {
-                        index: interactionID,
-                        memorized_item_key: key,
-                        memorized_item_value: value
-                    }
-                ]);
-                setInteractionID(prev => prev + 1);
-                return { ok: true };
-            }
-        );
 
         // handle realtime events from client + server for event logging
         openaiRTClient.on('conversation.updated', async ({ item, delta }: any) => {
@@ -356,11 +353,15 @@ export default function WorkFlow(props: WorkFlowProps) {
                     // set user event to the non-null value among transcript and text
                     if (items[i].formatted.transcript) {
                         if (Object.keys(stateMachine[props.currentState]).includes(Number(items[i].formatted.transcript).toString())) {
-                            props.setStateMachineEvent(Number(items[i].formatted.transcript));
+                            let userRequestCategory = Number(items[i].formatted.transcript);
+                            console.log('[user request category res]', userRequestCategory);
+                            props.setStateMachineEvent(userRequestCategory);
                         }
                     } else if (items[i].formatted.text) {
                         if (Object.keys(stateMachine[props.currentState]).includes(Number(items[i].formatted.text).toString())) {
-                            props.setStateMachineEvent(Number(items[i].formatted.text));
+                            let userRequestCategory = Number(items[i].formatted.text);
+                            console.log('[user request category res]', userRequestCategory);
+                            props.setStateMachineEvent(userRequestCategory);
                         }
                     }
                     break;
@@ -884,6 +885,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                                 onClick={() => {
                                     props.setVoiceInputTranscript('[Debug] Respond with Woohoo!');
                                     props.setStateMachineEvent(Number(event));
+                                    props.setStateTransitionToggle(!props.stateTransitionToggle);
                                 }}
                                 className='btn btn-outline btn-xs text-left mb-2.5 mr-1 cursor-pointer'
                             >

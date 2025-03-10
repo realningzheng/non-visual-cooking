@@ -134,7 +134,7 @@ function ControlTray(props: ControlTrayProps) {
 				}]
 			}
 		});
-		console.log('liveAPIConfig', liveAPIConfig)
+		// console.log('liveAPIConfig', liveAPIConfig)
 	}, [liveAPISetConfig, props.videoKnowledgeInput]);
 
 	useEffect(() => {
@@ -251,7 +251,7 @@ function ControlTray(props: ControlTrayProps) {
 		if (!video) return;
 
 		const startSendingFrames = () => {
-			console.log("Video started playing");
+			// console.log("Video started playing");
 			sendVideoFrame(); // Start capturing frames
 		};
 

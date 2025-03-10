@@ -19,29 +19,34 @@ export const explainCurrentFoodState = async (				// state 1
 	interactionMemoryKv: { [key: string]: any },
 	autoAgentResponseMemoryKv: { [key: string]: any }
 ) => {
-	const useVideoKnowledgeFlag = false;
-	const useInteractionMemoryFlag = false;
-	const useAutoAgentResponseMemoryFlag = false;
-	const useVideoAndMemoryCtx = false;
 
 	const prompt = `
-		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? '<VIDEO KNOWLEDGE>:' : ''}
-		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? videoKnowledgeInput : ''}
-		${useInteractionMemoryFlag && useVideoAndMemoryCtx ? 'Interaction memory is the previous user-agent interaction memory, it is useful for some of the requests given by the user but not all of them. Use it as needed.' : ''}
-		${useInteractionMemoryFlag && useVideoAndMemoryCtx ? 'User\'s memory is provided after the tag <INTERACTION MEMORY>.' : ''}
-		${useInteractionMemoryFlag && useVideoAndMemoryCtx ? '<INTERACTION MEMORY>:' : ''}
-		${useInteractionMemoryFlag && useVideoAndMemoryCtx ? interactionMemoryKv : ''}
-		${useAutoAgentResponseMemoryFlag && useVideoAndMemoryCtx ? 'Auto Agent response memory is the store of previous automatic agent response.' : ''}
-		${useAutoAgentResponseMemoryFlag && useVideoAndMemoryCtx ? 'Auto Agent response memory is provided after the tag <AUTO AGENT RESPONSE MEMORY>.' : ''}
-		${useAutoAgentResponseMemoryFlag && useVideoAndMemoryCtx ? '<AUTO AGENT RESPONSE MEMORY>:' : ''}
-		${useAutoAgentResponseMemoryFlag && useVideoAndMemoryCtx ? autoAgentResponseMemoryKv : ''}
+		<VIDEO KNOWLEDGE>:
+		${videoKnowledgeInput}
+		
+		<INTERACTION MEMORY>:
+		${interactionMemoryKv}
+		
+		<AUTO AGENT RESPONSE MEMORY>:
+		${autoAgentResponseMemoryKv}
+		
 		<USER REQUEST>:
 		${voiceInputTranscript}
-		Please describe the current cooking state in the following aspects:
-		1. a short general description of the current state
-		2. the size, color, and relative location of the main food item
+		
+		The user is unable to see, so they are asking about confirmations of visual elements in the cooking scene. 
+		Please provide a detailed visual description that includes:
+		
+		1. Direct answer to the user's specific question first
+		2. Clear visual details about the relevant items, including:
+		   - Size (e.g., small, medium, large, dimensions if relevant)
+		   - Color (be specific about shades and appearance)
+		   - Shape (describe the form and contours)
+		   - Position (describe location relative to other visible objects)
+		   - Visual state (e.g., if food: raw, cooked, browning, etc.)
+		
+		Keep your response concise and focused on what the user can actually see in the current image. 
 	`;
-	console.log(`[state 1: explain current state prompt]`);
+	console.log(`[state function] S1: explain current state prompt]`);
 	const response = await respondAndProvideVideoSegmentIndex(systemPromptDefault, prompt, [realityImageBase64]);
 	return response;
 };
