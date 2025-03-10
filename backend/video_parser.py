@@ -1,3 +1,36 @@
+"""
+Video Knowledge Extraction Tool
+This script processes cooking videos to extract structured knowledge about their content.
+It performs scene detection, audio analysis, and image analysis to create a detailed
+knowledge base of the video's content.
+
+Features:
+- Automatic scene detection to extract key frames
+- Audio extraction and environment sound analysis
+- Frame analysis using computer vision and GPT-4o
+- Transcript processing and segmentation
+- Comprehensive output in structured JSON format
+
+Dependencies:
+- OpenAI API for image analysis
+- GAMA model via Gradio for audio analysis
+- FFmpeg for audio extraction
+- SceneDetect for video scene detection
+- OpenCV for image processing
+
+Usage:
+Place the video file and its annotation files in the appropriate directory
+Run the script to process the video
+The resulting knowledge base will be saved as a JSON file
+
+Output format includes:
+- Video transcript segments
+- Time segments
+- Video clip descriptions
+- Food and kitchenware descriptions
+- Environmental sound descriptions
+"""
+
 import json
 import shutil
 import cv2
@@ -19,19 +52,19 @@ info_piece = {
     "segment": [int, int],
     "video_transcript": str,
     "procedure_description": str,
-    "action_type": str,
-    "action_description": str,
-    "object_list": list[str],
-    "visual_scene_base64": list[str],
-    "visual_scene_path": list[str],
-    "video_clip_description": str,
-    "environment_sound_description": str,
+    # "action_type": str,
+    # "action_description": str,
+    # "object_list": list[str],
+    # "visual_scene_base64": list[str],
+    # "visual_scene_path": list[str],
+    "step_description": str,      # describe the step being performed in the video clip
+    "food_and_kitchenware_description": str, # describe the food and kitchenware objects in the video clip
+    "environment_sound_description": str, # describe the environment sound
 }
 
-
 print("--> Initializing...")
-VIDEO_ID = "rwYaDqXFH88"
-DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+VIDEO_ID = "mixdagZ-fwI_core"
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data", "videos_study", VIDEO_ID)
 procedure_annotation = json.load(
     open(os.path.join(DATA_DIR, f"{VIDEO_ID}_procedure.json"))
 )["annotations"]
@@ -39,9 +72,10 @@ transcript_sentence = json.load(
     open(os.path.join(DATA_DIR, f"{VIDEO_ID}_sentence.json"))
 )
 video_path = os.path.join(DATA_DIR, f"{VIDEO_ID}.mp4")
-frame_output_dir = os.path.join(DATA_DIR, "key_frames", VIDEO_ID)
-audio_output_dir = os.path.join(DATA_DIR, "audio_output", VIDEO_ID)
-res_output_dir = os.path.join(DATA_DIR, "parser_res", VIDEO_ID)
+frame_output_dir = os.path.join(DATA_DIR, "key_frames")
+audio_output_dir = os.path.join(DATA_DIR, "audio_output")
+res_output_dir = os.path.join(DATA_DIR, "parser_res")
+
 # Create directories if they don't exist, and clean up existing content
 for directory in [frame_output_dir, audio_output_dir, res_output_dir]:
     if os.path.exists(directory):
@@ -53,10 +87,11 @@ for directory in [frame_output_dir, audio_output_dir, res_output_dir]:
                 shutil.rmtree(file_path)
     else:
         os.makedirs(directory)
+
 # Initialize video manager
 video_manager = VideoManager([video_path])
 scene_manager = SceneManager()
-scene_manager.add_detector(ContentDetector(threshold=30.0))
+scene_manager.add_detector(ContentDetector(threshold=10))
 
 try:
     # Start the video manager and run scene detection
@@ -91,6 +126,7 @@ with open(
     secret = json.load(f)
     OPENAI_API_KEY = secret["OPENAI_KEY"]
     HF_TOKEN = secret["HF_TOKEN"]
+
 
 # gamaClient = Client("sonalkum/GAMA")
 gamaClient = Client("sonalkum/GAMA-IT")
@@ -158,7 +194,7 @@ def determine_action_description(startTime, endTime):
 
 
 # get video clip description
-def get_video_clip_description(startTime, endTime):
+def get_step_description(startTime, endTime):
     frames = []
     for file in os.listdir(frame_output_dir):
         if file.startswith(f"{VIDEO_ID}_scene_") and len(file.split("_")) >= 4:
@@ -171,13 +207,41 @@ def get_video_clip_description(startTime, endTime):
             ):
                 with open(os.path.join(frame_output_dir, file), "rb") as image_file:
                     frames.append(base64.b64encode(image_file.read()).decode("utf-8"))
-    prompt = "These are some consecutive screenshots from a video clip, \
-            semantically summarize the content of the video clip precisely and describe the look, position, and usage of objects in the video clip. \
-            do not explain each screenshot separately, instead, consider all of them as a whole. \
-            Go straight to the description without any other words such as: \
-            'The video clip shows...', 'The video clip is about...', etc."
-    scene_desp = analyze_images_with_gpt4(frames, prompt)
-    return scene_desp
+    prompt = "Analyze these consecutive screenshots from a cooking video and identify the specific cooking step being performed. \
+            Focus on the primary cooking action or technique being demonstrated \
+            Describe the cooking step with precise, action-oriented natural language. \
+            Consider all screenshots as representing a single continuous cooking step. \
+            e.g. 'The chef is sautéing diced vegetables in olive oil over medium heat while stirring continuously to ensure even cooking.' \
+            Provide your description directly without phrases like 'The video shows...' or 'In this clip...'"
+    step_desp = analyze_images_with_gpt4(frames, prompt)
+    return step_desp
+
+
+# get food and kitchenware description
+def get_food_and_kitchenware_description(startTime, endTime):
+    frames = []
+    for file in os.listdir(frame_output_dir):
+        if file.startswith(f"{VIDEO_ID}_scene_") and len(file.split("_")) >= 4:
+            file_start = int(file.split("_")[-2])
+            file_end = int(file.split("_")[-1].split(".")[0])
+            if (
+                (file_start >= int(startTime) and file_end <= int(endTime))
+                or (file_end >= int(startTime) and file_start <= int(startTime))
+                or (file_end >= int(endTime) and file_start <= int(endTime))
+            ):
+                with open(os.path.join(frame_output_dir, file), "rb") as image_file:
+                    frames.append(base64.b64encode(image_file.read()).decode("utf-8"))
+    prompt = "Analyze these consecutive screenshots from a cooking video and provide a description on \
+            the appearance, relative position and relationship of the following objects:  \
+            1. Ingredients: focusing on their state (raw, chopped, cooked, etc.), appearance, and approximate quantities. \
+            2. Kitchenware: Identify all tools, utensils, cookware, and appliances, describing how they're currently being used. \
+            e.g., 'diced onions in a metal bowl next to a chef's knife'\
+            Describe the food and kitchenware objects in precise natural language. \
+            \
+            Consider all screenshots as a continuous scene rather than explaining each screenshot separately. \
+            Start directly with your description without any introductory phrases like 'The video shows...' or 'I can see...'"
+    food_and_kitchenware_desp = analyze_images_with_gpt4(frames, prompt)
+    return food_and_kitchenware_desp
 
 
 # get visual scene base64
@@ -263,15 +327,12 @@ if __name__ == "__main__":
         "index",
         "segment",
         "video_transcript",
-        # "procedure_description",
-        # "action_type",
-        # "action_description",
-        # "object_list",
-        # "visual_scene_base64",
-        # "visual_scene_path",
-        # "video_clip_description",
-        "environment_sound_description",
+        "procedure_description",
+        "step_description",              # describe the step being performed in the video clip
+        "food_and_kitchenware_description",    # describe the food and kitchenware objects in the video clip
+        "environment_sound_description"        # describe the environment sound
     ]
+    
     print("\n--> Getting audio track...")
     # extract audio track from the video
     original_audio_path = os.path.join(audio_output_dir, f"{VIDEO_ID}_original.wav")
@@ -285,7 +346,7 @@ if __name__ == "__main__":
     last_end_time = 0
 
     # sample a few sentences for testing
-    transcript_sentence = transcript_sentence[119:]
+    # transcript_sentence = transcript_sentence[:3]
     total_sentences = len(transcript_sentence)
     for sentenceInfo in tqdm(
         transcript_sentence,
@@ -308,30 +369,31 @@ if __name__ == "__main__":
             _info_piece["procedure_description"] = locate_procedure_annotation(
                 startTime, endTime
             )
-        if "action_type" in REQUIRED_KEY:
-            _info_piece["action_type"] = determine_action_type(startTime, endTime)
-        if "action_description" in REQUIRED_KEY:
-            _info_piece["action_description"] = determine_action_description(
+        if "step_description" in REQUIRED_KEY:
+            _info_piece["step_description"] = get_step_description(
                 startTime, endTime
             )
-        if "video_clip_description" in REQUIRED_KEY:
-            _info_piece["video_clip_description"] = get_video_clip_description(
-                startTime, endTime
-            )
-        if "environment_sound_description" in REQUIRED_KEY:
-            _info_piece["environment_sound_description"] = (
-                get_environment_sound_description(
-                    startTime, endTime, original_audio_path
+        if "food_and_kitchenware_description" in REQUIRED_KEY:
+            _info_piece["food_and_kitchenware_description"] = (
+                get_food_and_kitchenware_description(
+                    startTime, endTime
                 )
             )
-        if "object_list" in REQUIRED_KEY:
-            _info_piece["object_list"] = get_object_list(startTime, endTime)
-        if "visual_scene_base64" in REQUIRED_KEY:
-            _info_piece["visual_scene_base64"] = get_visual_scene_base64(
-                startTime, endTime
-            )
-        if "visual_scene_path" in REQUIRED_KEY:
-            _info_piece["visual_scene_path"] = get_visual_scene_path(startTime, endTime)
+        if "environment_sound_description" in REQUIRED_KEY:
+            # _info_piece["environment_sound_description"] = (
+            #     get_environment_sound_description(
+            #         startTime, endTime, original_audio_path
+            #     )
+            # )
+            _info_piece["environment_sound_description"] = ""
+        # if "object_list" in REQUIRED_KEY:
+        #     _info_piece["object_list"] = get_object_list(startTime, endTime)
+        # if "visual_scene_base64" in REQUIRED_KEY:
+        #     _info_piece["visual_scene_base64"] = get_visual_scene_base64(
+        #         startTime, endTime
+        #     )
+        # if "visual_scene_path" in REQUIRED_KEY:
+        #     _info_piece["visual_scene_path"] = get_visual_scene_path(startTime, endTime)
         video_knowledge_output.append(_info_piece)
 
         last_end_time = endTime

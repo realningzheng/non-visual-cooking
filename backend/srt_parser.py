@@ -3,6 +3,24 @@ import json
 import argparse
 import os
 
+"""
+SRT Parser Script
+
+This script parses SRT subtitle files and converts them to JSON format. It provides two main functionalities:
+
+1. Word-level parsing: Converts each subtitle entry in an SRT file to JSON format with caption index, 
+   text content, start time, and end time in milliseconds.
+
+2. Sentence-level parsing: Groups word-level subtitles into sentences (based on punctuation like 
+   periods, question marks, and exclamation points) and creates a JSON file with sentence index, 
+   text content, start time, and end time.
+
+Usage:
+    python srt_parser.py --srt_word_input=<srt_file> --json_sentence_output=<sentence_json_file> --json_word_output=<word_json_file>
+
+If run directly, the script uses default filenames in the same directory as the script.
+"""
+
 
 def parse_srt(srt_word_input, json_word_output):
     # Load the SRT file
@@ -84,18 +102,20 @@ def save_sentence_json(srt_word_input, json_sentence_output, json_word_output):
 
 
 if __name__ == "__main__":
+    VIDEO_ID = "mixdagZ-fwI_core"
     parser = argparse.ArgumentParser()
-    parser.add_argument("--srt_word_input", type=str, default="rwYaDqXFH88.srt")
-    parser.add_argument("--json_sentence_output", type=str, default="rwYaDqXFH88_sentence.json")
-    parser.add_argument("--json_word_output", type=str, default="rwYaDqXFH88_word.json")
+    parser.add_argument("--srt_word_input", type=str, default="mixdagZ-fwI_core.srt")
+    parser.add_argument("--json_sentence_output", type=str, default="mixdagZ-fwI_core_sentence.json")
+    parser.add_argument("--json_word_output", type=str, default="mixdagZ-fwI_core_word.json")
     args = parser.parse_args()
 
     # Get the directory of the current script
-    current_dir = os.path.dirname(os.path.abspath(__file__))
+    # current_dir = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.path.join(os.path.dirname(__file__), "data", "videos_study", VIDEO_ID)
 
     # Construct full paths using os.path.join
-    srt_word_input = os.path.join(current_dir, args.srt_word_input)
-    json_sentence_output = os.path.join(current_dir, args.json_sentence_output)
-    json_word_output = os.path.join(current_dir, args.json_word_output)
+    srt_word_input = os.path.join(data_dir, args.srt_word_input)
+    json_sentence_output = os.path.join(data_dir, args.json_sentence_output)
+    json_word_output = os.path.join(data_dir, args.json_word_output)
 
     save_sentence_json(srt_word_input, json_sentence_output, json_word_output)
