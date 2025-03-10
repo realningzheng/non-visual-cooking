@@ -220,7 +220,6 @@ export default function WorkFlow(props: WorkFlowProps) {
                     // Only proceed if the event hasn't changed
                     if (currentEvent === props.stateMachineEvent) {
                         console.log("[TTS Complete] Returning to initial state");
-                        props.setVoiceInputTranscript('');
                         props.setStateMachineEvent(4); // Trigger event 4 (user agreement)
                         props.setStateTransitionToggle(!props.stateTransitionToggle);
                     } else {
@@ -344,7 +343,6 @@ export default function WorkFlow(props: WorkFlowProps) {
             for (let i = items.length - 1; i >= 0; i--) {
                 if (items[i].role === 'user' && items[i].formatted.transcript) {
                     props.setVoiceInputTranscript(items[i].formatted.transcript || '');
-                    props.setStateTransitionToggle(!props.stateTransitionToggle);
                     break;
                 }
             }
@@ -371,6 +369,17 @@ export default function WorkFlow(props: WorkFlowProps) {
     }, [items]);
 
 
+    // Add a new useEffect to handle state transitions only when the event changes
+    const previousEventRef = useRef<number>(-1);
+    useEffect(() => {
+        // Only toggle state transition if the event actually changed
+        if (previousEventRef.current !== props.stateMachineEvent) {
+            props.setStateTransitionToggle(!props.stateTransitionToggle);
+            previousEventRef.current = props.stateMachineEvent;
+        }
+    }, [props.stateMachineEvent]);
+
+
     /** Handle state transition */
     useEffect(() => {
         const executeNextState = async () => {
@@ -382,7 +391,6 @@ export default function WorkFlow(props: WorkFlowProps) {
                         props.voiceInputTranscript,
                         props.videoKnowledgeInput
                     );
-                    props.setVoiceInputTranscript('');
                     props.setCurrentState(
                         stateMachine[props.currentState][props.stateMachineEvent]
                     );
