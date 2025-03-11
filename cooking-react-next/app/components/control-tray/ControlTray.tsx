@@ -51,11 +51,13 @@ function ControlTray(props: ControlTrayProps) {
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const responseCounter = useRef(0);
+	const sessionStartTime = useRef<number | null>(null);
 
 	const updateAutoAgentResponseMemoryKv = (response: AutoAgentResponseItem) => {
+		const currentTime = sessionStartTime.current ? Date.now() - sessionStartTime.current : 0;
 		const responseWithTimeValue = {
 			...response,
-			timeMS: responseCounter.current * 1000 / 0.5
+			timeMS: currentTime
 		};
 		responseCounter.current += 1;
 		props.setAutoAgentResponseMemoryKv((prevResponses) => [...prevResponses, responseWithTimeValue]);
@@ -282,6 +284,8 @@ function ControlTray(props: ControlTrayProps) {
 	const connectConversation = async () => {
 		// Clear any existing audio chunks when starting a new connection
 		audioChunks.current = [];
+		// Set the session start time
+		sessionStartTime.current = Date.now();
 		// await eventConnect();
 		await liveAPIConnect();
 		await props.connectConversation();
@@ -295,9 +299,8 @@ function ControlTray(props: ControlTrayProps) {
 		// await eventDisconnect();
 		await liveAPIDisconnect();
 		await props.disconnectConversation();
-		props.setStateMachineEvent(-1);
-		props.setCurrentState(-1);
-		props.setVoiceInputTranscript('');
+		// Reset session start time
+		sessionStartTime.current = null;
 		responseCounter.current = 0;
 	};
 

@@ -41,6 +41,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     // Add a reference to the file input
     const fileInputRef = useRef<HTMLInputElement>(null);
     const autoAgentResponseMemoryKvRef = useRef<AutoAgentResponseItem[]>([]);
+    const sessionStartTime = useRef<number | null>(null);
     const [selectedFileName, setSelectedFileName] = useState<string>('');
     const [isConnected, setIsConnected] = useState(false);
     const [items, setItems] = useState<ItemType[]>([]);
@@ -88,7 +89,9 @@ export default function WorkFlow(props: WorkFlowProps) {
 
         // Set state variables
         startTimeRef.current = new Date().toISOString();
+        sessionStartTime.current = Date.now();
         setItems(openaiRTClient.conversation.getItems());
+        setIsConnected(true);
 
         await wavRecorder.begin();
         await wavStreamPlayer.connect();
@@ -96,12 +99,15 @@ export default function WorkFlow(props: WorkFlowProps) {
         if (openaiRTClient.getTurnDetectionType() === 'server_vad') {
             await wavRecorder.record((data) => openaiRTClient.appendInputAudio(data.mono));
         }
-        setIsConnected(true);
     };
 
-    /* Disconnect and reset conversation state */
+    /** Disconnect conversation */
     const disconnectConversation = async () => {
         console.log('[openai realtime client] disconnected');
+        const wavRecorder = wavRecorderRef.current;
+        await wavRecorder.end();
+        setIsConnected(false);
+        sessionStartTime.current = null;
         props.setStateMachineEvent(-1);
         props.setCurrentState(-1);
         props.setVoiceInputTranscript('')
@@ -110,17 +116,13 @@ export default function WorkFlow(props: WorkFlowProps) {
         props.setAgentResponse('');
         // Make sure to update the ref with the latest responses before clearing
         autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
-
         setAutoAgentResponseMemoryKv([]);
+
         const client = openaiRTClientRef.current;
         client.disconnect();
 
-        const wavRecorder = wavRecorderRef.current;
-        await wavRecorder.end();
-
         const wavStreamPlayer = wavStreamPlayerRef.current;
         await wavStreamPlayer.interrupt();
-        setIsConnected(false);
     };
 
 
@@ -465,6 +467,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                     {
                         index: interactionID,
                         user_query: voiceInputTranscript,
+                        timestamp: sessionStartTime.current ? Date.now() - sessionStartTime.current : 0
                     }
                 ]);
                 setInteractionID(prev => prev + 1);
@@ -516,7 +519,8 @@ export default function WorkFlow(props: WorkFlowProps) {
                                     index: interactionID,
                                     user_query: voiceInputTranscript,
                                     agent_response: stateFunctionExeRes.response,
-                                    video_segment_index: stateFunctionExeRes.video_segment_index
+                                    video_segment_index: stateFunctionExeRes.video_segment_index,
+                                    timestamp: sessionStartTime.current ? Date.now() - sessionStartTime.current : 0
                                 }
                             ]);
                             setInteractionID(prev => prev + 1);
@@ -676,6 +680,14 @@ export default function WorkFlow(props: WorkFlowProps) {
         }
     }, [autoAgentResponseMemoryKv]); // Scroll when responses update
 
+    // Add session start time initialization
+    useEffect(() => {
+        if (isConnected && sessionStartTime.current === null) {
+            sessionStartTime.current = Date.now();
+        } else if (!isConnected) {
+            sessionStartTime.current = null;
+        }
+    }, [isConnected]);
 
     return (
         <Stack spacing={1}>
@@ -905,6 +917,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                             ? `${String(item.agent_response).substring(0, 40)}...${String(item.agent_response).slice(-30)}`
                             : String(item.agent_response)}<br />
                         &nbsp;&nbsp;&nbsp;&nbsp;video_segment_index: {String(item.video_segment_index)}<br />
+                        &nbsp;&nbsp;&nbsp;&nbsp;timestamp: {item.timestamp}<br />
                         {"}"},
                     </div>
                 ))}

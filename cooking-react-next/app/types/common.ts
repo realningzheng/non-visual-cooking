@@ -18,6 +18,7 @@ export interface InteractionMemoryItem {
     video_segment_index?: number[];
     memorized_item_key?: string;
     memorized_item_value?: string;
+    timestamp?: number; // Timestamp in milliseconds since session start
 }
 
 // Auto agent response items for automated analysis
