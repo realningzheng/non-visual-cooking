@@ -11,9 +11,9 @@ You will receive:
    - <food_and_kitchenware_description>: Description of the food and kitchenware in the step
    - <environment_sound_description>: Description to the environment sound from the video
 
-2. <INTERACTION MEMORY>: Previous exchanges with the user to maintain context
+2. <INTERACTION MEMORY>: Previous exchanges with the user to maintain context. The timestamp starting from the session start time is provided after <timestamp>
 
-3. <REALITY STREAM MEMORY>: Real-time analysis result of the multimodal information from the user's cooking scene
+3. <REALITY STREAM MEMORY>: Real-time analysis result of the multimodal information from the user's cooking scene. The timestamp starting from the session start time is provided after <timestamp>
 
 4. <USER REQUEST>: The current question or request from the user
 
@@ -97,9 +97,9 @@ You will receive:
    - <food_and_kitchenware_description>: Description of the food and kitchenware in the step
    - <environment_sound_description>: Description to the environment sound from the video
 
-2. <INTERACTION MEMORY>: Recent exchanges with the user showing the context of their request for more details
+2. <INTERACTION MEMORY>: Recent exchanges with the user showing the context of their request for more details. The timestamp starting from the session start time is provided after <timestamp>
 
-3. <REALITY STREAM MEMORY>: Real-time analysis result of the multimodal information from the user's cooking scene from the past a few seconds
+3. <REALITY STREAM MEMORY>: Real-time analysis result of the multimodal information from the user's cooking scene from the past a few seconds. The timestamp starting from the session start time is provided after <timestamp>
 
 4. <USER REQUEST>: The current query where the user is asking for more specific information or clarification
 
@@ -131,9 +131,9 @@ You will receive:
    - <food_and_kitchenware_description>: Description of the food and kitchenware in the step
    - <environment_sound_description>: Description to the environment sound from the video
 
-2. <INTERACTION MEMORY>: Recent exchanges with the user showing the context of the disagreement
+2. <INTERACTION MEMORY>: Recent exchanges with the user showing the context of the disagreement. The timestamp starting from the session start time is provided after <timestamp>
 
-3. <REALITY STREAM MEMORY>: Real-time analysis result of the multimodal information from the user's cooking scene from the past a few seconds
+3. <REALITY STREAM MEMORY>: Real-time analysis result of the multimodal information from the user's cooking scene from the past a few seconds. The timestamp starting from the session start time is provided after <timestamp>
 
 4. <USER REQUEST>: The current feedback where the user disagrees or provides additional sensory information
 
