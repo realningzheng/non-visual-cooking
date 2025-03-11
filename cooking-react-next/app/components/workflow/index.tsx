@@ -107,7 +107,7 @@ export default function WorkFlow(props: WorkFlowProps) {
         props.setVoiceInputTranscript('')
         setItems([]);
         setInteractionMemoryKv([]);
-
+        props.setAgentResponse('');
         // Make sure to update the ref with the latest responses before clearing
         autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
 
@@ -202,33 +202,33 @@ export default function WorkFlow(props: WorkFlowProps) {
                 speed: speed,
             });
             const arrayBuffer = await audioResponse.arrayBuffer();
-            const pcmView = new Int16Array(arrayBuffer);
-            const durationMs = (pcmView.length / 24000) * 1000 / speed;
             await wavStreamPlayer.add16BitPCM(arrayBuffer);
-            console.log("[TTS Duration]", durationMs);
+            // const pcmView = new Int16Array(arrayBuffer);
+            // const durationMs = (pcmView.length / 24000) * 1000 / speed;
+            // console.log("[TTS Duration]", durationMs);
             
-            if (autoResetToInitialState) {
-                // Store the current event to check if it changes
-                const currentEvent = props.stateMachineEvent;
+            // if (autoResetToInitialState) {
+            //     // Store the current event to check if it changes
+            //     const currentEvent = props.stateMachineEvent;
                 
-                // Make sure to update the ref with the latest responses
-                autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
+            //     // Make sure to update the ref with the latest responses
+            //     autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
                         
-                // Create the timeout
-                const timeoutId = setTimeout(() => {
-                    // Only proceed if the event hasn't changed
-                    if (currentEvent === props.stateMachineEvent) {
-                        console.log("[TTS Complete] Returning to initial state");
-                        props.setStateMachineEvent(4); // Trigger event 4 (user agreement)
-                        props.setStateTransitionToggle(!props.stateTransitionToggle);
-                    } else {
-                        console.log("[TTS Complete] Event changed, skipping state transition");
-                    }
-                }, durationMs + AUTO_TIMEOUT_MS);
+            //     // Create the timeout
+            //     const timeoutId = setTimeout(() => {
+            //         // Only proceed if the event hasn't changed
+            //         if (currentEvent === props.stateMachineEvent) {
+            //             console.log("[TTS Complete] Returning to initial state");
+            //             props.setStateMachineEvent(4); // Trigger event 4 (user agreement)
+            //             props.setStateTransitionToggle(!props.stateTransitionToggle);
+            //         } else {
+            //             console.log("[TTS Complete] Event changed, skipping state transition");
+            //         }
+            //     }, durationMs + AUTO_TIMEOUT_MS);
                         
-                // Clean up the timeout if the component unmounts or if the event changes
-                return () => clearTimeout(timeoutId);
-                    }
+            //     // Clean up the timeout if the component unmounts or if the event changes
+            //     return () => clearTimeout(timeoutId);
+            //         }
 
         } catch (error) {
             console.error("Error generating or playing TTS:", error);
@@ -366,14 +366,40 @@ export default function WorkFlow(props: WorkFlowProps) {
     }, [items]);
 
 
-    // Add a new useEffect to handle state transitions only when the event changes
-    const previousEventRef = useRef<number>(-1);
+    // Replace the existing useEffect with this more robust version
+    const prevEventAndTranscriptRef = useRef<{event: number, transcript: string}>({event: -1, transcript: ''});
+
     useEffect(() => {
-        // Only toggle state transition if the event actually changed
-        if (previousEventRef.current !== props.stateMachineEvent && props.voiceInputTranscript.length > 0) {
-            console.log('[stable! state transition toggle]');
+        // Get current values
+        const currentEvent = props.stateMachineEvent;
+        const currentTranscript = props.voiceInputTranscript;
+        const prevValues = prevEventAndTranscriptRef.current;
+        
+        // Special cases: events 1, 3, 4, 5, 6 only need a transcript change
+        const isSpecialEvent = [1, 3, 4, 5, 6].includes(currentEvent);
+        const eventChanged = prevValues.event !== currentEvent;
+        const transcriptChanged = prevValues.transcript !== currentTranscript;
+        
+        // Trigger state transition if:
+        // 1. It's a special event (1,3,4,5,6) and we have a transcript, OR
+        // 2. The event changed and we have a non-empty transcript, OR
+        // 3. The transcript changed and we have a valid event
+        if ((isSpecialEvent && currentTranscript.length > 0) ||
+            (eventChanged && currentTranscript.length > 0) || 
+            (transcriptChanged && currentEvent >= 0 && currentTranscript.length > 0)) {
+            console.log('[stable! state transition toggle]', { 
+                event: currentEvent, 
+                isSpecialEvent,
+                transcriptLength: currentTranscript.length 
+            });
+            
             props.setStateTransitionToggle(!props.stateTransitionToggle);
-            previousEventRef.current = props.stateMachineEvent;
+            
+            // Update the ref to remember current values
+            prevEventAndTranscriptRef.current = {
+                event: currentEvent,
+                transcript: currentTranscript
+            };
         }
     }, [props.stateMachineEvent, props.voiceInputTranscript]);
 
@@ -460,7 +486,10 @@ export default function WorkFlow(props: WorkFlowProps) {
                 props.setSegmentedVideoPlaying(false);
                 const realityImageBase64 = await props.captureRealityFrame();
                 props.setIsProcessing(true);
-                console.log('[state function exe input] state: ', stateMachine[statePrev][event], 'voiceInputTranscript: ', voiceInputTranscript);
+                console.log('[state function exe input] statePrev: ')
+                console.log(statePrev)
+                console.log('[state function exe input] voiceInputTranscript: ')
+                console.log(voiceInputTranscript)
                 let stateFunctionExeRes = await executeStateFunction(
                     stateMachine[statePrev][event],
                     videoKnowledgeInput,

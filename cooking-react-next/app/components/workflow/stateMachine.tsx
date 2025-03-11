@@ -250,7 +250,7 @@ export const executeStateFunction = async (
 ) => {
 	const stateFunction = stateFunctions[stateNumber];
 	if (stateFunction) {
-		console.log(`Executing function for state ${stateNumber}: ${stateTranslator[stateNumber]}`);
+		// console.log(`Executing function for state ${stateNumber}: ${stateTranslator[stateNumber]}`);
 		return await stateFunction(videoKnowledgeInput, realityImageBase64, voiceInputTranscript, interactionMemoryKv, autoAgentResponseMemoryKv);
 	} else {
 		console.error(`No function found for event ${stateNumber}`);
