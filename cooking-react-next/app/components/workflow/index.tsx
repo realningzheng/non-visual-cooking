@@ -658,7 +658,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                     }
                     props.setAgentResponse(JSON.stringify({ "response": lastResponse.improvementInstructions }));
                     // @TODO: debug only
-                    props.videoRef.current?.pause();
+                    // props.videoRef.current?.pause();
                     props.setStateTransitionToggle(!props.stateTransitionToggle);
                 } else if (needsCorrection) {
                     console.log("[Incorrect detected, but no instruction provided]");

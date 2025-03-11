@@ -93,27 +93,27 @@ export const eventDetailedExplanation: StateMachineTranslator = {
          * "I understand now"
          * "That worked, thank you"`,
 
-	// @TODO: deactivate this event for now
-	// 5: `User asks for repeating a previous interaction
-    //    - User seeks to recall the agent's response from the previous interaction.
-    //    - Examples:
-    //      * "Can you say that again?"
-	//    	 * "I didn't catch you."
-	// 	 * "What did you say about XXXX?"
-    //      * "Please repeat the last instruction"
-    //      * "How did you say about the ingredients for making the sauce?"`,
+	// @TODO: this event is deactivated for now
+	5: `User asks for repeating a previous interaction
+       - User seeks to recall the agent's response from the previous interaction.
+       - Examples:
+         * "Can you say that again?"
+	   	 * "I didn't catch you."
+		 * "What did you say about XXXX?"
+         * "Please repeat the last instruction"
+         * "How did you say about the ingredients for making the sauce?"`,
 
-	// @TODO: deactivate this event for now
-	// 6: `User asks for controlling the video playback
-    //    - User requests to play, pause, or replay the video
-    //    - Examples:
-	//    	 * "Play"
-	//    	 * "Pause"
-	// 	 * "Replay"
-	//    	 * "Play the video for this step"
-    //      * "Replay xxx from the video"
-    //      * "Can you show me how they did xxx from the video?"
-    //      * "I need to play the kneading part again"`,
+	// @TODO: this event is deactivated for now
+	6: `User asks for controlling the video playback
+       - User requests to play, pause, or replay the video
+       - Examples:
+	   	 * "Play"
+	   	 * "Pause"
+		 * "Replay"
+	   	 * "Play the video for this step"
+         * "Replay xxx from the video"
+         * "Can you show me how they did xxx from the video?"
+         * "I need to play the kneading part again"`,
 
 	7: `User asks for general questions
        - General cooking queries based on the video knowledge except for a specific steps or food states
@@ -173,51 +173,51 @@ export const stateMachine: StateMachine = {
 		8: 1,  // 8: User asks about food state related questions; 1: Agent: Explain the current state of the food
 		10: 3, // 10: System automatically detects food state misalignment; 3: Agent: Respond with how to fix
 		12: 3, // 12: System automatically detects missing previous steps; 3: Agent: Respond with how to fix
-		5: 0,  // 5: User asks for repeating a previous interaction; add-on state, stay where it is
-		6: 0,  // 6: User asks for playing the segmented video; add-on state, stay where it is
+		// 5: 0,  // 5: User asks for repeating a previous interaction; add-on state, stay where it is
+		// 6: 0,  // 6: User asks for playing the segmented video; add-on state, stay where it is
 		20: 0, // Timeout, stay in current state
 	},
 	1: {
 		3: 5,  // 3: User disagrees; 5: Handling user disagreements
 		1: 8,  // 1: User asks follow-up questions; 8: Agent: Follows up (with details) from the previous interaction
 		4: 0,  // 4: User agrees; 0: Comparing video-reality alignment	
-		5: 1,  // 5: User asks for repeating a previous interaction; add-on state, stay where it is
-		6: 1,  // 6: User asks for playing the segmented video; add-on state, stay where it is
+		// 5: 1,  // 5: User asks for repeating a previous interaction; add-on state, stay where it is
+		// 6: 1,  // 6: User asks for playing the segmented video; add-on state, stay where it is
 	},
 	2: {
 		3: 5,  // 3: User disagrees; 5: Handling user disagreements
 		1: 8,  // 1: User asks follow-up questions; 8: Agent: Follows up (with details) from the previous interaction
 		4: 0,  // 4: User agrees; 0: Comparing video-reality alignment
-		5: 2,  // 5: User asks for repeating a previous interaction; add-on state, stay where it is
-		6: 2,  // 6: User asks for playing the segmented video; add-on state, stay where it is
+		// 5: 2,  // 5: User asks for repeating a previous interaction; add-on state, stay where it is
+		// 6: 2,  // 6: User asks for playing the segmented video; add-on state, stay where it is
 	},
 	3: {
 		3: 5,  // 3: User disagrees; 5: Handling user disagreements
 		1: 8,  // 1: User asks follow-up questions; 8: Agent: Follows up (with details) from the previous interaction
 		4: 0,  // 4: User agrees; 0: Comparing video-reality alignment
-		5: 3,  // 5: User asks for repeating a previous interaction; add-on state, stay where it is
-		6: 3,  // 6: User asks for playing the segmented video; add-on state, stay where it is
+		// 5: 3,  // 5: User asks for repeating a previous interaction; add-on state, stay where it is
+		// 6: 3,  // 6: User asks for playing the segmented video; add-on state, stay where it is
 	},
 	4: {
 		3: 5,  // 3: User disagrees; 5: Handling user disagreements
 		1: 8,  // 1: User asks follow-up questions; 8: Agent: Follows up (with details) from the previous interaction
 		4: 0,  // 4: User agrees; 0: Comparing video-reality alignment
-		5: 4,  // 5: User asks for repeating a previous interaction; add-on state, stay where it is
-		6: 4,  // 6: User asks for playing the segmented video; add-on state, stay where it is
+		// 5: 4,  // 5: User asks for repeating a previous interaction; add-on state, stay where it is
+		// 6: 4,  // 6: User asks for playing the segmented video; add-on state, stay where it is
 	},
 	5: {
 		1: 8, // 1: User asks follow-up questions; 8: Agent: Follows up (with details) from the previous interaction
 		4: 0, // 4: User agrees; 0: Comparing video-reality alignment
 		3: 5, // 3: User disagrees; 5: Handling user disagreements
-		5: 5, // 5: User asks for repeating a previous interaction; add-on state, stay where it is
-		6: 5, // 6: User asks for playing the segmented video; add-on state, stay where it is
+		// 5: 5, // 5: User asks for repeating a previous interaction; add-on state, stay where it is
+		// 6: 5, // 6: User asks for playing the segmented video; add-on state, stay where it is
 	},
 	8: {
 		4: 0, // 4: User agrees; 0: Comparing video-reality alignment
 		3: 5, // 3: User disagrees; 5: Handling user disagreements
 		1: 8, // 1: User asks follow-up questions; 8: Agent: Follows up (with details) from the previous interaction
-		5: 8, // 5: User asks for repeating a previous interaction; add-on state, stay where it is
-		6: 8, // 6: User asks for playing the segmented video; add-on state, stay where it is
+		// 5: 8, // 5: User asks for repeating a previous interaction; add-on state, stay where it is
+		// 6: 8, // 6: User asks for playing the segmented video; add-on state, stay where it is
 	},
 };
 

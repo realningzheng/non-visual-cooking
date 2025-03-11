@@ -238,10 +238,10 @@ function ControlTray(props: ControlTrayProps) {
 				requestAnimationFrame(sendVideoFrame);
 			}
 		}
-		
+
 		// Update the previous connection state
 		prevConnectedRef.current = liveAPIConnected;
-		
+
 		return () => {
 			prevConnectedRef.current = false;
 		};
@@ -264,7 +264,7 @@ function ControlTray(props: ControlTrayProps) {
 		};
 	}, [props.videoRef, liveAPIConnected]);
 
-	
+
 	//handler for swapping from one video-stream to the next
 	const changeStreams = (next?: UseMediaStreamResult) => async () => {
 		if (next) {
@@ -307,9 +307,11 @@ function ControlTray(props: ControlTrayProps) {
 
 	return (
 		<div>
-			<div className="fixed bottom-12 left-12 bg-base-200 shadow-lg px-4 py-2 rounded-lg flex flex-col items-center">
-				<video ref={props.videoRef} controls width="200" className="rounded-md shadow-md" />
-			</div>
+			{/* {videoFile && (
+				<div className="fixed bottom-12 left-12 bg-base-200 shadow-lg px-4 py-2 rounded-lg flex flex-col items-center">
+					<video ref={props.videoRef} controls width="200" className="rounded-md shadow-md" />
+				</div>
+			)} */}
 			<div className="fixed bottom-4 left-12 bg-base-200 rounded-full shadow-lg px-6 py-3">
 				<canvas className="hidden" ref={renderCanvasRef} />
 				<div className="flex items-center gap-2">
