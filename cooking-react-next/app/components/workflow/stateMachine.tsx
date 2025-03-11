@@ -93,25 +93,27 @@ export const eventDetailedExplanation: StateMachineTranslator = {
          * "I understand now"
          * "That worked, thank you"`,
 
-	5: `User asks for repeating a previous interaction
-       - User seeks to recall the agent's response from the previous interaction.
-       - Examples:
-         * "Can you say that again?"
-	   	 * "I didn't catch you."
-		 * "What did you say about XXXX?"
-         * "Please repeat the last instruction"
-         * "How did you say about the ingredients for making the sauce?"`,
+	// @TODO: deactivate this event for now
+	// 5: `User asks for repeating a previous interaction
+    //    - User seeks to recall the agent's response from the previous interaction.
+    //    - Examples:
+    //      * "Can you say that again?"
+	//    	 * "I didn't catch you."
+	// 	 * "What did you say about XXXX?"
+    //      * "Please repeat the last instruction"
+    //      * "How did you say about the ingredients for making the sauce?"`,
 
-	6: `User asks for controlling the video playback
-       - User requests to play, pause, or replay the video
-       - Examples:
-	   	 * "Play"
-	   	 * "Pause"
-		 * "Replay"
-	   	 * "Play the video for this step"
-         * "Replay xxx from the video"
-         * "Can you show me how they did xxx from the video?"
-         * "I need to play the kneading part again"`,
+	// @TODO: deactivate this event for now
+	// 6: `User asks for controlling the video playback
+    //    - User requests to play, pause, or replay the video
+    //    - Examples:
+	//    	 * "Play"
+	//    	 * "Pause"
+	// 	 * "Replay"
+	//    	 * "Play the video for this step"
+    //      * "Replay xxx from the video"
+    //      * "Can you show me how they did xxx from the video?"
+    //      * "I need to play the kneading part again"`,
 
 	7: `User asks for general questions
        - General cooking queries based on the video knowledge except for a specific steps or food states
@@ -119,12 +121,14 @@ export const eventDetailedExplanation: StateMachineTranslator = {
          * "What other ingredients do we need?"
 		 * "How many steps are still left?"`,
 
-	8: `User asks about food state related questions
+	8: `User asks about confirmations of visual elements in the cooking scene. 
        - Seeking visual description and verification of food states
        - Examples:
          * "Can you explain the current scene for me?"
+		 * "What is the current state of the food?"
          * "What are things around me now?"
-         * "Where is the pan?"
+		 * "I'm a chopping the onion in a right way?"
+		 * "Is this the right ingredient?"
          * "How does my steak look like now?"`,
 
 	// 9: `User seeks to retrieve previous steps or interactions
