@@ -4,9 +4,9 @@ import {
 	determinePlaySegmentedVideo
 } from './utils';
 import {
-	systemPromptRetrievePreviousInteraction,
 	systemPromptDefault,
-	systemPromptCtxFollowUp,
+	systemPromptRetrievePreviousInteraction,
+	systemPromptUserFollowUp,
 	systemPromptErrorHandling
 } from '../../prompts';
 
@@ -27,11 +27,14 @@ export const explainCurrentFoodState = async (				// state 1
 		<INTERACTION MEMORY>:
 		${interactionMemoryKv}
 		
-		<AUTO AGENT RESPONSE MEMORY>:
+		<REALITY STREAM MEMORY>:
 		${autoAgentResponseMemoryKv}
 		
 		<USER REQUEST>:
 		${voiceInputTranscript}
+		
+		First, analyze the video knowledge to identify which segment(s) best answer the user's question. 
+		Store the relevant segment index(es) under the key: <video_segment_index>.
 		
 		The user is unable to see, so they are asking about confirmations of visual elements in the cooking scene. 
 		Please provide a detailed visual description that includes:
@@ -59,35 +62,37 @@ export const respondWithStepRelatedQuestions = async (		// state 2
 	interactionMemoryKv: { [key: string]: any },
 	autoAgentResponseMemoryKv: { [key: string]: any }
 ) => {
-	const useVideoKnowledgeFlag = true;
-	const useInteractionMemoryFlag = false;
-	const useAutoAgentResponseMemoryFlag = false;
 
 	const prompt = `
-		${useVideoKnowledgeFlag ? '<VIDEO KNOWLEDGE>:' : ''}
-		${useVideoKnowledgeFlag ? videoKnowledgeInput : ''}
-		<USER REQUEST>
+		<VIDEO KNOWLEDGE>:
+		${videoKnowledgeInput}
+		
+		<INTERACTION MEMORY>:
+		${interactionMemoryKv}
+		
+		<REALITY STREAM MEMORY>:
+		${autoAgentResponseMemoryKv}
+		
+		<USER REQUEST>:
 		${voiceInputTranscript}
-		${useInteractionMemoryFlag && useAutoAgentResponseMemoryFlag ? 'I also provide you with some previous steps and interactions, please use them as needed.' : ''}
-		${useInteractionMemoryFlag ? 'Interaction memory is the previous user-agent interaction memory, it is useful for some of the requests given by the user but not all of them. Use it as needed.' : ''}
-		${useInteractionMemoryFlag ? 'User\'s memory is provided after the tag <INTERACTION MEMORY>.' : ''}
-		${useInteractionMemoryFlag ? '<INTERACTION MEMORY>:' : ''}
-		${useInteractionMemoryFlag ? interactionMemoryKv : ''}
-		${useAutoAgentResponseMemoryFlag ? 'Auto Agent response memory is the store of previous automatic agent response.' : ''}
-		${useAutoAgentResponseMemoryFlag ? 'Auto Agent response memory is provided after the tag <AUTO AGENT RESPONSE MEMORY>.' : ''}
-		${useAutoAgentResponseMemoryFlag ? '<AUTO AGENT RESPONSE MEMORY>:' : ''}
-		${useAutoAgentResponseMemoryFlag ? autoAgentResponseMemoryKv : ''}
-		To help me answer this question, you first look at the video knowledge and find out which segments can possibly answer my question.
-		Remember the index(es) of all those segments under the key: <video_segment_index>.
-		Make sure you ONLY return the <Index> of the segments.
-		Then, please use natural languaguage to respond to my question regarding the step in the following aspects:
-		1. The name to step (e.g. "Cutting the onion")
-		2. An expected duration of the step in seconds or minutes from the video knowledge
-		3. How the step will influence the outcome of the dish.
-		However, do not explicitly say 'step name ...; expected duration...; influence on the outcome...',
-		Make your response precise and avoid extensive elaboration.
+
+		The user is asking about a cooking step - this could be about the current step, a previous step, or an upcoming step. 
+		The image provided shows the CURRENT cooking scene.
+
+		First, analyze the video knowledge to identify which segment(s) best answer the user's question. 
+		Store the relevant segment index(es) under the key: <video_segment_index>.
+
+		Then, provide a precise and focused response that addresses these three elements:
+		1. Step identification: Clearly name the step the user is asking about (e.g., "Chopping the garlic")
+		2. Temporal information: Provide the expected duration of this step (in seconds or minutes) based on the video knowledge
+		3. Impact explanation: Explain how this specific step affects the final dish (flavor, texture, etc.)
+
+		Important guidelines:
+		- Integrate these three elements naturally in your response without using numbered points or explicit headings
+		- If the user is not asking about the current step, your response doesn't need to be based on the current visual information
+		- Keep your response concise and directly relevant to what was asked
 	`;
-	console.log(`[state 2: step related questions prompt]`);
+	console.log(`[state function] S2: step related questions prompt`);
 	const response = await respondAndProvideVideoSegmentIndex(systemPromptDefault, prompt, [realityImageBase64]);
 	return response;
 };
@@ -100,33 +105,32 @@ export const respondWithHowToFix = async (				// state 3
 	interactionMemoryKv: { [key: string]: any },
 	autoAgentResponseMemoryKv: { [key: string]: any }
 ) => {
-	const useVideoKnowledgeFlag = false;
-	const useInteractionMemoryFlag = false;
-	const useAutoAgentResponseMemoryFlag = false;
-	const useVideoAndMemoryCtx = false;
-
 	const prompt = `
-		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? '<VIDEO KNOWLEDGE>:' : ''}
-		${useVideoKnowledgeFlag && useVideoAndMemoryCtx ? videoKnowledgeInput : ''}
-		${useInteractionMemoryFlag && useVideoAndMemoryCtx ? 'Interaction memory is the previous user-agent interaction memory, it is useful for some of the requests given by the user but not all of them. Use it as needed.' : ''}
-		${useInteractionMemoryFlag && useVideoAndMemoryCtx ? 'User\'s memory is provided after the tag <INTERACTION MEMORY>.' : ''}
-		${useInteractionMemoryFlag && useVideoAndMemoryCtx ? '<INTERACTION MEMORY>:' : ''}
-		${useInteractionMemoryFlag && useVideoAndMemoryCtx ? interactionMemoryKv : ''}
-		${useAutoAgentResponseMemoryFlag && useVideoAndMemoryCtx ? 'Auto Agent response memory is the store of previous automatic agent response.' : ''}
-		${useAutoAgentResponseMemoryFlag && useVideoAndMemoryCtx ? 'Auto Agent response memory is provided after the tag <AUTO AGENT RESPONSE MEMORY>.' : ''}
-		${useAutoAgentResponseMemoryFlag && useVideoAndMemoryCtx ? '<AUTO AGENT RESPONSE MEMORY>:' : ''}
-		${useAutoAgentResponseMemoryFlag && useVideoAndMemoryCtx ? autoAgentResponseMemoryKv : ''}
-		<USER REQUEST>
+		<VIDEO KNOWLEDGE>:
+		${videoKnowledgeInput}
+		
+		<INTERACTION MEMORY>:
+		${interactionMemoryKv}
+		
+		<REALITY STREAM MEMORY>:
+		${autoAgentResponseMemoryKv}
+		
+		<USER REQUEST>:
 		${voiceInputTranscript}
-		To help me answer this question, you first look at the video knowledge and find out which segments can possibly answer my question.
-		Remember the index(es) of all those segments under the key: <video_segment_index>.
-		Make sure you ONLY return the <Index> of the segments.
-		Then, please tell me how to fix the current problem based on the video knowledge and memory from previous steps in natural language.
-		Your response should include:
-		1. A short description of the current problem
-		2. Tell me about the immediate next step to fix this problem
+
+		The user has encountered a cooking problem and needs guidance on how to fix it. The image shows the CURRENT cooking situation.
+
+		First, analyze the video knowledge to identify which segment(s) contain the relevant solution. 
+		Store the relevant segment index(es) under the key: <video_segment_index>.
+
+		Then, provide a clear, actionable response that helps the user fix their cooking issue. Your response should:
+		1. Briefly identify the specific cooking problem (e.g., "The sauce is separating" or "The vegetables are burning")
+		2. Provide 1-2 immediate, concrete actions to fix the problem (e.g., "Lower the heat and add 2 tablespoons of water")
+		3. If relevant, explain how to prevent this issue in the future (in 1 short sentence)
+
+		Keep your response concise and executable.
 	`;
-	console.log(`[state 3: respond with how to fix prompt]`);
+	console.log(`[state function] S3: respond with how to fix prompt`);
 	const response = await respondAndProvideVideoSegmentIndex(systemPromptDefault, prompt, [realityImageBase64]);
 	return response;
 };
@@ -139,30 +143,27 @@ export const freeformResponse = async (				// state 4
 	interactionMemoryKv: { [key: string]: any },
 	autoAgentResponseMemoryKv: { [key: string]: any }
 ) => {
-	const useInteractionMemoryFlag = false;
-	const useAutoAgentResponseMemoryFlag = false;
 
 	const prompt = `
-		'<VIDEO KNOWLEDGE>' 
+		<VIDEO KNOWLEDGE>:
 		${videoKnowledgeInput}
-		<USER REQUEST>
+		
+		<INTERACTION MEMORY>:
+		${interactionMemoryKv}
+		
+		<REALITY STREAM MEMORY>:
+		${autoAgentResponseMemoryKv}
+		
+		<USER REQUEST>:
 		${voiceInputTranscript}
-		${useInteractionMemoryFlag && useAutoAgentResponseMemoryFlag ? 'I also provide you with some previous steps and interactions, please use them as needed.' : ''}
-		${useInteractionMemoryFlag ? 'Interaction memory is the previous user-agent interaction memory, it is useful for some of the requests given by the user but not all of them. Use it as needed.' : ''}
-		${useInteractionMemoryFlag ? 'User\'s memory is provided after the tag <INTERACTION MEMORY>.' : ''}
-		${useInteractionMemoryFlag ? '<INTERACTION MEMORY>:' : ''}
-		${useInteractionMemoryFlag ? interactionMemoryKv : ''}
-		${useAutoAgentResponseMemoryFlag ? 'Auto Agent response memory is the store of previous automatic agent response.' : ''}
-		${useAutoAgentResponseMemoryFlag ? 'Auto Agent response memory is provided after the tag <AUTO AGENT RESPONSE MEMORY>.' : ''}
-		${useAutoAgentResponseMemoryFlag ? '<AUTO AGENT RESPONSE MEMORY>:' : ''}
-		${useAutoAgentResponseMemoryFlag ? autoAgentResponseMemoryKv : ''}
-		To help me answer this question, you first look at the video knowledge and find out which segments can possibly answer my question.
-		Remember the index(es) of all those segments under the key: <video_segment_index>.
-		Make sure you ONLY return the <Index> of the segments.
-		Then, based on the information from the selected video segments, use natural languaguage to respond to my question under the key: <response>.
-		Make your response precise and avoid extensive elaboration.
+
+		First, analyze the video knowledge to identify which segment(s) best answer the user's question. 
+		Store the relevant segment index(es) under the key: <video_segment_index>.
+
+		Please repond to the user request in a concise manner and avoid extensive elaboration. 
+		The image shows the CURRENT cooking scene.
 	`;
-	console.log(`[state 4: freeform response prompt]`);
+	console.log(`[state function] S4: freeform response prompt`);
 	const response = await respondAndProvideVideoSegmentIndex(systemPromptDefault, prompt, [realityImageBase64]);
 	return response;
 };
@@ -176,15 +177,39 @@ export const handlingUserDisagreements = async (		// state 5
 	autoAgentResponseMemoryKv: { [key: string]: any }
 ) => {
 	const prompt = `
-		<VIDEO KNOWLEDGE>
+		<VIDEO KNOWLEDGE>:
 		${videoKnowledgeInput}
-		<INTERACTION HISTORY>
-		${JSON.stringify(interactionMemoryKv)}
-		<USER REQUEST>
+		
+		<INTERACTION MEMORY>:
+		${interactionMemoryKv.slice(-5)}
+		
+		<REALITY STREAM MEMORY>:
+		${autoAgentResponseMemoryKv.slice(-5)}
+		
+		<USER REQUEST>:
 		${voiceInputTranscript}
-		Please provide both your response and the index of the video segment that is relevant to my question.
-	`
-	console.log(`[state 5: handling user disagreements prompt]`);
+
+		The user disagrees with your previous response and has provided additional information based on their sensory experience (tactile, sound, smell, etc.) or has requested a clarification.
+
+		First, analyze the video knowledge to identify which segment(s) best answer the user's updated question or concern. 
+		Store the relevant segment index(es) under the key: <video_segment_index>.
+
+		Then, provide a revised response that:
+		1. Acknowledges the user's disagreement or additional information respectfully
+		2. Incorporates their tactile/sound/sensory feedback into your understanding of the situation
+		3. Offers a corrected or refined explanation based on both the video knowledge and their firsthand experience
+		4. If appropriate, explains any discrepancy between what the video shows and what the user is experiencing
+		
+		For ambiguous user requests, ask specific follow-up questions focused on sensory details:
+		1. "What texture do you observe?"
+		2. "What color/smell/sound indicates the issue?"
+		3. "How does it compare to what you expected?"
+
+		You are assisting low-vision users in real-time cooking, so AVOID asking the user to provide visual information.
+		
+		Keep your response concise, practical, and focused on helping the user succeed in their cooking task.
+	`;
+	console.log(`[state function] S5: handling user disagreements prompt`);
 	const response = await respondAndProvideVideoSegmentIndex(systemPromptErrorHandling, prompt, [realityImageBase64]);
 	return response;
 };
@@ -198,16 +223,37 @@ export const followUpWithDetails = async (   // state 8
 	autoAgentResponseMemoryKv: { [key: string]: any }
 ) => {
 	const prompt = `
-		<VIDEO KNOWLEDGE>
+		<VIDEO KNOWLEDGE>:
 		${videoKnowledgeInput}
-		<INTERACTION HISTORY>
-		${JSON.stringify(interactionMemoryKv)}
-		<USER REQUEST>
+		
+		<INTERACTION MEMORY>:
+		${interactionMemoryKv.slice(-5)}
+		
+		<REALITY STREAM MEMORY>:
+		${autoAgentResponseMemoryKv.slice(-5)}
+		
+		<USER REQUEST>:
 		${voiceInputTranscript}
-		Please provide both your response and the index of the video segment that is relevant to my question.
+
+		The user is asking for more details or clarification about your previous response. They generally agree with what you've shared but need additional information.
+
+		First, analyze the video knowledge to identify which segment(s) best provide the additional details the user is seeking. 
+		Store the relevant segment index(es) under the key: <video_segment_index>.
+
+		Then, provide an enhanced response that:
+		1. Briefly acknowledges what was previously explained (in 1 sentence)
+		2. Provides the specific additional details the user is requesting
+		3. Focuses on sensory information that would be helpful for a low-vision user (textures, sounds, smells, timing cues)
+		
+		For ambiguous user requests, ask specific follow-up questions focused on sensory details:
+		1. "What texture do you observe?"
+		2. "What color/smell/sound indicates the issue?"
+		3. "How does it compare to what you expected?"
+
+		Keep your response practical and concise, expanding only on the specific aspects the user has asked about.
 	`;
-	console.log(`[state 8: follow up with details prompt]`);
-	const response = await respondAndProvideVideoSegmentIndex(systemPromptCtxFollowUp, prompt, [realityImageBase64]);
+	console.log(`[state function] S8: follow up with details prompt`);
+	const response = await respondAndProvideVideoSegmentIndex(systemPromptUserFollowUp, prompt, [realityImageBase64]);
 	return response;
 };
 
@@ -224,8 +270,7 @@ export const repeatPreviousInteraction = async (			// event 5: retrieve previous
 		Retrieve the one, and only one, of the most relevant part from previous interactions based on user request:
 		<PREVIOUS INTERACTION>
 		${JSON.stringify(interactionMemoryKv)}
-		<USER REQUEST>
-		${voiceInputTranscript}
+		
 	`;
 	console.log(`[event 5: repeat previous interaction prompt]`);
 	const response = await retrievePreviousInteraction(
