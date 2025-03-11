@@ -381,12 +381,10 @@ export default function WorkFlow(props: WorkFlowProps) {
         const transcriptChanged = prevValues.transcript !== currentTranscript;
         
         // Trigger state transition if:
-        // 1. It's a special event (1,3,4,5,6) and we have a transcript, OR
-        // 2. The event changed and we have a non-empty transcript, OR
-        // 3. The transcript changed and we have a valid event
-        if ((isSpecialEvent && currentTranscript.length > 0) ||
-            (eventChanged && currentTranscript.length > 0) || 
-            (transcriptChanged && currentEvent >= 0 && currentTranscript.length > 0)) {
+        // 1. It's a special event (1,3,4,5,6) and we have a non-empty transcript, and the transcript changed OR
+        // 2. The event changed and we have a non-empty transcript, and the transcript changed OR
+        if ((isSpecialEvent && currentTranscript.length > 0 && transcriptChanged) ||
+            (eventChanged && currentTranscript.length > 0 && transcriptChanged)) {
             console.log('[stable! state transition toggle]', { 
                 event: currentEvent, 
                 isSpecialEvent,
