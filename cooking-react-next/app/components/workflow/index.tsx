@@ -1,7 +1,7 @@
 "use client";
 import { WorkFlowProps } from "../../types/props";
 import { InteractionMemoryItem, AutoAgentResponseItem } from "../../types/common";
-import { Stack, Box, TextField, IconButton } from "@mui/material";
+import { Stack, Box, TextField, IconButton, Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
     stateTranslator,
@@ -26,6 +26,7 @@ import { useLiveAPIContext } from "../../contexts/LiveAPIContext";
 import ControlTray from "../control-tray/ControlTray";
 import { VISUAL_ANALYZE_INTERVAL_MS, AUTO_TIMEOUT_MS } from "../../constants";
 import * as utils from "./utils";
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 
 const openaiClient = new OpenAI({ apiKey: secret.OPENAI_KEY, dangerouslyAllowBrowser: true });
@@ -52,6 +53,12 @@ export default function WorkFlow(props: WorkFlowProps) {
     const [canPushToTalk, setCanPushToTalk] = useState(true);
     const [audioAgentDuty, setAudioAgentDuty] = useState<'chatbot' | 'detect'>('detect');
     const [autoResetToInitialState, setAutoResetToInitialState] = useState(false);
+    const [expandedPanels, setExpandedPanels] = useState<{[key: string]: boolean}>({
+        'visual-responses': true,
+        'interaction-history': true,
+        'agent-response': true,
+        'possible-next-events': true
+    });
 
     const possibleNextUserEvents: string[] = useMemo(() => {
         if (props.currentState === -1) return [];
@@ -689,6 +696,10 @@ export default function WorkFlow(props: WorkFlowProps) {
         }
     }, [isConnected]);
 
+    const handlePanelChange = (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
+        setExpandedPanels({...expandedPanels, [panel]: isExpanded});
+    };
+
     return (
         <Stack spacing={1}>
             <div className='text-xl font-bold gap-2 pt-1 flex items-center'>
@@ -846,105 +857,235 @@ export default function WorkFlow(props: WorkFlowProps) {
                 />
             </Box>
 
-            <div className="divider"></div>
-
-            <div className='flex items-center gap-2'>
-                <div className='text-lg font-bold'>Agent response</div>
-                {props.currentState !== -1 && (props.isProcessing && <span className="loading loading-dots loading-lg"></span>)}
-            </div>
-            {props.currentState !== -1 && (
-                <p style={{ whiteSpace: 'pre-line' }}>
-                    {(() => {
-                        try {
-                            const parsed = typeof props.agentResponse === 'string'
-                                ? JSON.parse(props.agentResponse)
-                                : props.agentResponse;
-                            return parsed.response || props.agentResponse;
-                        } catch {
-                            return props.agentResponse;
-                        }
-                    })()}
-                </p>
-            )}
-            <div className="divider"></div>
-
-            <div className='flex items-center gap-2'>
-                <div className='text-lg font-bold'>Real-time visual agent responses</div>
-                <label
-                    className="btn btn-xs btn-outline cursor-pointer"
-                    onClick={saveResponsesToFile}
-                >
-                    Save
-                </label>
-            </div>
-            <div
-                ref={autoResponsesRef}
-                className="content-block-body content-kv"
-                style={{
-                    height: '300px',
-                    overflowY: 'auto',
-                    padding: '10px',
+            <Accordion 
+                expanded={expandedPanels['agent-response'] !== false} 
+                onChange={handlePanelChange('agent-response')}
+                sx={{
+                    background: 'transparent',
+                    boxShadow: 'none',
+                    '&:before': {
+                        display: 'none',
+                    }
                 }}
             >
-                {" [ "}
-                {props.currentState !== -1 && autoAgentResponseMemoryKv.map((item, idx) => (
-                    <div key={`agent-initiated-response-${idx}`} style={{ marginLeft: '20px' }}>
-                        {"{"}<br />
-                        {Object.entries(item).map(([key, value], index) => (
-                            <span key={index}>
-                                &nbsp;&nbsp;&nbsp;&nbsp;{key}: {String(value).length > 70
-                                    ? `${String(value).substring(0, 40)}...${String(value).slice(-30)}`
-                                    : String(value)}<br />
-                            </span>
-                        ))}
-                        {"}"},
+                <AccordionSummary
+                    expandIcon={<ExpandMoreIcon />}
+                    sx={{
+                        padding: '0',
+                        '& .MuiAccordionSummary-content': {
+                            margin: '0',
+                        }
+                    }}
+                >
+                    <div className='flex items-center gap-2 py-2'>
+                        <div className='text-lg font-bold'>Agent response</div>
+                        {props.currentState !== -1 && props.isProcessing && 
+                            <span className="loading loading-dots loading-md"></span>}
                     </div>
-                ))}
-                {" ] "}
-            </div>
+                </AccordionSummary>
+                <AccordionDetails sx={{ padding: '0 0 16px 0' }}>
+                    {props.currentState !== -1 ? (
+                        <div 
+                            className="content-block-body"
+                            style={{
+                                padding: '16px',
+                                borderRadius: '8px',
+                                backgroundColor: 'rgba(0,0,0,0.03)',
+                                whiteSpace: 'pre-line',
+                                fontFamily: 'inherit',
+                                fontSize: '1rem',
+                                lineHeight: '1.5'
+                            }}
+                        >
+                            {(() => {
+                                try {
+                                    const parsed = typeof props.agentResponse === 'string'
+                                        ? JSON.parse(props.agentResponse)
+                                        : props.agentResponse;
+                                    return parsed.response || props.agentResponse;
+                                } catch {
+                                    return props.agentResponse;
+                                }
+                            })()}
+                        </div>
+                    ) : (
+                        <div className="text-gray-400 italic px-2">No response available</div>
+                    )}
+                </AccordionDetails>
+            </Accordion>
 
-            <div className='text-lg font-bold content-block kv'>Interaction history</div>
-            <div className="content-block-body content-kv">
-                {" [ "}
-                {props.currentState !== -1 && interactionMemoryKv.map((item, idx) => (
-                    <div key={item.index} style={{ marginLeft: '20px' }}>
-                        {"{"}<br />
-                        &nbsp;&nbsp;&nbsp;&nbsp;index: {item.index},<br />
-                        &nbsp;&nbsp;&nbsp;&nbsp;user_query: {String(item.user_query).length > 70
-                            ? `${String(item.user_query).substring(0, 40)}...${String(item.user_query).slice(-30)}`
-                            : String(item.user_query)},<br />
-                        &nbsp;&nbsp;&nbsp;&nbsp;agent_response: {String(item.agent_response).length > 70
-                            ? `${String(item.agent_response).substring(0, 40)}...${String(item.agent_response).slice(-30)}`
-                            : String(item.agent_response)}<br />
-                        &nbsp;&nbsp;&nbsp;&nbsp;video_segment_index: {String(item.video_segment_index)}<br />
-                        &nbsp;&nbsp;&nbsp;&nbsp;timestamp: {item.timestamp}<br />
-                        {"}"},
-                    </div>
-                ))}
-                {" ] "}
-            </div>
             <div className="divider"></div>
 
-            <div className='text-lg font-bold'>Possible next events</div>
-            {props.currentState !== -1 && (
-                <ul style={{ listStyleType: 'none', padding: 0 }}>
-                    {props.currentState in stateMachine && Object.keys(stateMachine[props.currentState])
-                        .sort((a, b) => Number(a) - Number(b))
-                        .map((event) => (
-                            <li
-                                key={`event-${event}`}
-                                onClick={() => {
-                                    props.setVoiceInputTranscript('[Debug] Respond with Woohoo!');
-                                    props.setStateMachineEvent(Number(event));
-                                    props.setStateTransitionToggle(!props.stateTransitionToggle);
-                                }}
-                                className='btn btn-outline btn-xs text-left mb-2.5 mr-1 cursor-pointer'
-                            >
-                                {event}: {eventTranslator[Number(event)]}
-                            </li>
+            <Accordion 
+                expanded={expandedPanels['visual-responses']} 
+                onChange={handlePanelChange('visual-responses')}
+                sx={{
+                    background: 'transparent',
+                    boxShadow: 'none',
+                    '&:before': {
+                        display: 'none',
+                    }
+                }}
+            >
+                <AccordionSummary
+                    expandIcon={<ExpandMoreIcon />}
+                    sx={{
+                        padding: '0',
+                        '& .MuiAccordionSummary-content': {
+                            margin: '0',
+                        }
+                    }}
+                >
+                    <div className='flex items-center gap-2 py-2'>
+                        <div className='text-lg font-bold'>Real-time visual agent responses</div>
+                        <label
+                            className="btn btn-xs btn-outline cursor-pointer"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                saveResponsesToFile();
+                            }}
+                        >
+                            Save
+                        </label>
+                    </div>
+                </AccordionSummary>
+                <AccordionDetails sx={{ padding: '0 0 16px 0' }}>
+                    <div
+                        ref={autoResponsesRef}
+                        className="content-block-body content-kv"
+                        style={{
+                            height: '300px',
+                            overflowY: 'auto',
+                            padding: '10px',
+                            borderRadius: '8px',
+                            backgroundColor: 'rgba(0,0,0,0.03)'
+                        }}
+                    >
+                        {" [ "}
+                        {props.currentState !== -1 && autoAgentResponseMemoryKv.map((item, idx) => (
+                            <div key={`agent-initiated-response-${idx}`} style={{ marginLeft: '20px' }}>
+                                {"{"}<br />
+                                {Object.entries(item).map(([key, value], index) => (
+                                    <span key={index}>
+                                        &nbsp;&nbsp;&nbsp;&nbsp;{key}: {String(value).length > 70
+                                            ? `${String(value).substring(0, 40)}...${String(value).slice(-30)}`
+                                            : String(value)}<br />
+                                    </span>
+                                ))}
+                                {"}"},
+                            </div>
                         ))}
-                </ul>
-            )}
+                        {" ] "}
+                    </div>
+                </AccordionDetails>
+            </Accordion>
+
+            <Accordion 
+                expanded={expandedPanels['interaction-history']} 
+                onChange={handlePanelChange('interaction-history')}
+                sx={{
+                    background: 'transparent',
+                    boxShadow: 'none',
+                    '&:before': {
+                        display: 'none',
+                    }
+                }}
+            >
+                <AccordionSummary
+                    expandIcon={<ExpandMoreIcon />}
+                    sx={{
+                        padding: '0',
+                        '& .MuiAccordionSummary-content': {
+                            margin: '0',
+                        }
+                    }}
+                >
+                    <div className='text-lg font-bold py-2'>Interaction history</div>
+                </AccordionSummary>
+                <AccordionDetails sx={{ padding: '0 0 16px 0' }}>
+                    <div 
+                        className="content-block-body content-kv"
+                        style={{
+                            maxHeight: '300px',
+                            overflowY: 'auto',
+                            padding: '10px',
+                            borderRadius: '8px',
+                            backgroundColor: 'rgba(0,0,0,0.03)'
+                        }}
+                    >
+                        {" [ "}
+                        {props.currentState !== -1 && interactionMemoryKv.map((item, idx) => (
+                            <div key={item.index} style={{ marginLeft: '20px' }}>
+                                {"{"}<br />
+                                &nbsp;&nbsp;&nbsp;&nbsp;index: {item.index},<br />
+                                &nbsp;&nbsp;&nbsp;&nbsp;user_query: {String(item.user_query).length > 70
+                                    ? `${String(item.user_query).substring(0, 40)}...${String(item.user_query).slice(-30)}`
+                                    : String(item.user_query)},<br />
+                                &nbsp;&nbsp;&nbsp;&nbsp;agent_response: {String(item.agent_response).length > 70
+                                    ? `${String(item.agent_response).substring(0, 40)}...${String(item.agent_response).slice(-30)}`
+                                    : String(item.agent_response)}<br />
+                                &nbsp;&nbsp;&nbsp;&nbsp;video_segment_index: {String(item.video_segment_index)}<br />
+                                &nbsp;&nbsp;&nbsp;&nbsp;timestamp: {item.timestamp}<br />
+                                {"}"},
+                            </div>
+                        ))}
+                        {" ] "}
+                    </div>
+                </AccordionDetails>
+            </Accordion>
+
+            <Accordion 
+                expanded={expandedPanels['possible-next-events']} 
+                onChange={handlePanelChange('possible-next-events')}
+                sx={{
+                    background: 'transparent',
+                    boxShadow: 'none',
+                    '&:before': {
+                        display: 'none',
+                    }
+                }}
+            >
+                <AccordionSummary
+                    expandIcon={<ExpandMoreIcon />}
+                    sx={{
+                        padding: '0',
+                        '& .MuiAccordionSummary-content': {
+                            margin: '0',
+                        }
+                    }}
+                >
+                    <div className='text-lg font-bold py-2'>Possible next events</div>
+                </AccordionSummary>
+                <AccordionDetails sx={{ padding: '0 0 16px 0' }}>
+                    {props.currentState !== -1 ? (
+                        <ul style={{ 
+                            listStyleType: 'none', 
+                            padding: 0,
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: '0.5rem'
+                        }}>
+                            {props.currentState in stateMachine && Object.keys(stateMachine[props.currentState])
+                                .sort((a, b) => Number(a) - Number(b))
+                                .map((event) => (
+                                    <li
+                                        key={`event-${event}`}
+                                        onClick={() => {
+                                            props.setVoiceInputTranscript('[Debug] Respond with Woohoo!');
+                                            props.setStateMachineEvent(Number(event));
+                                            props.setStateTransitionToggle(!props.stateTransitionToggle);
+                                        }}
+                                        className='btn btn-outline btn-xs text-left cursor-pointer'
+                                    >
+                                        {event}: {eventTranslator[Number(event)]}
+                                    </li>
+                                ))}
+                        </ul>
+                    ) : (
+                        <div className="text-gray-400 italic px-2">No events available</div>
+                    )}
+                </AccordionDetails>
+            </Accordion>
 
             <ControlTray
                 videoRef={props.videoRef}
