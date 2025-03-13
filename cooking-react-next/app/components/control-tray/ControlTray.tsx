@@ -297,6 +297,11 @@ function ControlTray(props: ControlTrayProps) {
 
 	/* Disconnect and reset conversation state */
 	const disconnectConversation = async () => {
+		// If onDisconnect is provided, call it to save memory before disconnecting
+		if (props.onDisconnect) {
+			await props.onDisconnect();
+		}
+		
 		// await eventDisconnect();
 		await liveAPIDisconnect();
 		await props.disconnectConversation();

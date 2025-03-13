@@ -323,15 +323,16 @@ export default function WorkFlow(props: WorkFlowProps) {
 
 
     /** Save function call responses to a file (for testing) */
-    const saveResponsesToFile = () => {
+    const saveResponsesToFileAsync = async () => {
         const blob = new Blob([JSON.stringify(combinedMemory, null, 2)], { type: "application/json" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = "combined_memory_responses.json";
+        const timestamp = new Date().toISOString().replace(/:/g, '-');
+        a.download = `combined_memory_responses_${timestamp}.json`;
         a.click();
         URL.revokeObjectURL(a.href);
+        return Promise.resolve();
     };
-
 
     // Handle user transcript update
     useEffect(() => {
@@ -958,10 +959,10 @@ export default function WorkFlow(props: WorkFlowProps) {
                             className="btn btn-xs btn-outline cursor-pointer"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                saveResponsesToFile();
+                                saveResponsesToFileAsync();
                             }}
                         >
-                            Save Combined
+                            save
                         </label>
                     </div>
                 </AccordionSummary>
@@ -1062,6 +1063,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                 disconnectConversation={disconnectConversation}
                 setVoiceInputTranscript={props.setVoiceInputTranscript}
                 setCombinedMemory={setCombinedMemory}
+                onDisconnect={saveResponsesToFileAsync}
             />
         </Stack >
     );

@@ -79,4 +79,5 @@ export type ControlTrayProps = {
 	disconnectConversation: () => Promise<void>;
 	setCombinedMemory: React.Dispatch<React.SetStateAction<CombinedMemoryItem[]>>;
 	setVoiceInputTranscript: (transcript: string) => void;
+	onDisconnect?: () => Promise<void>;
 };
