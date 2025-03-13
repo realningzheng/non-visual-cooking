@@ -8,6 +8,7 @@ import {
 } from './eventStateFunctions';
 import { decideCategoryFromUserRequest } from './utils';
 import { systemPromptEventDetection } from '../../prompts';
+import { CombinedMemoryItem } from '@/app/types/common';
 
 // define states and transitions
 type StateMachineTranslator = {
@@ -227,8 +228,7 @@ export const stateFunctions: {
 		videoKnowledgeInput: string,
 		realityImageBase64: string,
 		voiceInputTranscript: string,
-		interactionMemoryKv: { [key: string]: any },
-		autoAgentResponseMemoryKv: { [key: string]: any }
+		combinedMemory: CombinedMemoryItem[]
 	) => Promise<string | { response: string; video_segment_index: number[] }>
 } = {
 	// 0: comparingVideoRealityAlignment,
@@ -249,13 +249,12 @@ export const executeStateFunction = async (
 	videoKnowledgeInput: string,
 	realityImageBase64: string,
 	voiceInputTranscript: string,
-	interactionMemoryKv: { [key: string]: any },
-	autoAgentResponseMemoryKv: { [key: string]: any }
+	combinedMemory: CombinedMemoryItem[]
 ) => {
 	const stateFunction = stateFunctions[stateNumber];
 	if (stateFunction) {
 		// console.log(`Executing function for state ${stateNumber}: ${stateTranslator[stateNumber]}`);
-		return await stateFunction(videoKnowledgeInput, realityImageBase64, voiceInputTranscript, interactionMemoryKv, autoAgentResponseMemoryKv);
+		return await stateFunction(videoKnowledgeInput, realityImageBase64, voiceInputTranscript, combinedMemory);
 	} else {
 		console.error(`No function found for event ${stateNumber}`);
 		return `No function found for event ${stateNumber}`;

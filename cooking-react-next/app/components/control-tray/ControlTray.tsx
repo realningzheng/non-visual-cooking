@@ -26,11 +26,10 @@ import { useScreenCapture } from "../../hooks/use-screen-capture";
 import { useWebcam } from "../../hooks/use-webcam";
 import { AudioRecorder } from "../../lib/audio-recorder";
 import AudioPulse from "../audio-pulse/AudioPulse";
-import { systemPromptEventDetection, systemPromptDefault } from "../../prompts";
 import { ToolCall } from "../../multimodal-live-types";
 // import { getPromptForPossibleNextEvents } from "../../WorkFlow/stateMachine";
 import { compareStreamWithReferenceVideoKnowledge } from "@/app/hooks/use-live-api";
-import { AutoAgentResponseItem } from "../../types/common";
+import { AutoAgentResponseItem, CombinedMemoryItem } from "../../types/common";
 import { ControlTrayProps } from "../../types/props";
 
 
@@ -55,14 +54,16 @@ function ControlTray(props: ControlTrayProps) {
 
 	const updateAutoAgentResponseMemoryKv = (response: AutoAgentResponseItem) => {
 		const currentTime = sessionStartTime.current ? Date.now() - sessionStartTime.current : 0;
-		const responseWithTimeValue = {
-			...response,
-			timeMS: currentTime
-		};
-		responseCounter.current += 1;
-		props.setAutoAgentResponseMemoryKv((prevResponses) => [...prevResponses, responseWithTimeValue]);
+		props.setCombinedMemory((prevResponses) => {
+			const newResponse: CombinedMemoryItem = {
+				index: prevResponses.length,
+				type: 'automatic reality analysis result',
+				content: response,
+				timestamp: String(currentTime / 1000)
+			};
+			return [...prevResponses, newResponse];
+		});
 	};
-
 
 	const handleVideoFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];

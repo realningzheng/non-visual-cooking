@@ -9,6 +9,7 @@ import {
 	systemPromptUserFollowUp,
 	systemPromptErrorHandling
 } from '../../prompts';
+import { CombinedMemoryItem } from '@/app/types/common';
 
 
 /** State functions */
@@ -16,8 +17,7 @@ export const explainCurrentFoodState = async (				// state 1
 	videoKnowledgeInput: string,
 	realityImageBase64: string,
 	voiceInputTranscript: string,
-	interactionMemoryKv: { [key: string]: any },
-	autoAgentResponseMemoryKv: { [key: string]: any }
+	combinedMemory: CombinedMemoryItem[]
 ) => {
 
 	const prompt = `
@@ -25,10 +25,10 @@ export const explainCurrentFoodState = async (				// state 1
 		${videoKnowledgeInput}
 		
 		<INTERACTION MEMORY>:
-		${interactionMemoryKv}
+		${combinedMemory.filter(item => item.type === 'user interaction').join('\n')}
 		
 		<REALITY STREAM MEMORY>:
-		${autoAgentResponseMemoryKv}
+		${combinedMemory.filter(item => item.type === 'automatic reality analysis result').join('\n')}
 		
 		<USER REQUEST>:
 		${voiceInputTranscript}
@@ -59,8 +59,7 @@ export const respondWithStepRelatedQuestions = async (		// state 2
 	videoKnowledgeInput: string,
 	realityImageBase64: string,
 	voiceInputTranscript: string,
-	interactionMemoryKv: { [key: string]: any },
-	autoAgentResponseMemoryKv: { [key: string]: any }
+	combinedMemory: CombinedMemoryItem[]
 ) => {
 
 	const prompt = `
@@ -68,10 +67,10 @@ export const respondWithStepRelatedQuestions = async (		// state 2
 		${videoKnowledgeInput}
 		
 		<INTERACTION MEMORY>:
-		${interactionMemoryKv}
+		${combinedMemory.filter(item => item.type === 'user interaction').join('\n')}
 		
 		<REALITY STREAM MEMORY>:
-		${autoAgentResponseMemoryKv}
+		${combinedMemory.filter(item => item.type === 'automatic reality analysis result').join('\n')}
 		
 		<USER REQUEST>:
 		${voiceInputTranscript}
@@ -102,18 +101,17 @@ export const respondWithHowToFix = async (				// state 3
 	videoKnowledgeInput: string,
 	realityImageBase64: string,
 	voiceInputTranscript: string,
-	interactionMemoryKv: { [key: string]: any },
-	autoAgentResponseMemoryKv: { [key: string]: any }
+	combinedMemory: CombinedMemoryItem[]
 ) => {
 	const prompt = `
 		<VIDEO KNOWLEDGE>:
 		${videoKnowledgeInput}
 		
 		<INTERACTION MEMORY>:
-		${interactionMemoryKv}
+		${combinedMemory.filter(item => item.type === 'user interaction').join('\n')}
 		
 		<REALITY STREAM MEMORY>:
-		${autoAgentResponseMemoryKv}
+		${combinedMemory.filter(item => item.type === 'automatic reality analysis result').join('\n')}
 		
 		<USER REQUEST>:
 		${voiceInputTranscript}
@@ -140,8 +138,7 @@ export const freeformResponse = async (				// state 4
 	videoKnowledgeInput: string,
 	realityImageBase64: string,
 	voiceInputTranscript: string,
-	interactionMemoryKv: { [key: string]: any },
-	autoAgentResponseMemoryKv: { [key: string]: any }
+	combinedMemory: CombinedMemoryItem[]
 ) => {
 
 	const prompt = `
@@ -149,10 +146,10 @@ export const freeformResponse = async (				// state 4
 		${videoKnowledgeInput}
 		
 		<INTERACTION MEMORY>:
-		${interactionMemoryKv}
+		${combinedMemory.filter(item => item.type === 'user interaction').join('\n')}
 		
 		<REALITY STREAM MEMORY>:
-		${autoAgentResponseMemoryKv}
+		${combinedMemory.filter(item => item.type === 'automatic reality analysis result').join('\n')}
 		
 		<USER REQUEST>:
 		${voiceInputTranscript}
@@ -173,18 +170,17 @@ export const handlingUserDisagreements = async (		// state 5
 	videoKnowledgeInput: string,
 	realityImageBase64: string,
 	voiceInputTranscript: string,
-	interactionMemoryKv: { [key: string]: any },
-	autoAgentResponseMemoryKv: { [key: string]: any }
+	combinedMemory: CombinedMemoryItem[]
 ) => {
 	const prompt = `
 		<VIDEO KNOWLEDGE>:
 		${videoKnowledgeInput}
 		
 		<INTERACTION MEMORY>:
-		${interactionMemoryKv.slice(-5)}
+		${combinedMemory.filter(item => item.type === 'user interaction').slice(-10).join('\n')}
 		
 		<REALITY STREAM MEMORY>:
-		${autoAgentResponseMemoryKv.slice(-5)}
+		${combinedMemory.filter(item => item.type === 'automatic reality analysis result').slice(-10).join('\n')}
 		
 		<USER REQUEST>:
 		${voiceInputTranscript}
@@ -219,18 +215,17 @@ export const followUpWithDetails = async (   // state 8
 	videoKnowledgeInput: string,
 	realityImageBase64: string,
 	voiceInputTranscript: string,
-	interactionMemoryKv: { [key: string]: any },
-	autoAgentResponseMemoryKv: { [key: string]: any }
+	combinedMemory: CombinedMemoryItem[]
 ) => {
 	const prompt = `
 		<VIDEO KNOWLEDGE>:
 		${videoKnowledgeInput}
 		
 		<INTERACTION MEMORY>:
-		${interactionMemoryKv.slice(-5)}
+		${combinedMemory.filter(item => item.type === 'user interaction').slice(-10).join('\n')}
 		
 		<REALITY STREAM MEMORY>:
-		${autoAgentResponseMemoryKv.slice(-5)}
+		${combinedMemory.filter(item => item.type === 'automatic reality analysis result').slice(-10).join('\n')}
 		
 		<USER REQUEST>:
 		${voiceInputTranscript}
@@ -264,12 +259,12 @@ export const followUpWithDetails = async (   // state 8
 */
 export const repeatPreviousInteraction = async (			// event 5: retrieve previous interactions
 	voiceInputTranscript: string,
-	interactionMemoryKv: { [key: string]: any },
+	combinedMemory: CombinedMemoryItem[]
 ) => {
 	const prompt = `
 		Retrieve the one, and only one, of the most relevant part from previous interactions based on user request:
 		<PREVIOUS INTERACTION>
-		${JSON.stringify(interactionMemoryKv)}
+		${combinedMemory.filter(item => item.type === 'user interaction').join('\n')}
 		
 	`;
 	console.log(`[event 5: repeat previous interaction prompt]`);

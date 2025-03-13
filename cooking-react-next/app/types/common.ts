@@ -12,18 +12,13 @@ export interface TranscriptSentenceItem {
 
 // Interaction memory items for conversation history
 export interface InteractionMemoryItem {
-    index: number;
     user_query?: string;
-    agent_response?: string;
+    agent_response?: string; 
     video_segment_index?: number[];
-    memorized_item_key?: string;
-    memorized_item_value?: string;
-    timestamp?: number; // Timestamp in milliseconds since session start
 }
 
 // Auto agent response items for automated analysis
 export interface AutoAgentResponseItem {
-    timeMS: number;
     isValidCookingStep: boolean;
     isStepCorrect: boolean;
     isCorrectProcedureOrder: boolean;
@@ -35,6 +30,14 @@ export interface AutoAgentResponseItem {
     improvementInstructions: string;
 }
 
+// Combined memory item is either an interaction memory item or an auto agent response item with a timestamp
+export type CombinedMemoryItem = {
+    index: number;
+    type: 'user interaction' | 'automatic reality analysis result';
+    content: InteractionMemoryItem | AutoAgentResponseItem;
+    timestamp: string;
+}
+    
 // Reality preview props
 export interface RealityPreviewProps {
     isClient: boolean;

@@ -2,7 +2,7 @@
  * Component props definitions
  */
 import { ReactNode, RefObject } from 'react';
-import { AutoAgentResponseItem } from './common';
+import { CombinedMemoryItem } from './common';
 
 // WorkFlow component props
 export interface WorkFlowProps {
@@ -71,12 +71,12 @@ export type ControlTrayProps = {
 	supportsVideo: boolean;
 	currentState: number;
 	videoKnowledgeInput: string;
-	autoAgentResponseMemoryKv: AutoAgentResponseItem[];
+	combinedMemory: CombinedMemoryItem[];
 	onVideoStreamChange?: (stream: MediaStream | null) => void;
 	setStateMachineEvent: (event: number) => void;
 	setCurrentState: (state: number) => void;
 	connectConversation: () => Promise<void>;
 	disconnectConversation: () => Promise<void>;
-	setAutoAgentResponseMemoryKv: React.Dispatch<React.SetStateAction<AutoAgentResponseItem[]>>;
+	setCombinedMemory: React.Dispatch<React.SetStateAction<CombinedMemoryItem[]>>;
 	setVoiceInputTranscript: (transcript: string) => void;
 };

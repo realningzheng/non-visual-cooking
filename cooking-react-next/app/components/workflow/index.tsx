@@ -1,6 +1,6 @@
 "use client";
 import { WorkFlowProps } from "../../types/props";
-import { InteractionMemoryItem, AutoAgentResponseItem } from "../../types/common";
+import { InteractionMemoryItem, AutoAgentResponseItem, CombinedMemoryItem } from "../../types/common";
 import { Stack, Box, TextField, IconButton, Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
@@ -38,26 +38,23 @@ export default function WorkFlow(props: WorkFlowProps) {
     const openaiRTClientRef = useRef<RealtimeClient>(new RealtimeClient({ apiKey: secret.OPENAI_KEY, dangerouslyAllowAPIKeyInBrowser: true }));
     const startTimeRef = useRef<string>(new Date().toISOString());
     const conversationRef = useRef<HTMLDivElement>(null);
-    const autoResponsesRef = useRef<HTMLDivElement>(null);
-    // Add a reference to the file input
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const autoAgentResponseMemoryKvRef = useRef<AutoAgentResponseItem[]>([]);
     const sessionStartTime = useRef<number | null>(null);
+    const memoryDivRef = useRef<HTMLDivElement>(null);
+
     const [selectedFileName, setSelectedFileName] = useState<string>('');
     const [isConnected, setIsConnected] = useState(false);
     const [items, setItems] = useState<ItemType[]>([]);
-    const [interactionMemoryKv, setInteractionMemoryKv] = useState<InteractionMemoryItem[]>([]);
-    const [autoAgentResponseMemoryKv, setAutoAgentResponseMemoryKv] = useState<AutoAgentResponseItem[]>([]);
-    const [interactionID, setInteractionID] = useState<number>(0);
+    const [combinedMemory, setCombinedMemory] = useState<CombinedMemoryItem[]>([]);
     const [isRecording, setIsRecording] = useState(false);
     const [canPushToTalk, setCanPushToTalk] = useState(true);
     const [audioAgentDuty, setAudioAgentDuty] = useState<'chatbot' | 'detect'>('detect');
     const [autoResetToInitialState, setAutoResetToInitialState] = useState(false);
-    const [expandedPanels, setExpandedPanels] = useState<{[key: string]: boolean}>({
-        'visual-responses': true,
-        'interaction-history': true,
+    const [expandedPanels, setExpandedPanels] = useState<{ [key: string]: boolean }>({
+        'visual-responses': false,
+        'interaction-history': false,
         'agent-response': true,
-        'possible-next-events': true
+        'possible-next-events': false
     });
 
     const possibleNextUserEvents: string[] = useMemo(() => {
@@ -79,8 +76,6 @@ export default function WorkFlow(props: WorkFlowProps) {
     const {
         client: liveAPIClient,
         connected: liveAPIConnected,
-        content: liveAPIContent,
-        turnComplete: liveAPITurnComplete,
     } = useLiveAPIContext();
 
     /** Bootstrap functions */
@@ -119,11 +114,9 @@ export default function WorkFlow(props: WorkFlowProps) {
         props.setCurrentState(-1);
         props.setVoiceInputTranscript('')
         setItems([]);
-        setInteractionMemoryKv([]);
         props.setAgentResponse('');
-        // Make sure to update the ref with the latest responses before clearing
-        autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
-        setAutoAgentResponseMemoryKv([]);
+
+        setCombinedMemory([]);
 
         const client = openaiRTClientRef.current;
         client.disconnect();
@@ -215,14 +208,14 @@ export default function WorkFlow(props: WorkFlowProps) {
             // const pcmView = new Int16Array(arrayBuffer);
             // const durationMs = (pcmView.length / 24000) * 1000 / speed;
             // console.log("[TTS Duration]", durationMs);
-            
+
             // if (autoResetToInitialState) {
             //     // Store the current event to check if it changes
             //     const currentEvent = props.stateMachineEvent;
-                
+
             //     // Make sure to update the ref with the latest responses
             //     autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
-                        
+
             //     // Create the timeout
             //     const timeoutId = setTimeout(() => {
             //         // Only proceed if the event hasn't changed
@@ -234,7 +227,7 @@ export default function WorkFlow(props: WorkFlowProps) {
             //             console.log("[TTS Complete] Event changed, skipping state transition");
             //         }
             //     }, durationMs + AUTO_TIMEOUT_MS);
-                        
+
             //     // Clean up the timeout if the component unmounts or if the event changes
             //     return () => clearTimeout(timeoutId);
             //         }
@@ -331,10 +324,10 @@ export default function WorkFlow(props: WorkFlowProps) {
 
     /** Save function call responses to a file (for testing) */
     const saveResponsesToFile = () => {
-        const blob = new Blob([JSON.stringify(autoAgentResponseMemoryKv, null, 2)], { type: "application/json" });
+        const blob = new Blob([JSON.stringify(combinedMemory, null, 2)], { type: "application/json" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = "live_api_responses.json";
+        a.download = "combined_memory_responses.json";
         a.click();
         URL.revokeObjectURL(a.href);
     };
@@ -376,32 +369,32 @@ export default function WorkFlow(props: WorkFlowProps) {
 
 
     // Replace the existing useEffect with this more robust version
-    const prevEventAndTranscriptRef = useRef<{event: number, transcript: string}>({event: -1, transcript: ''});
+    const prevEventAndTranscriptRef = useRef<{ event: number, transcript: string }>({ event: -1, transcript: '' });
 
     useEffect(() => {
         // Get current values
         const currentEvent = props.stateMachineEvent;
         const currentTranscript = props.voiceInputTranscript;
         const prevValues = prevEventAndTranscriptRef.current;
-        
+
         // Special cases: events 1, 3, 4, 5, 6 only need a transcript change
         const isSpecialEvent = [1, 3, 4, 5, 6].includes(currentEvent);
         const eventChanged = prevValues.event !== currentEvent;
         const transcriptChanged = prevValues.transcript !== currentTranscript;
-        
+
         // Trigger state transition if:
         // 1. It's a special event (1,3,4,5,6) and we have a non-empty transcript, and the transcript changed OR
         // 2. The event changed and we have a non-empty transcript, and the transcript changed OR
         if ((isSpecialEvent && currentTranscript.length > 0 && transcriptChanged) ||
             (eventChanged && currentTranscript.length > 0 && transcriptChanged)) {
-            console.log('[stable! state transition toggle]', { 
-                event: currentEvent, 
+            console.log('[stable! state transition toggle]', {
+                event: currentEvent,
                 isSpecialEvent,
-                transcriptLength: currentTranscript.length 
+                transcriptLength: currentTranscript.length
             });
-            
+
             props.setStateTransitionToggle(!props.stateTransitionToggle);
-            
+
             // Update the ref to remember current values
             prevEventAndTranscriptRef.current = {
                 event: currentEvent,
@@ -442,14 +435,18 @@ export default function WorkFlow(props: WorkFlowProps) {
         if (event >= 0 && (event in stateMachine[statePrev])) {
             // handle replay previous interaction 
             if (event === 5) {
+                // get type 'user interaction' from combinedMemoryRef
+                let interactionMemory = combinedMemory.filter(item => item.type === 'user interaction');
+                if (!interactionMemory) return;
                 let retrievedResponse = await repeatPreviousInteraction(
                     voiceInputTranscript,
-                    interactionMemoryKv
+                    interactionMemory
                 );
+
                 let retrievedIndex = Number(retrievedResponse.response);
-                let retrievedInfo = interactionMemoryKv[retrievedIndex];
-                let agentResponse = retrievedInfo.agent_response;
-                let videoSegmentIndex = retrievedInfo.video_segment_index;
+                let retrievedInfo = interactionMemory[retrievedIndex];
+                let agentResponse = (retrievedInfo.content as InteractionMemoryItem).agent_response;
+                let videoSegmentIndex = (retrievedInfo.content as InteractionMemoryItem).video_segment_index;
                 if (agentResponse) {
                     await playTTS(agentResponse, props.ttsSpeed);
                 }
@@ -469,20 +466,22 @@ export default function WorkFlow(props: WorkFlowProps) {
             } else if (event === 4) {
                 props.setSegmentedVideoPlaying(false);
                 // store user response to interaction memory
-                setInteractionMemoryKv(prevList => [
+                setCombinedMemory(prevList => [
                     ...prevList,
                     {
-                        index: interactionID,
-                        user_query: voiceInputTranscript,
-                        timestamp: sessionStartTime.current ? Date.now() - sessionStartTime.current : 0
+                        index: prevList.length,
+                        type: 'user interaction',
+                        content: {
+                            user_query: voiceInputTranscript,
+                        },
+                        timestamp: sessionStartTime.current ? String((Date.now() - sessionStartTime.current) / 1000) : '0'
                     }
                 ]);
-                setInteractionID(prev => prev + 1);
                 // play auto agent response for event 10 and 12
             } else if (event === 10 || event === 12) {
-                let responses = autoAgentResponseMemoryKvRef.current;
+                let responses = combinedMemory.filter(item => item.type === 'automatic reality analysis result');
                 console.log('[ready to play auto agent response]');
-                let lastResponse = responses[responses.length - 1];
+                let lastResponse = responses[responses.length - 1].content as AutoAgentResponseItem;
                 console.log('[last response]', lastResponse);
                 if (lastResponse.hasProgressedToProcedure) {
                     await playTTS(lastResponse.procedureAnalysis, props.ttsSpeed);
@@ -503,8 +502,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                     videoKnowledgeInput,
                     realityImageBase64,
                     voiceInputTranscript,
-                    interactionMemoryKv,
-                    autoAgentResponseMemoryKv
+                    combinedMemory
                 );
                 props.setIsProcessing(false);
                 console.log('[state function exe res]');
@@ -520,17 +518,19 @@ export default function WorkFlow(props: WorkFlowProps) {
                     // store user input and agent response
                     if (voiceInputTranscript.length > 0) {
                         if (typeof stateFunctionExeRes === 'object') {
-                            setInteractionMemoryKv(prevList => [
+                            setCombinedMemory(prevList => [
                                 ...prevList,
                                 {
-                                    index: interactionID,
-                                    user_query: voiceInputTranscript,
-                                    agent_response: stateFunctionExeRes.response,
-                                    video_segment_index: stateFunctionExeRes.video_segment_index,
-                                    timestamp: sessionStartTime.current ? Date.now() - sessionStartTime.current : 0
+                                    index: prevList.length,
+                                    type: 'user interaction',
+                                    content: {
+                                        user_query: voiceInputTranscript,
+                                        agent_response: stateFunctionExeRes.response,
+                                        video_segment_index: stateFunctionExeRes.video_segment_index,
+                                    },
+                                    timestamp: sessionStartTime.current ? String((Date.now() - sessionStartTime.current) / 1000) : '0'
                                 }
                             ]);
-                            setInteractionID(prev => prev + 1);
                         }
                         // play the natural language response from the agent
                         if (typeof stateFunctionExeRes === 'object') {
@@ -565,127 +565,143 @@ export default function WorkFlow(props: WorkFlowProps) {
         }
     };
 
-
-    // liveAPI: system automatic trigger
+    const numberedProceduresRef = useRef<string>();
     useEffect(() => {
         const procedures = utils.extractProcedureSequence(props.videoKnowledgeInput);
         const numberedProcedures = procedures.length > 0
             ? procedures.map((proc, idx) => `${idx + 1}. ${proc}`).join('\n')
             : "No procedures found in video knowledge";
+        numberedProceduresRef.current = numberedProcedures;
+    }, [props.videoKnowledgeInput]);
 
-        const repeatingPrompt =
-            "You are a cooking assistant that analyzes video streams. Use compareStreamWithReferenceVideoKnowledge tool to analyze the video stream. " +
-            "Your task has two distinct parts:\n\n" +
-            "PART 1 - OBJECTIVE OBSERVATION (what you actually see):\n" +
-            "First, analyze ONLY what you can directly observe in the current video stream:\n" +
-            "1. Describe the specific cooking procedure being performed at this moment\n" +
-            "2. Describe the specific step being performed at this moment\n" +
-            "3. Describe the visible food items, ingredients, and kitchenware\n" +
-            "4. Describe any cooking-related sounds\n\n" +
-
-            "IMPORTANT: In Part 1, do NOT reference or compare with the reference knowledge. Only describe what you actually observe.\n\n" +
-
-            "PART 2 - COMPARISON WITH REFERENCE (after observation):\n" +
-            "After completing your objective observation, compare what you observed with the reference cooking knowledge:\n" +
-            "1. Is the observed cooking step valid according to reference knowledge? (true/false)\n" +
-            "2. Is the observed step being executed correctly? (true/false)\n" +
-            "3. Is the user missing any procedures from the reference knowledge? (true/false)\n" +
-            "4. Has the user progressed to a new procedure? (true/false)\n\n" +
-
-            "If the user is missing procedures or performing steps incorrectly, provide specific improvement instructions.\n\n" +
-
-            "REFERENCE KNOWLEDGE (do not hallucinate this as being in the video):\n" +
-            "The correct procedure sequence according to the reference is:\n" +
-            numberedProcedures + "\n\n" +
-
-            "PREVIOUS OBSERVATION:\n";
-
+    // liveAPI: system automatic trigger
+    useEffect(() => {
         let intervalId: NodeJS.Timeout | null = null;
+        if (props.currentState === 0 && isConnected && liveAPIConnected) {
+            const repeatingPrompt =
+                "You are a cooking assistant that analyzes video streams. Use compareStreamWithReferenceVideoKnowledge tool to analyze the video stream. " +
+                "Your task has two distinct parts:\n\n" +
+                "PART 1 - OBJECTIVE OBSERVATION (what you actually see):\n" +
+                "First, analyze ONLY what you can directly observe in the current video stream:\n" +
+                "1. Describe the specific cooking procedure being performed at this moment\n" +
+                "2. Describe the specific step being performed at this moment\n" +
+                "3. Describe the visible food items, ingredients, and kitchenware\n" +
+                "4. Describe any cooking-related sounds\n\n" +
 
-        // Only start the interval if we're connected and in the correct state
-        // If autoResetToInitialState is enabled, we should be more lenient about the state check
-        const shouldRunAnalysis = isConnected && liveAPIConnected &&
-            (props.currentState === 0 || (autoResetToInitialState && props.currentState >= 0));
+                "IMPORTANT: In Part 1, do NOT reference or compare with the reference knowledge. Only describe what you actually observe.\n\n" +
 
-        if (shouldRunAnalysis) {
-            console.log("Starting visual analysis interval");
+                "PART 2 - COMPARISON WITH REFERENCE (after observation):\n" +
+                "After completing your objective observation, compare what you observed with the reference cooking knowledge:\n" +
+                "1. Is the observed cooking step valid according to reference knowledge? (true/false)\n" +
+                "2. Is the observed step being executed correctly? (true/false)\n" +
+                "3. Is the user missing any procedures from the reference knowledge? (true/false)\n" +
+                "4. Has the user progressed to a new procedure? (true/false)\n\n" +
+
+                "If the user is missing procedures or performing steps incorrectly, provide specific improvement instructions.\n\n" +
+
+                "REFERENCE KNOWLEDGE (do not hallucinate this as being in the video):\n" +
+                "The correct procedure sequence according to the reference is:\n" +
+                numberedProceduresRef.current + "\n\n" +
+
+                "PREVIOUS OBSERVATION:\n";
+
+            // Only start the interval if we're connected and in the correct state
+            // If autoResetToInitialState is enabled, we should be more lenient about the state check
+
+            // @TODO: Commented out for testing auto go back to initial state
+            // const shouldRunAnalysis = isConnected && liveAPIConnected &&
+            //     (props.currentState === 0 || (autoResetToInitialState && props.currentState >= 0));
+
+            // if (shouldRunAnalysis) {
+            //     console.log("Starting visual analysis interval");
+            //     intervalId = setInterval(() => {
+            //         // Double-check we're still connected before sending
+            //         // If autoResetToInitialState is enabled, we should be more lenient about the state check
+            //         const stillShouldRunAnalysis = liveAPIConnected &&
+            //             (props.currentState === 0 || (autoResetToInitialState && props.currentState >= 0));
+
+            //         if (!stillShouldRunAnalysis) {
+            //             console.log("Not connected or not in the correct state");
+            //             return;
+            //         }
+
+            //         const responses = combinedMemory.filter(item => item.type === 'automatic reality analysis result');
+            //         if (responses.length === 0) {
+            //             liveAPIClient.send([{ text: repeatingPrompt + "No previous action: just started cooking." }]);
+            //         } else {
+            //             const lastResponseInfo =
+            //                 "Procedure: " + (responses[responses.length - 1].content as AutoAgentResponseItem).procedureAnalysis + "\n" +
+            //                 "Step: " + (responses[responses.length - 1].content as AutoAgentResponseItem).stepAnalysis + "\n" +
+            //                 "Food and kitchenware analysis: " + (responses[responses.length - 1].content as AutoAgentResponseItem).foodAndKitchenwareAnalysis + "\n" +
+            //                 "Audio analysis: " + (responses[responses.length - 1].content as AutoAgentResponseItem).audioAnalysis + "\n";
+            //             liveAPIClient.send([{ text: repeatingPrompt + lastResponseInfo }]);
+            //         }
+            //     }, VISUAL_ANALYZE_INTERVAL_MS);
+            // }
             intervalId = setInterval(() => {
-                // Double-check we're still connected before sending
-                // If autoResetToInitialState is enabled, we should be more lenient about the state check
-                const stillShouldRunAnalysis = liveAPIConnected &&
-                    (props.currentState === 0 || (autoResetToInitialState && props.currentState >= 0));
-
-                if (!stillShouldRunAnalysis) {
-                    console.log("Not connected or not in the correct state");
-                    return;
-                }
-
-                const responses = autoAgentResponseMemoryKvRef.current;
+                const responses = combinedMemory.filter(item => item.type === 'automatic reality analysis result');
                 if (responses.length === 0) {
                     liveAPIClient.send([{ text: repeatingPrompt + "No previous action: just started cooking." }]);
                 } else {
                     const lastResponseInfo =
-                        "Procedure: " + responses[responses.length - 1].procedureAnalysis + "\n" +
-                        "Step: " + responses[responses.length - 1].stepAnalysis + "\n" +
-                        "Food and kitchenware analysis: " + responses[responses.length - 1].foodAndKitchenwareAnalysis + "\n" +
-                        "Audio analysis: " + responses[responses.length - 1].audioAnalysis + "\n";
+                        "Procedure: " + (responses[responses.length - 1].content as AutoAgentResponseItem).procedureAnalysis + "\n" +
+                        "Step: " + (responses[responses.length - 1].content as AutoAgentResponseItem).stepAnalysis + "\n" +
+                        "Food and kitchenware analysis: " + (responses[responses.length - 1].content as AutoAgentResponseItem).foodAndKitchenwareAnalysis + "\n" +
+                        "Audio analysis: " + (responses[responses.length - 1].content as AutoAgentResponseItem).audioAnalysis + "\n";
                     liveAPIClient.send([{ text: repeatingPrompt + lastResponseInfo }]);
                 }
             }, VISUAL_ANALYZE_INTERVAL_MS);
         }
 
         return () => {
-            if (intervalId) {
+            if (intervalId !== null) {
                 console.log("Clearing visual analysis interval");
                 clearInterval(intervalId);
             }
         };
-    }, [isConnected, liveAPIConnected, props.currentState, props.videoKnowledgeInput, liveAPIClient, autoResetToInitialState]);
+    }, [isConnected, liveAPIConnected, props.currentState, props.videoKnowledgeInput, autoResetToInitialState]);
 
 
     // trigger state transition for event 10 and 12 when auto agent detects issues
     useEffect(() => {
-        // Always update the ref with the latest responses, regardless of state
-        autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
+        if (props.currentState !== 0) return;
+        let autoAgentResponseMemory = combinedMemory.filter(item => item.type === 'automatic reality analysis result');
+        if (autoAgentResponseMemory.length === 0) return;
+        let lastResponse = autoAgentResponseMemory[autoAgentResponseMemory.length - 1];
 
-        if (props.currentState === 0) {
-            const responses = autoAgentResponseMemoryKvRef.current;
-            const lastResponse = responses[responses.length - 1];
-            // console.log('[liveAPI function call response]');
-            if (lastResponse?.isValidCookingStep) {
-                const hasInstructions = lastResponse.improvementInstructions.length > 0;
-                const needsCorrection = !lastResponse.isCorrectProcedureOrder || !lastResponse.isStepCorrect;
+        let lastResponseContent = lastResponse.content as AutoAgentResponseItem;
 
-                if (needsCorrection && hasInstructions) {
-                    console.log("[Instruction]: " + lastResponse.improvementInstructions);
-                    if (!lastResponse.isStepCorrect) {
-                        props.setStateMachineEvent(10); // 10: System automatically detects food state misalignment
-                    } else {
-                        props.setStateMachineEvent(12); // 12: System automatically detects missing previous steps
-                    }
-                    props.setAgentResponse(JSON.stringify({ "response": lastResponse.improvementInstructions }));
-                    // @TODO: debug only
-                    // props.videoRef.current?.pause();
-                    props.setStateTransitionToggle(!props.stateTransitionToggle);
-                } else if (needsCorrection) {
-                    console.log("[Incorrect detected, but no instruction provided]");
+        if (lastResponseContent?.isValidCookingStep) {
+            const hasInstructions = lastResponseContent.improvementInstructions.length > 0;
+            const needsCorrection = !lastResponseContent.isCorrectProcedureOrder || !lastResponseContent.isStepCorrect;
+
+            if (needsCorrection && hasInstructions) {
+                console.log("[Instruction]: " + lastResponseContent.improvementInstructions);
+                if (!lastResponseContent.isStepCorrect) {
+                    props.setStateMachineEvent(10); // 10: System automatically detects food state misalignment
+                } else {
+                    props.setStateMachineEvent(12); // 12: System automatically detects missing previous steps
                 }
-
-                if (lastResponse.hasProgressedToProcedure) {
-                    console.log("[new procedure]: " + lastResponse.procedureAnalysis);
-                    // props.setAgentResponse(JSON.stringify({ "response": lastResponse.procedureAnalysis }));
-                    // props.setStateTransitionToggle(!props.stateTransitionToggle);
-                }
+                props.setAgentResponse(JSON.stringify({ "response": lastResponseContent.improvementInstructions }));
+                // debug video simulation only
+                // props.videoRef.current?.pause();
+                props.setStateTransitionToggle(!props.stateTransitionToggle);
+            } else if (needsCorrection) {
+                console.log("[Incorrect detected, but no instruction provided]");
+            }
+            if (lastResponseContent.hasProgressedToProcedure) {
+                console.log("[new procedure]: " + lastResponseContent.procedureAnalysis);
             }
         }
-    }, [autoAgentResponseMemoryKv]);
+
+    }, [combinedMemory]);
 
     // Add this effect to handl e auto-scrolling
     useEffect(() => {
-        if (autoResponsesRef.current) {
-            autoResponsesRef.current.scrollTop = autoResponsesRef.current.scrollHeight;
+        if (memoryDivRef.current) {
+            memoryDivRef.current.scrollTop = memoryDivRef.current.scrollHeight;
         }
-    }, [autoAgentResponseMemoryKv]); // Scroll when responses update
+    }, [combinedMemory]); // Scroll when responses update
 
     // Add session start time initialization
     useEffect(() => {
@@ -697,7 +713,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     }, [isConnected]);
 
     const handlePanelChange = (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
-        setExpandedPanels({...expandedPanels, [panel]: isExpanded});
+        setExpandedPanels({ ...expandedPanels, [panel]: isExpanded });
     };
 
     return (
@@ -857,8 +873,8 @@ export default function WorkFlow(props: WorkFlowProps) {
                 />
             </Box>
 
-            <Accordion 
-                expanded={expandedPanels['agent-response'] !== false} 
+            <Accordion
+                expanded={expandedPanels['agent-response'] !== false}
                 onChange={handlePanelChange('agent-response')}
                 sx={{
                     background: 'transparent',
@@ -879,13 +895,13 @@ export default function WorkFlow(props: WorkFlowProps) {
                 >
                     <div className='flex items-center gap-2 py-2'>
                         <div className='text-lg font-bold'>Agent response</div>
-                        {props.currentState !== -1 && props.isProcessing && 
+                        {props.currentState !== -1 && props.isProcessing &&
                             <span className="loading loading-dots loading-md"></span>}
                     </div>
                 </AccordionSummary>
                 <AccordionDetails sx={{ padding: '0 0 16px 0' }}>
                     {props.currentState !== -1 ? (
-                        <div 
+                        <div
                             className="content-block-body"
                             style={{
                                 padding: '16px',
@@ -916,8 +932,8 @@ export default function WorkFlow(props: WorkFlowProps) {
 
             <div className="divider"></div>
 
-            <Accordion 
-                expanded={expandedPanels['visual-responses']} 
+            <Accordion
+                expanded={expandedPanels['visual-responses']}
                 onChange={handlePanelChange('visual-responses')}
                 sx={{
                     background: 'transparent',
@@ -945,13 +961,13 @@ export default function WorkFlow(props: WorkFlowProps) {
                                 saveResponsesToFile();
                             }}
                         >
-                            Save
+                            Save Combined
                         </label>
                     </div>
                 </AccordionSummary>
                 <AccordionDetails sx={{ padding: '0 0 16px 0' }}>
                     <div
-                        ref={autoResponsesRef}
+                        ref={memoryDivRef}
                         className="content-block-body content-kv"
                         style={{
                             height: '300px',
@@ -962,7 +978,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                         }}
                     >
                         {" [ "}
-                        {props.currentState !== -1 && autoAgentResponseMemoryKv.map((item, idx) => (
+                        {props.currentState !== -1 && combinedMemory.map((item, idx) => (
                             <div key={`agent-initiated-response-${idx}`} style={{ marginLeft: '20px' }}>
                                 {"{"}<br />
                                 {Object.entries(item).map(([key, value], index) => (
@@ -980,62 +996,8 @@ export default function WorkFlow(props: WorkFlowProps) {
                 </AccordionDetails>
             </Accordion>
 
-            <Accordion 
-                expanded={expandedPanels['interaction-history']} 
-                onChange={handlePanelChange('interaction-history')}
-                sx={{
-                    background: 'transparent',
-                    boxShadow: 'none',
-                    '&:before': {
-                        display: 'none',
-                    }
-                }}
-            >
-                <AccordionSummary
-                    expandIcon={<ExpandMoreIcon />}
-                    sx={{
-                        padding: '0',
-                        '& .MuiAccordionSummary-content': {
-                            margin: '0',
-                        }
-                    }}
-                >
-                    <div className='text-lg font-bold py-2'>Interaction history</div>
-                </AccordionSummary>
-                <AccordionDetails sx={{ padding: '0 0 16px 0' }}>
-                    <div 
-                        className="content-block-body content-kv"
-                        style={{
-                            maxHeight: '300px',
-                            overflowY: 'auto',
-                            padding: '10px',
-                            borderRadius: '8px',
-                            backgroundColor: 'rgba(0,0,0,0.03)'
-                        }}
-                    >
-                        {" [ "}
-                        {props.currentState !== -1 && interactionMemoryKv.map((item, idx) => (
-                            <div key={item.index} style={{ marginLeft: '20px' }}>
-                                {"{"}<br />
-                                &nbsp;&nbsp;&nbsp;&nbsp;index: {item.index},<br />
-                                &nbsp;&nbsp;&nbsp;&nbsp;user_query: {String(item.user_query).length > 70
-                                    ? `${String(item.user_query).substring(0, 40)}...${String(item.user_query).slice(-30)}`
-                                    : String(item.user_query)},<br />
-                                &nbsp;&nbsp;&nbsp;&nbsp;agent_response: {String(item.agent_response).length > 70
-                                    ? `${String(item.agent_response).substring(0, 40)}...${String(item.agent_response).slice(-30)}`
-                                    : String(item.agent_response)}<br />
-                                &nbsp;&nbsp;&nbsp;&nbsp;video_segment_index: {String(item.video_segment_index)}<br />
-                                &nbsp;&nbsp;&nbsp;&nbsp;timestamp: {item.timestamp}<br />
-                                {"}"},
-                            </div>
-                        ))}
-                        {" ] "}
-                    </div>
-                </AccordionDetails>
-            </Accordion>
-
-            <Accordion 
-                expanded={expandedPanels['possible-next-events']} 
+            <Accordion
+                expanded={expandedPanels['possible-next-events']}
                 onChange={handlePanelChange('possible-next-events')}
                 sx={{
                     background: 'transparent',
@@ -1058,8 +1020,8 @@ export default function WorkFlow(props: WorkFlowProps) {
                 </AccordionSummary>
                 <AccordionDetails sx={{ padding: '0 0 16px 0' }}>
                     {props.currentState !== -1 ? (
-                        <ul style={{ 
-                            listStyleType: 'none', 
+                        <ul style={{
+                            listStyleType: 'none',
                             padding: 0,
                             display: 'flex',
                             flexWrap: 'wrap',
@@ -1092,14 +1054,14 @@ export default function WorkFlow(props: WorkFlowProps) {
                 supportsVideo={true}
                 currentState={props.currentState}
                 videoKnowledgeInput={props.videoKnowledgeInput}
-                autoAgentResponseMemoryKv={autoAgentResponseMemoryKv}
+                combinedMemory={combinedMemory}
                 onVideoStreamChange={props.setVideoStream}
                 setStateMachineEvent={props.setStateMachineEvent}
                 setCurrentState={props.setCurrentState}
                 connectConversation={connectConversation}
                 disconnectConversation={disconnectConversation}
-                setAutoAgentResponseMemoryKv={setAutoAgentResponseMemoryKv}
                 setVoiceInputTranscript={props.setVoiceInputTranscript}
+                setCombinedMemory={setCombinedMemory}
             />
         </Stack >
     );
