@@ -27,9 +27,7 @@ import ControlTray from "../control-tray/ControlTray";
 import { VISUAL_ANALYZE_INTERVAL_MS, AUTO_TIMEOUT_MS } from "../../constants";
 import * as utils from "./utils";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-
-
-const openaiClient = new OpenAI({ apiKey: secret.OPENAI_KEY, dangerouslyAllowBrowser: true });
+import TTSPlayer from "../tts-player/TTSPlayer";
 
 
 export default function WorkFlow(props: WorkFlowProps) {
@@ -42,6 +40,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     const sessionStartTime = useRef<number | null>(null);
     const memoryDivRef = useRef<HTMLDivElement>(null);
 
+    const [ttsInput, setTTSInput] = useState('');
     const [selectedFileName, setSelectedFileName] = useState<string>('');
     const [isConnected, setIsConnected] = useState(false);
     const [items, setItems] = useState<ItemType[]>([]);
@@ -56,6 +55,7 @@ export default function WorkFlow(props: WorkFlowProps) {
         'agent-response': true,
         'possible-next-events': false
     });
+
 
     const possibleNextUserEvents: string[] = useMemo(() => {
         if (props.currentState === -1) return [];
@@ -132,6 +132,7 @@ export default function WorkFlow(props: WorkFlowProps) {
      */
     const startRecording = async () => {
         setIsRecording(true);
+        setTTSInput('');
         const openaiRTClient = openaiRTClientRef.current;
         const wavRecorder = wavRecorderRef.current;
         const wavStreamPlayer = wavStreamPlayerRef.current;
@@ -189,52 +190,6 @@ export default function WorkFlow(props: WorkFlowProps) {
             await wavRecorder.record((data) => openaiRTClient.appendInputAudio(data.mono));
         }
         setCanPushToTalk(value === 'none');
-    };
-
-
-    const playTTS = async (text: string, speed: number) => {
-        try {
-            console.log('[TTS play]', text);
-            const wavStreamPlayer = wavStreamPlayerRef.current;
-            const audioResponse = await openaiClient.audio.speech.create({
-                model: "tts-1",
-                voice: "alloy",
-                input: text,
-                response_format: 'pcm',
-                speed: speed,
-            });
-            const arrayBuffer = await audioResponse.arrayBuffer();
-            await wavStreamPlayer.add16BitPCM(arrayBuffer);
-            // const pcmView = new Int16Array(arrayBuffer);
-            // const durationMs = (pcmView.length / 24000) * 1000 / speed;
-            // console.log("[TTS Duration]", durationMs);
-
-            // if (autoResetToInitialState) {
-            //     // Store the current event to check if it changes
-            //     const currentEvent = props.stateMachineEvent;
-
-            //     // Make sure to update the ref with the latest responses
-            //     autoAgentResponseMemoryKvRef.current = autoAgentResponseMemoryKv;
-
-            //     // Create the timeout
-            //     const timeoutId = setTimeout(() => {
-            //         // Only proceed if the event hasn't changed
-            //         if (currentEvent === props.stateMachineEvent) {
-            //             console.log("[TTS Complete] Returning to initial state");
-            //             props.setStateMachineEvent(4); // Trigger event 4 (user agreement)
-            //             props.setStateTransitionToggle(!props.stateTransitionToggle);
-            //         } else {
-            //             console.log("[TTS Complete] Event changed, skipping state transition");
-            //         }
-            //     }, durationMs + AUTO_TIMEOUT_MS);
-
-            //     // Clean up the timeout if the component unmounts or if the event changes
-            //     return () => clearTimeout(timeoutId);
-            //         }
-
-        } catch (error) {
-            console.error("Error generating or playing TTS:", error);
-        }
     };
 
 
@@ -448,9 +403,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                 let retrievedInfo = interactionMemory[retrievedIndex];
                 let agentResponse = (retrievedInfo.content as InteractionMemoryItem).agent_response;
                 let videoSegmentIndex = (retrievedInfo.content as InteractionMemoryItem).video_segment_index;
-                if (agentResponse) {
-                    await playTTS(agentResponse, props.ttsSpeed);
-                }
+                setTTSInput(agentResponse || '');
                 props.setAgentResponse(JSON.stringify({ "response": agentResponse, "video_segment_index": videoSegmentIndex }));
                 // handle replay segmented video
             } else if (event === 6) {
@@ -485,9 +438,9 @@ export default function WorkFlow(props: WorkFlowProps) {
                 let lastResponse = responses[responses.length - 1].content as AutoAgentResponseItem;
                 console.log('[last response]', lastResponse);
                 if (lastResponse.hasProgressedToProcedure) {
-                    await playTTS(lastResponse.procedureAnalysis, props.ttsSpeed);
+                    setTTSInput(lastResponse.procedureAnalysis);
                 } else {
-                    await playTTS(lastResponse.improvementInstructions, props.ttsSpeed);
+                    setTTSInput(lastResponse.improvementInstructions);
                 }
             }
             else {
@@ -535,9 +488,9 @@ export default function WorkFlow(props: WorkFlowProps) {
                         }
                         // play the natural language response from the agent
                         if (typeof stateFunctionExeRes === 'object') {
-                            await playTTS(String(stateFunctionExeRes.response), props.ttsSpeed);
+                            setTTSInput(String(stateFunctionExeRes.response));
                         } else {
-                            await playTTS(stringifiedResponse, props.ttsSpeed);
+                            setTTSInput(stringifiedResponse);
                         }
                     } else {
                         console.log('[no voice input transcript]');
@@ -900,8 +853,8 @@ export default function WorkFlow(props: WorkFlowProps) {
                             <span className="loading loading-dots loading-md"></span>}
                     </div>
                 </AccordionSummary>
-                <AccordionDetails sx={{ padding: '0 0 16px 0' }}>
-                    {props.currentState !== -1 ? (
+                <AccordionDetails sx={{ padding: '0 0 0px 0' }}>
+                    {/* {props.currentState !== -1 ? (
                         <div
                             className="content-block-body"
                             style={{
@@ -927,11 +880,10 @@ export default function WorkFlow(props: WorkFlowProps) {
                         </div>
                     ) : (
                         <div className="text-gray-400 italic px-2">No response available</div>
-                    )}
+                    )} */}
+                    <TTSPlayer input={ttsInput} />
                 </AccordionDetails>
             </Accordion>
-
-            <div className="divider"></div>
 
             <Accordion
                 expanded={expandedPanels['visual-responses']}
