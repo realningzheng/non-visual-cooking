@@ -339,40 +339,51 @@ export default function WorkFlow(props: WorkFlowProps) {
     }, [items]);
 
 
-    // Replace the existing useEffect with this more robust version
     const prevEventAndTranscriptRef = useRef<{ event: number, transcript: string }>({ event: -1, transcript: '' });
+    const transcriptTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const isTranscriptStableRef = useRef<boolean>(true);
 
     useEffect(() => {
-        // Get current values
-        const currentEvent = props.stateMachineEvent;
         const currentTranscript = props.voiceInputTranscript;
-        const prevValues = prevEventAndTranscriptRef.current;
-
-        // Special cases: events 1, 3, 4, 5, 6 only need a transcript change
-        const isSpecialEvent = [1, 3, 4, 5, 6].includes(currentEvent);
-        const eventChanged = prevValues.event !== currentEvent;
-        const transcriptChanged = prevValues.transcript !== currentTranscript;
-
-        // Trigger state transition if:
-        // 1. It's a special event (1,3,4,5,6) and we have a non-empty transcript, and the transcript changed OR
-        // 2. The event changed and we have a non-empty transcript, and the transcript changed OR
-        if ((isSpecialEvent && currentTranscript.length > 0 && transcriptChanged) ||
-            (eventChanged && currentTranscript.length > 0 && transcriptChanged)) {
-            console.log('[stable! state transition toggle]', {
-                event: currentEvent,
-                isSpecialEvent,
-                transcriptLength: currentTranscript.length
-            });
-
-            props.setStateTransitionToggle(!props.stateTransitionToggle);
-
-            // Update the ref to remember current values
-            prevEventAndTranscriptRef.current = {
-                event: currentEvent,
-                transcript: currentTranscript
-            };
+        const prevTranscript = prevEventAndTranscriptRef.current.transcript;
+        
+        // If transcript hasn't changed, do nothing
+        if (currentTranscript === prevTranscript) return;
+        
+        // Mark transcript as unstable when it changes
+        isTranscriptStableRef.current = false;
+        
+        // Clear any existing timer
+        if (transcriptTimerRef.current) {
+            clearTimeout(transcriptTimerRef.current);
         }
-    }, [props.stateMachineEvent, props.voiceInputTranscript]);
+        
+        // Set a new timer for this transcript change
+        transcriptTimerRef.current = setTimeout(() => {
+            // When timer fires, transcript is considered stable
+            isTranscriptStableRef.current = true;
+            
+            // Only toggle state transition if transcript actually changed from the previously stable one
+            if (currentTranscript !== prevTranscript) {
+                props.setStateTransitionToggle(!props.stateTransitionToggle);
+                
+                // Update the ref with the new stable transcript
+                prevEventAndTranscriptRef.current = {
+                    event: prevEventAndTranscriptRef.current.event,
+                    transcript: currentTranscript
+                };
+            }
+            
+            transcriptTimerRef.current = null;
+        }, 500); // 500ms debounce time - adjust as needed
+        
+        // Cleanup function
+        return () => {
+            if (transcriptTimerRef.current) {
+                clearTimeout(transcriptTimerRef.current);
+            }
+        };
+    }, [props.voiceInputTranscript]);
 
 
     /** Handle state transition */

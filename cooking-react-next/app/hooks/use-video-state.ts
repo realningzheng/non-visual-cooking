@@ -50,7 +50,7 @@ export function useVideoState({
     useEffect(() => {
         const segments = parseVideoSegments(agentResponse, videoKnowledgeInput);
         if (segments.length > 0) {
-            console.log('[set video segments]', segments);
+            // console.log('[set video segments]', segments);
             setVideoSegments(segments);
             setPlaySeconds(0);
         } else {
