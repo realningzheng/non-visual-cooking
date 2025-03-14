@@ -24,30 +24,20 @@ export const explainCurrentFoodState = async (				// state 1
 		<VIDEO KNOWLEDGE>:
 		${videoKnowledgeInput}
 		
-		<INTERACTION MEMORY>:
-		${combinedMemory.filter(item => item.type === 'user interaction').join('\n')}
-		
-		<REALITY STREAM MEMORY>:
-		${combinedMemory.filter(item => item.type === 'automatic reality analysis result').join('\n')}
+		<MEMORY>:
+		${combinedMemory.map(item => `[${item.timestamp}] [${item.type}] ${JSON.stringify(item.content)}`).join('\n')}
 		
 		<USER REQUEST>:
 		${voiceInputTranscript}
 		
 		First, analyze the video knowledge to identify which segment(s) best answer the user's question. 
-		Store the relevant segment index(es) under the key: <video_segment_index>.
+		Store the relevant segment index(es) under the key: <video_segment_index> from the <VIDEO KNOWLEDGE>.
 		
-		The user is unable to see, so they are asking about confirmations of visual elements in the cooking scene. 
-		Please provide a detailed visual description that includes:
-		
-		1. Direct answer to the user's specific question first
-		2. Clear visual details about the relevant items, including:
-		   - Size (e.g., small, medium, large, dimensions if relevant)
-		   - Color (be specific about shades and appearance)
-		   - Shape (describe the form and contours)
-		   - Position (describe location relative to other visible objects)
-		   - Visual state (e.g., if food: raw, cooked, browning, etc.)
-		
-		Keep your response concise and focused on what the user can actually see in the current image. 
+		The user is unable to see, so provide a concise visual description focusing on:
+		1. FIRST, directly answer the specific question in 1-2 sentences
+		2. BRIEFLY describe relevant visual details (size, color, shape, position, state)
+		3. Limit your entire response to 3-5 sentences maximum
+		4. Use simple, direct language without elaboration or pleasantries
 	`;
 	console.log(`[state function] S1: explain current state prompt]`);
 	const response = await respondAndProvideVideoSegmentIndex(systemPromptDefault, prompt, [realityImageBase64]);
@@ -66,30 +56,21 @@ export const respondWithStepRelatedQuestions = async (		// state 2
 		<VIDEO KNOWLEDGE>:
 		${videoKnowledgeInput}
 		
-		<INTERACTION MEMORY>:
-		${combinedMemory.filter(item => item.type === 'user interaction').join('\n')}
-		
-		<REALITY STREAM MEMORY>:
-		${combinedMemory.filter(item => item.type === 'automatic reality analysis result').join('\n')}
+		<MEMORY>:
+		${combinedMemory.map(item => `[${item.timestamp}] [${item.type}] ${JSON.stringify(item.content)}`).join('\n')}
 		
 		<USER REQUEST>:
 		${voiceInputTranscript}
 
-		The user is asking about a cooking step - this could be about the current step, a previous step, or an upcoming step. 
-		The image provided shows the CURRENT cooking scene.
-
 		First, analyze the video knowledge to identify which segment(s) best answer the user's question. 
-		Store the relevant segment index(es) under the key: <video_segment_index>.
+		Store the relevant segment index(es) under the key: <video_segment_index> from the <VIDEO KNOWLEDGE>
 
-		Then, provide a precise and focused response that addresses these three elements:
-		1. Step identification: Clearly name the step the user is asking about (e.g., "Chopping the garlic")
-		2. Temporal information: Provide the expected duration of this step (in seconds or minutes) based on the video knowledge
-		3. Impact explanation: Explain how this specific step affects the final dish (flavor, texture, etc.)
-
-		Important guidelines:
-		- Integrate these three elements naturally in your response without using numbered points or explicit headings
-		- If the user is not asking about the current step, your response doesn't need to be based on the current visual information
-		- Keep your response concise and directly relevant to what was asked
+		Provide a brief response about the cooking step with these 3 elements:
+		1. Step name (1 sentence)
+		2. Duration (based on the video knowledge if available, otherwise tell the user the duration of the step is not mentioned in the video)
+		3. Impact on dish (1-3 short sentences)
+		
+		Keep entire response under 3-5 sentences. No elaboration or pleasantries.
 	`;
 	console.log(`[state function] S2: step related questions prompt`);
 	const response = await respondAndProvideVideoSegmentIndex(systemPromptDefault, prompt, [realityImageBase64]);
@@ -107,26 +88,22 @@ export const respondWithHowToFix = async (				// state 3
 		<VIDEO KNOWLEDGE>:
 		${videoKnowledgeInput}
 		
-		<INTERACTION MEMORY>:
-		${combinedMemory.filter(item => item.type === 'user interaction').join('\n')}
-		
-		<REALITY STREAM MEMORY>:
-		${combinedMemory.filter(item => item.type === 'automatic reality analysis result').join('\n')}
+		<MEMORY>:
+		${combinedMemory.map(item => `[${item.timestamp}] [${item.type}] ${JSON.stringify(item.content)}`).join('\n')}
 		
 		<USER REQUEST>:
 		${voiceInputTranscript}
 
-		The user has encountered a cooking problem and needs guidance on how to fix it. The image shows the CURRENT cooking situation.
-
 		First, analyze the video knowledge to identify which segment(s) contain the relevant solution. 
-		Store the relevant segment index(es) under the key: <video_segment_index>.
+		Store the relevant segment index(es) under the key: <video_segment_index> from the <VIDEO KNOWLEDGE>
 
-		Then, provide a clear, actionable response that helps the user fix their cooking issue. Your response should:
-		1. Briefly identify the specific cooking problem (e.g., "The sauce is separating" or "The vegetables are burning")
-		2. Provide 1-2 immediate, concrete actions to fix the problem (e.g., "Lower the heat and add 2 tablespoons of water")
-		3. If relevant, explain how to prevent this issue in the future (in 1 short sentence)
+		Provide an immediate solution:
+		1. Problem identification (1-2 sentence)
+		2. Explain why the problem happens (1-2 sentence)
+		3. 1-2 specific actions to fix (use imperative form: "Reduce heat. Add water.")
 
-		Keep your response concise and executable.
+		
+		Keep entire response about 3-5 sentences. No explanations or pleasantries.
 	`;
 	console.log(`[state function] S3: respond with how to fix prompt`);
 	const response = await respondAndProvideVideoSegmentIndex(systemPromptDefault, prompt, [realityImageBase64]);
@@ -145,20 +122,20 @@ export const freeformResponse = async (				// state 4
 		<VIDEO KNOWLEDGE>:
 		${videoKnowledgeInput}
 		
-		<INTERACTION MEMORY>:
-		${combinedMemory.filter(item => item.type === 'user interaction').join('\n')}
-		
-		<REALITY STREAM MEMORY>:
-		${combinedMemory.filter(item => item.type === 'automatic reality analysis result').join('\n')}
+		<MEMORY>:
+		${combinedMemory.map(item => `[${item.timestamp}] [${item.type}] ${JSON.stringify(item.content)}`).join('\n')}
 		
 		<USER REQUEST>:
 		${voiceInputTranscript}
 
 		First, analyze the video knowledge to identify which segment(s) best answer the user's question. 
-		Store the relevant segment index(es) under the key: <video_segment_index>.
+		Store the relevant segment index(es) under the key: <video_segment_index> from the <VIDEO KNOWLEDGE>
 
-		Please repond to the user request in a concise manner and avoid extensive elaboration. 
-		The image shows the CURRENT cooking scene.
+		Response requirements:
+		1. Start with direct answer to user's specific question
+		2. Use maximum 3-5 short sentences total
+		3. No elaboration and pleasantries
+		4. Use simple, direct language only
 	`;
 	console.log(`[state function] S4: freeform response prompt`);
 	const response = await respondAndProvideVideoSegmentIndex(systemPromptDefault, prompt, [realityImageBase64]);
@@ -176,34 +153,21 @@ export const handlingUserDisagreements = async (		// state 5
 		<VIDEO KNOWLEDGE>:
 		${videoKnowledgeInput}
 		
-		<INTERACTION MEMORY>:
-		${combinedMemory.filter(item => item.type === 'user interaction').slice(-10).join('\n')}
-		
-		<REALITY STREAM MEMORY>:
-		${combinedMemory.filter(item => item.type === 'automatic reality analysis result').slice(-10).join('\n')}
+		<MEMORY>:
+		${combinedMemory.slice(-5).map(item => `[${item.timestamp}] [${item.type}] ${JSON.stringify(item.content)}`).join('\n')}
 		
 		<USER REQUEST>:
 		${voiceInputTranscript}
 
-		The user disagrees with your previous response and has provided additional information based on their sensory experience (tactile, sound, smell, etc.) or has requested a clarification.
-
 		First, analyze the video knowledge to identify which segment(s) best answer the user's updated question or concern. 
-		Store the relevant segment index(es) under the key: <video_segment_index>.
+		Store the relevant segment index(es) under the key: <video_segment_index> from the <VIDEO KNOWLEDGE>
 
-		Then, provide a revised response that:
-		1. Acknowledges the user's disagreement or additional information respectfully
-		2. Incorporates their tactile/sound/sensory feedback into your understanding of the situation
-		3. Offers a corrected or refined explanation based on both the video knowledge and their firsthand experience
-		4. If appropriate, explains any discrepancy between what the video shows and what the user is experiencing
+		Provide an immediate correction:
+		1. BRIEFLY summarize the reason why the previous response (from conversation items in the <MEMORY>) is declined by the user based on their current provided additional details (from the <USER REQUEST>) (1-2 sentence)
+		2. Give 1-2 specific actions based on the additional details and previous response (1-2 sentence)
+		3. Use maximum 3-5 sentences total, no apologies, elaboration and pleasantries.
 		
-		For ambiguous user requests, ask specific follow-up questions focused on sensory details:
-		1. "What texture do you observe?"
-		2. "What color/smell/sound indicates the issue?"
-		3. "How does it compare to what you expected?"
-
-		You are assisting low-vision users in real-time cooking, so AVOID asking the user to provide visual information.
-		
-		Keep your response concise, practical, and focused on helping the user succeed in their cooking task.
+		For truly ambiguous requests, ask ONE specific follow-up about texture, sound, or smell.
 	`;
 	console.log(`[state function] S5: handling user disagreements prompt`);
 	const response = await respondAndProvideVideoSegmentIndex(systemPromptErrorHandling, prompt, [realityImageBase64]);
@@ -221,31 +185,22 @@ export const followUpWithDetails = async (   // state 8
 		<VIDEO KNOWLEDGE>:
 		${videoKnowledgeInput}
 		
-		<INTERACTION MEMORY>:
-		${combinedMemory.filter(item => item.type === 'user interaction').slice(-10).join('\n')}
-		
-		<REALITY STREAM MEMORY>:
-		${combinedMemory.filter(item => item.type === 'automatic reality analysis result').slice(-10).join('\n')}
+		<MEMORY>:
+		${combinedMemory.slice(-5).map(item => `[${item.timestamp}] [${item.type}] ${JSON.stringify(item.content)}`).join('\n')}
 		
 		<USER REQUEST>:
 		${voiceInputTranscript}
-
-		The user is asking for more details or clarification about your previous response. They generally agree with what you've shared but need additional information.
-
-		First, analyze the video knowledge to identify which segment(s) best provide the additional details the user is seeking. 
-		Store the relevant segment index(es) under the key: <video_segment_index>.
-
-		Then, provide an enhanced response that:
-		1. Briefly acknowledges what was previously explained (in 1 sentence)
-		2. Provides the specific additional details the user is requesting
-		3. Focuses on sensory information that would be helpful for a low-vision user (textures, sounds, smells, timing cues)
+        The user is asking for more details or clarification about your previous response (from conversation items in the <MEMORY>). 
+		They generally agree with what you've shared but need additional information.
 		
-		For ambiguous user requests, ask specific follow-up questions focused on sensory details:
-		1. "What texture do you observe?"
-		2. "What color/smell/sound indicates the issue?"
-		3. "How does it compare to what you expected?"
-
-		Keep your response practical and concise, expanding only on the specific aspects the user has asked about.
+		First, analyze the video knowledge to identify which segment(s) best provide the additional details the user is seeking. 
+		Store the relevant segment index(es) under the key: <video_segment_index> from the <VIDEO KNOWLEDGE>
+		Improve your previous response based on the additional details provided by the user.
+		Avoid repeating the same information from the previous response.
+		Limit response to 3-5 SHORT sentences maximum.
+		Avoid elaboration and pleasantries.
+		For truly ambiguous requests, ask ONE specific follow-up about texture, sound, or smell.
+		
 	`;
 	console.log(`[state function] S8: follow up with details prompt`);
 	const response = await respondAndProvideVideoSegmentIndex(systemPromptUserFollowUp, prompt, [realityImageBase64]);
@@ -264,8 +219,7 @@ export const repeatPreviousInteraction = async (			// event 5: retrieve previous
 	const prompt = `
 		Retrieve the one, and only one, of the most relevant part from previous interactions based on user request:
 		<PREVIOUS INTERACTION>
-		${combinedMemory.filter(item => item.type === 'user interaction').join('\n')}
-		
+		${combinedMemory.filter(item => item.type === 'conversation').map(item => `[${item.timestamp}] ${JSON.stringify(item.content)}`).join('\n')}
 	`;
 	console.log(`[event 5: repeat previous interaction prompt]`);
 	const response = await retrievePreviousInteraction(

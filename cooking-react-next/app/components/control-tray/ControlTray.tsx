@@ -57,7 +57,7 @@ function ControlTray(props: ControlTrayProps) {
 		props.setCombinedMemory((prevResponses) => {
 			const newResponse: CombinedMemoryItem = {
 				index: prevResponses.length,
-				type: 'automatic reality analysis result',
+				type: 'cooking_scene_desc',
 				content: response,
 				timestamp: String(currentTime / 1000)
 			};

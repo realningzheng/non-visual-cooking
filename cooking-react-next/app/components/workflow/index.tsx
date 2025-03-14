@@ -73,10 +73,24 @@ export default function WorkFlow(props: WorkFlowProps) {
         }
     }, [props.currentState]);
 
+
+    /** Load a default video knowledge to save time */
+    useEffect(() => {
+        const loadDefaultVideoKnowledge = async () => {
+            const response = await fetch('/lH7pgsnyGrI_core_video_knowledge.json');
+            const data = await response.json();
+            props.setVideoKnowledgeInput(JSON.stringify(data));
+            setSelectedFileName('lH7pgsnyGrI_core.json');
+        }
+        loadDefaultVideoKnowledge();
+    }, []);
+
+
     const {
         client: liveAPIClient,
         connected: liveAPIConnected,
     } = useLiveAPIContext();
+
 
     /** Bootstrap functions */
     /** Connect to conversation */
@@ -102,6 +116,7 @@ export default function WorkFlow(props: WorkFlowProps) {
             await wavRecorder.record((data) => openaiRTClient.appendInputAudio(data.mono));
         }
     };
+
 
     /** Disconnect conversation */
     const disconnectConversation = async () => {
@@ -159,7 +174,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                             ${possibleNextUserEvents.join("\n")}\n
                             Consider the intent behind the user's words, not just the literal meaning. Each category has examples to guide your classification.
                             Respond with ONLY the numerical index (e.g., 0, 1, 2) of the most appropriate category. Do not include any explanation or additional text in your response.`;
-            console.log('[user request classification]', promptForUserRequestClassification);
+            // console.log('[user request classification]', promptForUserRequestClassification);
             openaiRTClient.sendUserMessageContent([
                 {
                     type: `input_text`,
@@ -391,8 +406,8 @@ export default function WorkFlow(props: WorkFlowProps) {
         if (event >= 0 && (event in stateMachine[statePrev])) {
             // handle replay previous interaction 
             if (event === 5) {
-                // get type 'user interaction' from combinedMemoryRef
-                let interactionMemory = combinedMemory.filter(item => item.type === 'user interaction');
+                // get type 'conversation' from combinedMemoryRef
+                let interactionMemory = combinedMemory.filter(item => item.type === 'conversation');
                 if (!interactionMemory) return;
                 let retrievedResponse = await repeatPreviousInteraction(
                     voiceInputTranscript,
@@ -424,7 +439,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                     ...prevList,
                     {
                         index: prevList.length,
-                        type: 'user interaction',
+                        type: 'conversation',
                         content: {
                             user_query: voiceInputTranscript,
                         },
@@ -433,7 +448,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                 ]);
                 // play auto agent response for event 10 and 12
             } else if (event === 10 || event === 12) {
-                let responses = combinedMemory.filter(item => item.type === 'automatic reality analysis result');
+                let responses = combinedMemory.filter(item => item.type === 'cooking_scene_desc');
                 console.log('[ready to play auto agent response]');
                 let lastResponse = responses[responses.length - 1].content as AutoAgentResponseItem;
                 console.log('[last response]', lastResponse);
@@ -476,7 +491,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                                 ...prevList,
                                 {
                                     index: prevList.length,
-                                    type: 'user interaction',
+                                    type: 'conversation',
                                     content: {
                                         user_query: voiceInputTranscript,
                                         agent_response: stateFunctionExeRes.response,
@@ -579,7 +594,7 @@ export default function WorkFlow(props: WorkFlowProps) {
             //             return;
             //         }
 
-            //         const responses = combinedMemory.filter(item => item.type === 'automatic reality analysis result');
+            //         const responses = combinedMemory.filter(item => item.type === 'cooking_scene_desc');
             //         if (responses.length === 0) {
             //             liveAPIClient.send([{ text: repeatingPrompt + "No previous action: just started cooking." }]);
             //         } else {
@@ -593,7 +608,7 @@ export default function WorkFlow(props: WorkFlowProps) {
             //     }, VISUAL_ANALYZE_INTERVAL_MS);
             // }
             intervalId = setInterval(() => {
-                const responses = combinedMemory.filter(item => item.type === 'automatic reality analysis result');
+                const responses = combinedMemory.filter(item => item.type === 'cooking_scene_desc');
                 if (responses.length === 0) {
                     liveAPIClient.send([{ text: repeatingPrompt + "No previous action: just started cooking." }]);
                 } else {
@@ -619,7 +634,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     // trigger state transition for event 10 and 12 when auto agent detects issues
     useEffect(() => {
         if (props.currentState !== 0) return;
-        let autoAgentResponseMemory = combinedMemory.filter(item => item.type === 'automatic reality analysis result');
+        let autoAgentResponseMemory = combinedMemory.filter(item => item.type === 'cooking_scene_desc');
         if (autoAgentResponseMemory.length === 0) return;
         let lastResponse = autoAgentResponseMemory[autoAgentResponseMemory.length - 1];
 

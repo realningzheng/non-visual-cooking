@@ -33,7 +33,7 @@ export interface AutoAgentResponseItem {
 // Combined memory item is either an interaction memory item or an auto agent response item with a timestamp
 export type CombinedMemoryItem = {
     index: number;
-    type: 'user interaction' | 'automatic reality analysis result';
+    type: 'conversation' | 'cooking_scene_desc';
     content: InteractionMemoryItem | AutoAgentResponseItem;
     timestamp: string;
 }
