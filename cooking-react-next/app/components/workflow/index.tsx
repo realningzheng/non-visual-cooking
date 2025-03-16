@@ -170,10 +170,9 @@ export default function WorkFlow(props: WorkFlowProps) {
         const wavRecorder = wavRecorderRef.current;
         await wavRecorder.pause();
         if (audioAgentDuty === 'detect') {
-            let promptForUserRequestClassification = `Use classify_voice_input function to analyze the user's voice input and classify it into exactly one of the following categories:\n\n
+            let promptForUserRequestClassification = `Analyze the user's voice input and classify it into exactly one of the following categories:\n\n
                             ${possibleNextUserEvents.join("\n")}\n
-                            Consider the intent behind the user's words, not just the literal meaning. Each category has examples to guide your classification.
-                            Respond with ONLY the numerical index (e.g., 0, 1, 2) of the most appropriate category. Do not include any explanation or additional text in your response.`;
+                            Consider the intent behind the user's words, not just the literal meaning.`;
             // console.log('[user request classification]', promptForUserRequestClassification);
             openaiRTClient.sendUserMessageContent([
                 {
@@ -221,22 +220,22 @@ export default function WorkFlow(props: WorkFlowProps) {
 
             You are a specialized intent classifier for a cooking assistance application. 
             Your primary role is to analyze user voice inputs and accurately categorize them into predefined categories use the tool classify_voice_input.
+            User's request is provided in audio, the categories are provided in text.
 
             When presented with a user's speech:
-            1. Listen carefully to understand the user's primary intent
-            2. Match their request to the most appropriate category from the options provided
-            3. Respond ONLY with the numerical index (e.g., 0, 1, 2) of the best matching category
-            4. DO NOT include any explanations, descriptions, or additional text
-            5. If the request seems ambiguous or could fit multiple categories, select the one that best captures the core intent
+            1. Match their request to the most appropriate category from the options provided
+            2. Respond ONLY with the numerical index (e.g., 0, 1, 2) of the best matching category. DO NOT include any explanations, descriptions, or additional text
+            3. If the request seems ambiguous or could fit multiple categories, select the one that best captures the core intent
             
-            Context: The user is following a cooking procedure and may ask questions about steps, ingredients, troubleshooting, or request video playback control. Each category represents a different type of user intent within the cooking workflow.
+            Context: The user is following a cooking procedure and may ask questions about steps, ingredients, troubleshooting, or request video playback control. 
+            Each category represents a different type of user intent within the cooking workflow.
             
             This classification is critical for routing the user's request through the correct state machine path, so accuracy is essential.`,
             tools: [
                 {
                     type: 'function',
                     name: 'classify_voice_input',
-                    description: `User will provide a request and possible categories. Analyze the user's voice input and classify it into exactly one of the categories provided by the user`,
+                    description: `Every time the user finishes speaking, classify the user's voice input into exactly one of the categories`,
                     parameters: {
                         type: 'object',
                         properties: {
@@ -249,7 +248,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                     },
                 },
             ],
-            tool_choice: { type: 'function', name: 'classify_voice_input' }
+            tool_choice: 'auto'
         });
 
         // Set transcription, otherwise we don't get user transcriptions back
