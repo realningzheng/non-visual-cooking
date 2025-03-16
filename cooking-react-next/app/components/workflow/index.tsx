@@ -28,6 +28,7 @@ import { VISUAL_ANALYZE_INTERVAL_MS, AUTO_TIMEOUT_MS } from "../../constants";
 import * as utils from "./utils";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import TTSPlayer from "../tts-player/TTSPlayer";
+import { visualAnalysisPromptPrefix } from "@/app/prompts";
 
 
 export default function WorkFlow(props: WorkFlowProps) {
@@ -345,37 +346,37 @@ export default function WorkFlow(props: WorkFlowProps) {
     useEffect(() => {
         const currentTranscript = props.voiceInputTranscript;
         const prevTranscript = prevEventAndTranscriptRef.current.transcript;
-        
+
         // If transcript hasn't changed, do nothing
         if (currentTranscript === prevTranscript) return;
-        
+
         // Mark transcript as unstable when it changes
         isTranscriptStableRef.current = false;
-        
+
         // Clear any existing timer
         if (transcriptTimerRef.current) {
             clearTimeout(transcriptTimerRef.current);
         }
-        
+
         // Set a new timer for this transcript change
         transcriptTimerRef.current = setTimeout(() => {
             // When timer fires, transcript is considered stable
             isTranscriptStableRef.current = true;
-            
+
             // Only toggle state transition if transcript actually changed from the previously stable one
             if (currentTranscript !== prevTranscript) {
                 props.setStateTransitionToggle(!props.stateTransitionToggle);
-                
+
                 // Update the ref with the new stable transcript
                 prevEventAndTranscriptRef.current = {
                     event: prevEventAndTranscriptRef.current.event,
                     transcript: currentTranscript
                 };
             }
-            
+
             transcriptTimerRef.current = null;
         }, 500); // 500ms debounce time - adjust as needed
-        
+
         // Cleanup function
         return () => {
             if (transcriptTimerRef.current) {
@@ -557,77 +558,24 @@ export default function WorkFlow(props: WorkFlowProps) {
     useEffect(() => {
         let intervalId: NodeJS.Timeout | null = null;
         if (props.currentState === 0 && isConnected && liveAPIConnected) {
-            const repeatingPrompt =
-                "You are a cooking assistant that analyzes video streams. Use compareStreamWithReferenceVideoKnowledge tool to analyze the video stream. " +
-                "Your task has two distinct parts:\n\n" +
-                "PART 1 - OBJECTIVE OBSERVATION (what you actually see):\n" +
-                "First, analyze ONLY what you can directly observe in the current video stream:\n" +
-                "1. Describe the specific cooking procedure being performed at this moment\n" +
-                "2. Describe the specific step being performed at this moment\n" +
-                "3. Describe the visible food items, ingredients, and kitchenware\n" +
-                "4. Describe any cooking-related sounds\n\n" +
-
-                "IMPORTANT: In Part 1, do NOT reference or compare with the reference knowledge. Only describe what you actually observe.\n\n" +
-
-                "PART 2 - COMPARISON WITH REFERENCE (after observation):\n" +
-                "After completing your objective observation, compare what you observed with the reference cooking knowledge:\n" +
-                "1. Is the observed cooking step valid according to reference knowledge? (true/false)\n" +
-                "2. Is the observed step being executed correctly? (true/false)\n" +
-                "3. Is the user missing any procedures from the reference knowledge? (true/false)\n" +
-                "4. Has the user progressed to a new procedure? (true/false)\n\n" +
-
-                "If the user is missing procedures or performing steps incorrectly, provide specific improvement instructions.\n\n" +
-
-                "REFERENCE KNOWLEDGE (do not hallucinate this as being in the video):\n" +
+            const visualAnalysisPrompt = visualAnalysisPromptPrefix + "\n\n" +
                 "The correct procedure sequence according to the reference is:\n" +
-                numberedProceduresRef.current + "\n\n" +
+                numberedProceduresRef.current + "\n\n"
 
-                "PREVIOUS OBSERVATION:\n";
-
-            // Only start the interval if we're connected and in the correct state
-            // If autoResetToInitialState is enabled, we should be more lenient about the state check
-
-            // @TODO: Commented out for testing auto go back to initial state
-            // const shouldRunAnalysis = isConnected && liveAPIConnected &&
-            //     (props.currentState === 0 || (autoResetToInitialState && props.currentState >= 0));
-
-            // if (shouldRunAnalysis) {
-            //     console.log("Starting visual analysis interval");
-            //     intervalId = setInterval(() => {
-            //         // Double-check we're still connected before sending
-            //         // If autoResetToInitialState is enabled, we should be more lenient about the state check
-            //         const stillShouldRunAnalysis = liveAPIConnected &&
-            //             (props.currentState === 0 || (autoResetToInitialState && props.currentState >= 0));
-
-            //         if (!stillShouldRunAnalysis) {
-            //             console.log("Not connected or not in the correct state");
-            //             return;
-            //         }
-
-            //         const responses = combinedMemory.filter(item => item.type === 'cooking_scene_desc');
-            //         if (responses.length === 0) {
-            //             liveAPIClient.send([{ text: repeatingPrompt + "No previous action: just started cooking." }]);
-            //         } else {
-            //             const lastResponseInfo =
-            //                 "Procedure: " + (responses[responses.length - 1].content as AutoAgentResponseItem).procedureAnalysis + "\n" +
-            //                 "Step: " + (responses[responses.length - 1].content as AutoAgentResponseItem).stepAnalysis + "\n" +
-            //                 "Food and kitchenware analysis: " + (responses[responses.length - 1].content as AutoAgentResponseItem).foodAndKitchenwareAnalysis + "\n" +
-            //                 "Audio analysis: " + (responses[responses.length - 1].content as AutoAgentResponseItem).audioAnalysis + "\n";
-            //             liveAPIClient.send([{ text: repeatingPrompt + lastResponseInfo }]);
-            //         }
-            //     }, VISUAL_ANALYZE_INTERVAL_MS);
-            // }
             intervalId = setInterval(() => {
                 const responses = combinedMemory.filter(item => item.type === 'cooking_scene_desc');
                 if (responses.length === 0) {
-                    liveAPIClient.send([{ text: repeatingPrompt + "No previous action: just started cooking." }]);
+                    liveAPIClient.send([{ text: visualAnalysisPrompt + "No previous action: just started cooking." }]);
                 } else {
                     const lastResponseInfo =
-                        "Procedure: " + (responses[responses.length - 1].content as AutoAgentResponseItem).procedureAnalysis + "\n" +
-                        "Step: " + (responses[responses.length - 1].content as AutoAgentResponseItem).stepAnalysis + "\n" +
-                        "Food and kitchenware analysis: " + (responses[responses.length - 1].content as AutoAgentResponseItem).foodAndKitchenwareAnalysis + "\n" +
-                        "Audio analysis: " + (responses[responses.length - 1].content as AutoAgentResponseItem).audioAnalysis + "\n";
-                    liveAPIClient.send([{ text: repeatingPrompt + lastResponseInfo }]);
+                        "PREVIOUS OBSERVATION:\n" +
+                        "• Procedure: " + (responses[responses.length - 1].content as AutoAgentResponseItem).procedureAnalysis + "\n" +
+                        "• Step: " + (responses[responses.length - 1].content as AutoAgentResponseItem).stepAnalysis + "\n" +
+                        "• Food & Kitchenware: " + (responses[responses.length - 1].content as AutoAgentResponseItem).foodAndKitchenwareAnalysis + "\n" +
+                        "• Audio: " + (responses[responses.length - 1].content as AutoAgentResponseItem).audioAnalysis + "\n" +
+                        ((responses[responses.length - 1].content as AutoAgentResponseItem).improvementInstructions ? "• Previous Issues: " + (responses[responses.length - 1].content as AutoAgentResponseItem).improvementInstructions : "");
+
+                    liveAPIClient.send([{ text: visualAnalysisPrompt + lastResponseInfo }]);
                 }
             }, VISUAL_ANALYZE_INTERVAL_MS);
         }
@@ -650,27 +598,25 @@ export default function WorkFlow(props: WorkFlowProps) {
 
         let lastResponseContent = lastResponse.content as AutoAgentResponseItem;
 
-        if (lastResponseContent?.isValidCookingStep) {
-            const hasInstructions = lastResponseContent.improvementInstructions.length > 0;
-            const needsCorrection = !lastResponseContent.isCorrectProcedureOrder || !lastResponseContent.isStepCorrect;
+        const hasInstructions = lastResponseContent.improvementInstructions.length > 0;
+        const needsCorrection = !lastResponseContent.isCorrectProcedureOrder || !lastResponseContent.isStepCorrect;
 
-            if (needsCorrection && hasInstructions) {
-                console.log("[Instruction]: " + lastResponseContent.improvementInstructions);
-                if (!lastResponseContent.isStepCorrect) {
-                    props.setStateMachineEvent(10); // 10: System automatically detects food state misalignment
-                } else {
-                    props.setStateMachineEvent(12); // 12: System automatically detects missing previous steps
-                }
-                props.setAgentResponse(JSON.stringify({ "response": lastResponseContent.improvementInstructions }));
-                // debug video simulation only
-                // props.videoRef.current?.pause();
-                props.setStateTransitionToggle(!props.stateTransitionToggle);
-            } else if (needsCorrection) {
-                console.log("[Incorrect detected, but no instruction provided]");
+        if (needsCorrection && hasInstructions) {
+            console.log("[Instruction]: " + lastResponseContent.improvementInstructions);
+            if (!lastResponseContent.isStepCorrect) {
+                props.setStateMachineEvent(10); // 10: System automatically detects food state misalignment
+            } else {
+                props.setStateMachineEvent(12); // 12: System automatically detects missing previous steps
             }
-            if (lastResponseContent.hasProgressedToProcedure) {
-                console.log("[new procedure]: " + lastResponseContent.procedureAnalysis);
-            }
+            props.setAgentResponse(JSON.stringify({ "response": lastResponseContent.improvementInstructions }));
+            // debug video simulation only
+            // props.videoRef.current?.pause();
+            props.setStateTransitionToggle(!props.stateTransitionToggle);
+        } else if (needsCorrection) {
+            console.log("[Incorrect detected, but no instruction provided]");
+        }
+        if (lastResponseContent.hasProgressedToProcedure) {
+            console.log("[new procedure]: " + lastResponseContent.procedureAnalysis);
         }
 
     }, [combinedMemory]);

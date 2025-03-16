@@ -31,7 +31,7 @@ import { ToolCall } from "../../multimodal-live-types";
 import { compareStreamWithReferenceVideoKnowledge } from "@/app/hooks/use-live-api";
 import { AutoAgentResponseItem, CombinedMemoryItem } from "../../types/common";
 import { ControlTrayProps } from "../../types/props";
-
+import { visualAnalysisSystemPrompt } from "@/app/prompts";
 
 function ControlTray(props: ControlTrayProps) {
 	const videoStreams = [useWebcam(), useScreenCapture()];
@@ -117,23 +117,7 @@ function ControlTray(props: ControlTrayProps) {
 			},
 			systemInstruction: {
 				parts: [{
-					text: `You are an AI cooking assistant analyzing real-time cooking procedures from a video stream. 
-					Your high-levelgoal is to analyze the current video stream and compare it with the reference cooking knowledge in the system context given after <VIDEO KNOWLEDGE>.
-					<VIDEO KNOWLEDGE>
-					${props.videoKnowledgeInput}
-
-					ROLE:
-					- Continuously analyze cooking activities from the video stream
-					- Raise an alert if the current step is wrong
-					- Raise an alert if missing any steps
-
-					RESPONSE GUIDELINES:
-					- Be precise and concise
-					- Prioritize critical safety and quality issues
-					- Consider both visual and audio inputs
-
-					User will also provided previous responses from you as context after <Previous observations for context>
-					`
+					text: visualAnalysisSystemPrompt(props.videoKnowledgeInput)
 				}]
 			}
 		});

@@ -48,33 +48,33 @@ export const compareStreamWithReferenceVideoKnowledge: FunctionDeclaration = {
 		properties: {
 			isValidCookingStep: {
 				type: SchemaType.BOOLEAN,
-				description: "Indicates if current scene shows a valid cooking step from reference knowledge. " +
-					"TRUE: User performing recognizable cooking step (e.g., 'chopping onions', 'stirring sauce'). " +
-					"FALSE: Non-cooking activities (e.g., walking, checking phone) or unclear/ambiguous actions.",
+				description: "Is this a valid cooking activity from the reference? " +
+					"TRUE: Recognizable cooking step matching reference (e.g., 'chopping onions', 'stirring sauce'). " +
+					"FALSE: Non-cooking activity or unrecognizable action (e.g., walking, looking at somewhere else).",
 			},
 			isStepCorrect: {
 				type: SchemaType.BOOLEAN,
-				description: "Indicates if the current step is executed correctly. " +
-					"TRUE: Execution matches reference exactly. " +
+				description: "Is the current step being executed properly based on the real-time video stream and reference cooking knowledge? " +
+					"TRUE: The audiovisual information of the current scene matches reference knowledge. " +
 					"FALSE: Execution deviates from reference (e.g., 'Heat too high causing rapid browning', " +
-					"'Cutting size inconsistent, ranging from 1/4 to 1/2 inch pieces').",
+                    "'Cutting size inconsistent, ranging from 1/4 to 1/2 inch pieces').",
 			},
 			isCorrectProcedureOrder: {
 				type: SchemaType.BOOLEAN,
-				description: "As the user has moved to the next procedure, indicates if the user is following the correct order according to the video knowledge. " +
-					"TRUE: The new step's order is correct. " +
-					"FALSE: User is not following the right procedure.",
+				description: "Is the user following procedures in the correct sequence? " +
+					"TRUE: Current procedure follows the proper sequence. " +
+					"FALSE: User has skipped procedures or is performing a step in a wrong order.",
 			},
 			hasProgressedToProcedure: {
 				type: SchemaType.BOOLEAN,
-				description: "Indicates if user has completed all steps in current procedure and moved to next procedure. " +
-					"TRUE: Current procedure complete and new procedure started. " +
-					"FALSE: Still working on current procedure or between steps of same procedure.",
+				description: "Has the user completed the previous procedure and moved to a new one? " +
+					"TRUE: User has transitioned to a new procedure. " +
+					"FALSE: Still working within the same procedure as previous observation.",
 			},
 			procedureAnalysis: {
 				type: SchemaType.STRING,
-				description: "The high-level cooking procedure being performed at the current time based on the reality image. " + 
-					"This should be in one of the procedures in the correct procedure sequence in the prompt.",
+				description: "The specific high-level cooking procedure currently being performed. " + 
+					"Should match one of the reference procedures exactly.",
 			},
 			stepAnalysis: {
 				type: SchemaType.STRING,
@@ -100,12 +100,9 @@ export const compareStreamWithReferenceVideoKnowledge: FunctionDeclaration = {
 			},
 			improvementInstructions: {
 				type: SchemaType.STRING,
-				description: "Should only be provided if the user is doing the step wrong or not following the procedure correctly. " +
-					"Clear, actionable guidance when issues found, based on reference knowledge. " +
-					"Include what to correct, how to correct it, and why it matters. " +
-					"Empty string if no issues found. " +
-					"Example: 'Reduce heat to medium-high - current temperature is too hot and will burn the exterior " +
-					"before the chicken is cooked through. Wait 30 seconds before adding the meat.'",
+				description: "Precisely describe the issues detected and provide instructions on how to correct them immediately. Include: " +
+					"• What specifically is incorrect " +
+					"• How to correct it immediately "
 			}
 		},
 		required: [
