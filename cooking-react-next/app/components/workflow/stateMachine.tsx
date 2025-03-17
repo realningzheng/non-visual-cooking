@@ -257,7 +257,7 @@ export const executeStateFunction = async (
 		return await stateFunction(videoKnowledgeInput, realityImageBase64, voiceInputTranscript, combinedMemory);
 	} else {
 		console.error(`No function found for event ${stateNumber}`);
-		return `No function found for event ${stateNumber}`;
+		return '';
 	}
 };
 
