@@ -453,7 +453,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                         index: prevList.length,
                         type: 'conversation',
                         content: {
-                            user_query: voiceInputTranscript,
+                            user_query: "I agree with your response",
                         },
                         timestamp: sessionStartTime.current ? String((Date.now() - sessionStartTime.current) / 1000) : '0'
                     }
@@ -464,8 +464,8 @@ export default function WorkFlow(props: WorkFlowProps) {
                 console.log('[ready to play auto agent response]');
                 let lastResponse = responses[responses.length - 1].content as AutoAgentResponseItem;
                 console.log('[last response]', lastResponse);
-                    setTTSInput(lastResponse.improvementInstructions);
-                }
+                setTTSInput(lastResponse.improvementInstructions);
+            }
             else {
                 props.setSegmentedVideoPlaying(false);
                 const realityImageBase64 = await props.captureRealityFrame();
@@ -774,6 +774,18 @@ export default function WorkFlow(props: WorkFlowProps) {
                     disabled={!isConnected || !canPushToTalk}
                 >
                     {isRecording ? 'release to send' : 'push to talk'}
+                </button>
+                <button
+                    className="btn btn btn-outline"
+                    onClick={() => {
+                        props.setStateMachineEvent(4);
+                        // toggle state transtion after a short delay
+                        setTimeout(() => {
+                            props.setStateTransitionToggle(!props.stateTransitionToggle);
+                        }, 500);
+                    }}
+                >
+                    Reset
                 </button>
                 <input
                     type="text"

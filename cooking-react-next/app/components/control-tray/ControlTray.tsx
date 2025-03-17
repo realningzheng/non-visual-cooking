@@ -297,11 +297,11 @@ function ControlTray(props: ControlTrayProps) {
 
 	return (
 		<div>
-			{/* {videoFile && (
+			{videoFile && (
 				<div className="fixed bottom-12 left-12 bg-base-200 shadow-lg px-4 py-2 rounded-lg flex flex-col items-center">
 					<video ref={props.videoRef} controls width="200" className="rounded-md shadow-md" />
 				</div>
-			)} */}
+			)}
 			<div className="fixed bottom-4 left-12 bg-base-200 rounded-full shadow-lg px-6 py-3">
 				<canvas className="hidden" ref={renderCanvasRef} />
 				<div className="flex items-center gap-2">
