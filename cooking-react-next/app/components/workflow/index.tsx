@@ -344,6 +344,7 @@ export default function WorkFlow(props: WorkFlowProps) {
     const isTranscriptStableRef = useRef<boolean>(true);
 
     useEffect(() => {
+        if (props.voiceInputTranscript.length === 0) return;
         const currentTranscript = props.voiceInputTranscript;
         const prevTranscript = prevEventAndTranscriptRef.current.transcript;
 
@@ -463,12 +464,8 @@ export default function WorkFlow(props: WorkFlowProps) {
                 console.log('[ready to play auto agent response]');
                 let lastResponse = responses[responses.length - 1].content as AutoAgentResponseItem;
                 console.log('[last response]', lastResponse);
-                if (lastResponse.hasProgressedToProcedure) {
-                    setTTSInput(lastResponse.procedureAnalysis);
-                } else {
                     setTTSInput(lastResponse.improvementInstructions);
                 }
-            }
             else {
                 props.setSegmentedVideoPlaying(false);
                 const realityImageBase64 = await props.captureRealityFrame();
@@ -592,6 +589,9 @@ export default function WorkFlow(props: WorkFlowProps) {
     // trigger state transition for event 10 and 12 when auto agent detects issues
     useEffect(() => {
         if (props.currentState !== 0) return;
+        //  if the last response is conversation, return
+        if (combinedMemory[combinedMemory.length - 1].type === 'conversation') return;
+        
         let autoAgentResponseMemory = combinedMemory.filter(item => item.type === 'cooking_scene_desc');
         if (autoAgentResponseMemory.length === 0) return;
         let lastResponse = autoAgentResponseMemory[autoAgentResponseMemory.length - 1];
@@ -612,11 +612,6 @@ export default function WorkFlow(props: WorkFlowProps) {
             // debug video simulation only
             // props.videoRef.current?.pause();
             props.setStateTransitionToggle(!props.stateTransitionToggle);
-        } else if (needsCorrection) {
-            console.log("[Incorrect detected, but no instruction provided]");
-        }
-        if (lastResponseContent.hasProgressedToProcedure) {
-            console.log("[new procedure]: " + lastResponseContent.procedureAnalysis);
         }
 
     }, [combinedMemory]);
