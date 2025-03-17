@@ -11,7 +11,7 @@ export const AUDIO_SAMPLE_RATE = 24000;
 
 // Default video settings
 export const DEFAULT_VIDEO_URL = 'lH7pgsnyGrI_core.mp4';
-export const DEFAULT_TTS_SPEED = 2;
+export const DEFAULT_TTS_SPEED = 1.25;
 
 // State machine constants
 export const INITIAL_STATE = -1;

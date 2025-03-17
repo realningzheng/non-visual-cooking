@@ -15,11 +15,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-        const { input } = req.query;
+        const { input, speed } = req.query;
 
         if (!input || typeof input !== 'string') {
             return res.status(400).json({ error: "Text input is required" });
         }
+
+        const ttsSpeed = speed ? parseFloat(speed as string) : 1.0;
 
         // Set appropriate headers for streaming audio
         res.setHeader('Content-Type', 'audio/mpeg');
@@ -30,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             voice: "alloy",
             input: input,
             response_format: 'mp3',
-            speed: 1.5
+            speed: ttsSpeed
         });
 
         // Stream the response directly to the client

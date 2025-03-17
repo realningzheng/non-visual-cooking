@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 
 interface TTSPlayerProps {
     input: string;
+    ttsSpeed: number;
 }
 
 export default function TTSPlayer(props: TTSPlayerProps) {
@@ -23,7 +24,7 @@ export default function TTSPlayer(props: TTSPlayerProps) {
         setIsPlaying(true);
 
         // Create audio source URL with the input
-        const audioUrl = `/api/route?input=${encodeURIComponent(props.input)}`;
+        const audioUrl = `/api/route?input=${encodeURIComponent(props.input)}&speed=${props.ttsSpeed}`;
 
         // Create and play audio
         if (!audioRef.current) {

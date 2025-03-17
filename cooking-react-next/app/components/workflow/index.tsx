@@ -543,8 +543,12 @@ export default function WorkFlow(props: WorkFlowProps) {
     };
 
     const numberedProceduresRef = useRef<string>();
+    const proceduresRef = useRef<string[]>([]);
     useEffect(() => {
+        proceduresRef.current = [];
+        numberedProceduresRef.current = '';
         const procedures = utils.extractProcedureSequence(props.videoKnowledgeInput);
+        proceduresRef.current = procedures;
         const numberedProcedures = procedures.length > 0
             ? procedures.map((proc, idx) => `${idx + 1}. ${proc}`).join('\n')
             : "No procedures found in video knowledge";
@@ -718,7 +722,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                                 <input
                                     type="range"
                                     className="range range-xs w-full"
-                                    min="0.25" max="4" step="0.05"
+                                    min="0.25" max="2.5" step="0.25"
                                     value={props.ttsSpeed}
                                     onChange={(e) => props.setTtsSpeed(Number(e.target.value))}
                                 />
@@ -859,7 +863,10 @@ export default function WorkFlow(props: WorkFlowProps) {
                     ) : (
                         <div className="text-gray-400 italic px-2">No response available</div>
                     )} */}
-                    <TTSPlayer input={ttsInput} />
+                    <TTSPlayer
+                        ttsSpeed={props.ttsSpeed}
+                        input={ttsInput}
+                    />
                 </AccordionDetails>
             </Accordion>
 
