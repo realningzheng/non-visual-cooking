@@ -57,6 +57,7 @@ export default function WorkFlow(props: WorkFlowProps) {
         'possible-next-events': false
     });
 
+    const [placeHolderTTSInput, setPlaceHolderTTSInput] = useState('');
 
     const possibleNextUserEvents: string[] = useMemo(() => {
         if (props.currentState === -1) return [];
@@ -595,7 +596,7 @@ export default function WorkFlow(props: WorkFlowProps) {
         if (props.currentState !== 0) return;
         //  if the last response is conversation, return
         if (combinedMemory[combinedMemory.length - 1].type === 'conversation') return;
-        
+
         let autoAgentResponseMemory = combinedMemory.filter(item => item.type === 'cooking_scene_desc');
         if (autoAgentResponseMemory.length === 0) return;
         let lastResponse = autoAgentResponseMemory[autoAgentResponseMemory.length - 1];
@@ -934,7 +935,7 @@ export default function WorkFlow(props: WorkFlowProps) {
                 </AccordionDetails>
             </Accordion>
 
-            <Accordion
+            {/* <Accordion
                 expanded={expandedPanels['possible-next-events']}
                 onChange={handlePanelChange('possible-next-events')}
                 sx={{
@@ -985,7 +986,32 @@ export default function WorkFlow(props: WorkFlowProps) {
                         <div className="text-gray-400 italic px-2">No events available</div>
                     )}
                 </AccordionDetails>
-            </Accordion>
+            </Accordion> */}
+
+            <div className='text-lg font-bold py-2'>Procedures</div>
+            {proceduresRef.current.map((procedure, idx) => (
+                <li
+                    key={`procedure-tts-${idx}`}
+                    onClick={() => {
+                        setTTSInput(`Remember to ${procedure} before you move on to the next step`);
+                    }}
+                    className='btn btn-outline btn-xs text-left cursor-pointer'
+                >
+                    {idx + 1}. {`${procedure}`}
+                </li>
+            ))}
+            <input
+                type="text"
+                placeholder="Type a procedure to speak..."
+                className="input input-bordered join-item w-full"
+                value={placeHolderTTSInput}
+                onChange={(e) => setPlaceHolderTTSInput(e.target.value)}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                        setTTSInput(placeHolderTTSInput);
+                    }
+                }}
+            />
 
             <ControlTray
                 videoRef={props.videoRef}
