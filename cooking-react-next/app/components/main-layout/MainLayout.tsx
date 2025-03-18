@@ -171,6 +171,7 @@ export default function MainLayout() {
                         ttsSpeed={ttsSpeed}
                         replaySignal={videoState.replaySignal}
                         videoRef={realityPreview.videoRef}
+                        segmentedVideoPlaying={videoState.segmentedVideoPlaying}
                         setVideoStream={realityPreview.setVideoStream}
                     />
                 </Grid>

@@ -5,3 +5,4 @@ cooking-react-next/public/**.mp4
 cooking-react-next/secret.json
 backend/data/**
 cooking-react-next/public/**.json
+cooking-react-next/public/offline_audio/**

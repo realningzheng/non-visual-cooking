@@ -29,6 +29,7 @@ export interface WorkFlowProps {
     ttsSpeed: number;
     replaySignal: boolean;
     videoRef: RefObject<HTMLVideoElement>;
+    segmentedVideoPlaying: boolean;
     setVideoStream: (stream: MediaStream | null) => void;
 }
 

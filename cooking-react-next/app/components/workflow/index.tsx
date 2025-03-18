@@ -79,10 +79,14 @@ export default function WorkFlow(props: WorkFlowProps) {
     /** Load a default video knowledge to save time */
     useEffect(() => {
         const loadDefaultVideoKnowledge = async () => {
-            const response = await fetch('/lH7pgsnyGrI_core_video_knowledge.json');
+            // const response = await fetch('/lH7pgsnyGrI_core_video_knowledge.json');
+            // const response = await fetch('/mixdagZ-fwI_core_video_knowledge.json');
+            const response = await fetch('/lgg6luYfQ1w_core_video_knowledge.json');
             const data = await response.json();
             props.setVideoKnowledgeInput(JSON.stringify(data));
-            setSelectedFileName('lH7pgsnyGrI_core.json');
+            // setSelectedFileName('lH7pgsnyGrI_core.json');
+            // setSelectedFileName('mixdagZ-fwI_core.json');
+            setSelectedFileName('lgg6luYfQ1w_core.json');
         }
         loadDefaultVideoKnowledge();
     }, []);
@@ -160,6 +164,9 @@ export default function WorkFlow(props: WorkFlowProps) {
                 await openaiRTClient.cancelResponse(trackId, offset);
             }
         }
+        // play a sound noticing the user request is received
+        const audio = new Audio(`/offline_audio/request_received${Math.random() < 0.5 ? 1 : 2}.mp3`);
+        audio.play();
         await wavRecorder.record((data) => openaiRTClient.appendInputAudio(data.mono));
     };
 
@@ -182,6 +189,9 @@ export default function WorkFlow(props: WorkFlowProps) {
                     text: promptForUserRequestClassification
                 }
             ]);
+            // play a sound noticing the user request is received
+            const audio = new Audio(`/offline_audio/analyzing_in_progress${Math.floor(Math.random() * 4) + 1}.mp3`);
+            audio.play();
         } else if (audioAgentDuty === 'chatbot') {
             openaiRTClient.createResponse();
         } else {
@@ -791,6 +801,14 @@ export default function WorkFlow(props: WorkFlowProps) {
                     }}
                 >
                     Reset
+                </button>
+                <button
+                    className="btn btn btn-outline"
+                    onClick={() => {
+                        props.setSegmentedVideoPlaying(!props.segmentedVideoPlaying);
+                    }}
+                >
+                    {props.segmentedVideoPlaying ? 'Pause' : 'Play'}
                 </button>
                 <input
                     type="text"
