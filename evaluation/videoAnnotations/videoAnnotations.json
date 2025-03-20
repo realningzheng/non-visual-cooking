@@ -1,0 +1,970 @@
+[
+    {
+      "video_id": "P1",
+      "ingredients": [
+        "1 round eggplant",
+        "1 green pepper",
+        "Several cloves of garlic",
+        "Cooking oil",
+        "A few pieces of Sichuan peppercorn",
+        "Soy sauce",
+        "Oyster sauce",
+        "2 teaspoon of salt",
+        "1/2 teaspoon of chicken powder"
+      ],
+      "annotations": [
+        {
+          "segment": [
+            70,
+            136
+          ],
+          "id": 0,
+          "sentence": "Wash the eggplant and green pepper, then remove the seeds from the green pepper."
+        },
+        {
+          "segment": [
+            180,
+            427
+          ],
+          "id": 1,
+          "sentence": "Cut the eggplant and green pepper into pieces."
+        },
+        {
+          "segment": [
+            464,
+            595
+          ],
+          "id": 2,
+          "sentence": "Peel and mince the garlic."
+        },
+        {
+          "segment": [
+            660,
+            747
+          ],
+          "id": 3,
+          "sentence": "Turn on the heat of the gas range and add some oil to the wok."
+        },
+        {
+          "segment": [
+            750,
+            784
+          ],
+          "id": 4,
+          "sentence": "Add Sichuan peppercorn and minced garlic to the wok, mix, and wait for a few seconds."
+        },
+        {
+          "segment": [
+            790,
+            863
+          ],
+          "id": 5,
+          "sentence": "Add the eggplant, soy sauce, and oyster sauce, and stir for 60 seconds."
+        },
+        {
+          "segment": [
+            868,
+            882
+          ],
+          "id": 6,
+          "sentence": "Add the green pepper and stir for 15 seconds."
+        },
+        {
+          "segment": [
+            888,
+            925
+          ],
+          "id": 7,
+          "sentence": "Add 1 tablespoon of water and stir for another 40 seconds."
+        },
+        {
+          "segment": [
+            926,
+            1000
+          ],
+          "id": 8,
+          "sentence": "Add 2 teaspoons of salt and 1/2 teaspoon of chicken powder, then stir for 60 seconds."
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "video_id": "P2",
+      "ingredients": [
+        "A handful of green beans",
+        "A large piece of preserved meat",
+        "1 table spoon of Salt",
+        "2 table spoon of Sugar",
+        "20ml of soy sauce",
+        "a stalk of green onion",
+        "30ml of water"
+      ],
+      "annotations": [
+        {
+          "segment": [
+            190,
+            439
+          ],
+          "id": 0,
+          "sentence": "Pick the green beans."
+        },
+        {
+          "segment": [
+            441,
+            787
+          ],
+          "id": 1,
+          "sentence": "Cut the green beans into pieces and store them in a bowl."
+        },
+        {
+          "segment": [
+            1151,
+            1274
+          ],
+          "id": 2,
+          "sentence": "Cut the preserved meat into pieces and store them in a bowl."
+        },
+        {
+          "segment": [
+            1369,
+            1440
+          ],
+          "id": 3,
+          "sentence": "Add a spoon of salt and 2 spoons of sugar to the meat, then mix."
+        },
+        {
+          "segment": [
+            1472,
+            1490
+          ],
+          "id": 4,
+          "sentence": "Add soy sauce to the meat for marination and mix with a spoon."
+        },
+        {
+          "segment": [
+            1569,
+            1606
+          ],
+          "id": 5,
+          "sentence": "Cut the green onions into pieces."
+        },
+        {
+          "segment": [
+            1764,
+            1832
+          ],
+          "id": 6,
+          "sentence": "Turn on the heat of the electric wok and add a spoon of oil to the wok."
+        },
+        {
+          "segment": [
+            1876,
+            1936
+          ],
+          "id": 7,
+          "sentence": "Add the meat to the wok and stir."
+        },
+        {
+          "segment": [
+            1941,
+            1968
+          ],
+          "id": 8,
+          "sentence": "Add the green onion and green beans to the wok, then add 30ml of water."
+        },
+        {
+          "segment": [
+            1999,
+            2138
+          ],
+          "id": 9,
+          "sentence": "Stir the green beans and meat in the wok, then serve."
+        }
+      ],
+      "notes": [
+        "Always reserve food with bowls."
+      ]
+    },
+    {
+      "video_id": "P3",
+      "ingredients": [
+        "1 potato",
+        "Soy sauce",
+        "Some flakes of Chili peppers",
+        "Cooking Oil"
+      ],
+      "annotations": [
+        {
+          "segment": [
+            40,
+            67
+          ],
+          "id": 0,
+          "sentence": "Wash a potato."
+        },
+        {
+          "segment": [
+            121,
+            300
+          ],
+          "id": 1,
+          "sentence": "Peel the potato."
+        },
+        {
+          "segment": [
+            376,
+            815
+          ],
+          "id": 2,
+          "sentence": "Cut the potato into slices and then shred it. Store in a bowl."
+        },
+        {
+          "segment": [
+            913,
+            940
+          ],
+          "id": 3,
+          "sentence": "Prepare and wash the chili peppers."
+        },
+        {
+          "segment": [
+            960,
+            1037
+          ],
+          "id": 4,
+          "sentence": "Hand-pick and remove the bottom part of the chili peppers."
+        },
+        {
+          "segment": [
+            1075,
+            1132
+          ],
+          "id": 5,
+          "sentence": "Cut the chili peppers into pieces and store them in a pan."
+        },
+        {
+          "segment": [
+            1234,
+            1239
+          ],
+          "id": 6,
+          "sentence": "Add some oil to the pan."
+        },
+        {
+          "segment": [
+            1415,
+            1487
+          ],
+          "id": 7,
+          "sentence": "Turn on the heat, add the shredded potatoes to the pan, then stir."
+        },
+        {
+          "segment": [
+            1489,
+            1500
+          ],
+          "id": 8,
+          "sentence": "Add soy sauce to the pan."
+        },
+        {
+          "segment": [
+            1502,
+            1631
+          ],
+          "id": 9,
+          "sentence": "Stir the shredded potato for 2 minutes, then serve."
+        }
+      ],
+      "notes": [
+        "Prefer use one type of sauce fits all."
+      ]
+    },
+    {
+      "video_id": "P4",
+      "ingredients": [
+        "2 Tomatos",
+        "1 egg",
+        "Cooking oil",
+        "Salt",
+        "A stalk of green onion"
+      ],
+      "annotations": [
+        {
+          "segment": [
+            72,
+            214
+          ],
+          "id": 0,
+          "sentence": "Cut the tomatoes into pieces and store them in a bowl."
+        },
+        {
+          "segment": [
+            343,
+            410
+          ],
+          "id": 1,
+          "sentence": "Crack an egg and scramble it."
+        },
+        {
+          "segment": [
+            417,
+            457
+          ],
+          "id": 2,
+          "sentence": "Add salt to the scrambled egg and mix."
+        },
+        {
+          "segment": [
+            518,
+            604
+          ],
+          "id": 3,
+          "sentence": "Take a stalk of green onion and cut it into pieces."
+        },
+        {
+          "segment": [
+            638,
+            650
+          ],
+          "id": 4,
+          "sentence": "Add oil to the wok."
+        },
+        {
+          "segment": [
+            676,
+            792
+          ],
+          "id": 5,
+          "sentence": "Turn on the heat, then add the scrambled egg to the wok and stir until the egg is hard."
+        },
+        {
+          "segment": [
+            855,
+            912
+          ],
+          "id": 6,
+          "sentence": "Store the cooked egg in a bowl."
+        },
+        {
+          "segment": [
+            920,
+            1045
+          ],
+          "id": 7,
+          "sentence": "Add oil to the wok, then add the green onion and chopped tomatoes."
+        },
+        {
+          "segment": [
+            1085,
+            1128
+          ],
+          "id": 8,
+          "sentence": "Add salt to the wok and stir the tomatoes until soft."
+        },
+        {
+          "segment": [
+            1222,
+            1265
+          ],
+          "id": 9,
+          "sentence": "Add the egg to the wok and stir for one minute, then serve."
+        }
+      ],
+      "notes": [
+        "Sometimes have to turn off the fire momentarily."
+      ]
+    },
+    {
+      "video_id": "P5",
+      "ingredients": [
+        "1 tomato",
+        "1 egg",
+        "Half cucumber",
+        "1 stalk of green onion",
+        "A pinch of salt",
+        "A pinch of sugar",
+        "Cooking oil"
+      ],
+      "annotations": [
+        {
+          "segment": [
+            182,
+            260
+          ],
+          "id": 0,
+          "sentence": "Cut 1 tomato into slices and store them in a bowl."
+        },
+        {
+          "segment": [
+            286,
+            305
+          ],
+          "id": 1,
+          "sentence": "Cut half a cucumber into slices."
+        },
+        {
+          "segment": [
+            321,
+            351
+          ],
+          "id": 2,
+          "sentence": "Mince one stalk of green onion."
+        },
+        {
+          "segment": [
+            362,
+            424
+          ],
+          "id": 3,
+          "sentence": "Crack an egg and scramble it."
+        },
+        {
+          "segment": [
+            546,
+            600
+          ],
+          "id": 4,
+          "sentence": "Turn on the heat, add cooking oil, add the scrambled egg, and mix."
+        },
+        {
+          "segment": [
+            612,
+            698
+          ],
+          "id": 5,
+          "sentence": "Add the tomatoes to the wok and stir, then add a pinch of sugar and stir."
+        },
+        {
+          "segment": [
+            700,
+            732
+          ],
+          "id": 6,
+          "sentence": "Add the green onion to the wok and stir."
+        },
+        {
+          "segment": [
+            740,
+            866
+          ],
+          "id": 7,
+          "sentence": "Add the cucumber slices to the wok, add a pinch of salt, and stir. Ready to serve."
+        }
+      ],
+      "notes": [
+        "Takes time to find stuff can cause false positive."
+      ]
+    },
+    {
+      "video_id": "P6",
+      "ingredients": [
+        "Enoki mushroom",
+        "1 cucumber",
+        "1 carrot",
+        "Several flakes of garlic",
+        "Vinegar",
+        "Cooking oil",
+        "Salt",
+        "Peppercorn",
+        "1L water"
+      ],
+      "annotations": [
+        {
+          "segment": [
+            277,
+            568
+          ],
+          "id": 0,
+          "sentence": "Wash the enoki mushroom, carrot, and cucumber. Shred the carrot and cucumber."
+        },
+        {
+          "segment": [
+            571,
+            625
+          ],
+          "id": 1,
+          "sentence": "Add 1 liter of water to a wok and turn on the heat until the water boils."
+        },
+        {
+          "segment": [
+            874,
+            1082
+          ],
+          "id": 2,
+          "sentence": "Add the enoki mushroom to the wok."
+        },
+        {
+          "segment": [
+            1105,
+            1179
+          ],
+          "id": 3,
+          "sentence": "Add the shredded carrots to the wok and boil with the enoki mushroom until fully cooked."
+        },
+        {
+          "segment": [
+            1185,
+            1305
+          ],
+          "id": 4,
+          "sentence": "Take out the enoki mushroom and shredded carrots from the wok and place them in a bowl. Add cold water to the bowl to cool them down, then drain the water."
+        },
+        {
+          "segment": [
+            1319,
+            1342
+          ],
+          "id": 5,
+          "sentence": "Add the shredded cucumber to the bowl."
+        },
+        {
+          "segment": [
+            1369,
+            1491
+          ],
+          "id": 6,
+          "sentence": "Peel several cloves of garlic and add them to the bowl."
+        },
+        {
+          "segment": [
+            1726,
+            1840
+          ],
+          "id": 7,
+          "sentence": "Add cooking oil to the wok, then add some peppercorns and minced garlic, and stir."
+        },
+        {
+          "segment": [
+            1840,
+            1854
+          ],
+          "id": 8,
+          "sentence": "Add the oil from the wok to the bowl."
+        },
+        {
+          "segment": [
+            1900,
+            1942
+          ],
+          "id": 9,
+          "sentence": "Add a teaspoon of salt and vinegar, then mix."
+        }
+      ],
+      "notes": [
+        "High frequency of attempts, but not always complete the step due to unknown the status of objects cooking now.",
+        "Light condition is very important."
+      ]
+    },
+    {
+      "video_id": "P7",
+      "ingredients": [
+        "2 tomatoes",
+        "3 eggs",
+        "Salt",
+        "Cooking oil",
+        "Several flakes of garlic"
+      ],
+      "annotations": [
+        {
+          "segment": [
+            30,
+            118
+          ],
+          "id": 0,
+          "sentence": "Wash two tomatoes and cut them into a bowl."
+        },
+        {
+          "segment": [
+            134,
+            175
+          ],
+          "id": 1,
+          "sentence": "Crack three eggs into a bowl."
+        },
+        {
+          "segment": [
+            192,
+            225
+          ],
+          "id": 2,
+          "sentence": "Scramble the eggs."
+        },
+        {
+          "segment": [
+            252,
+            416
+          ],
+          "id": 3,
+          "sentence": "Peel several cloves of garlic and mince them."
+        },
+        {
+          "segment": [
+            548,
+            610
+          ],
+          "id": 4,
+          "sentence": "Turn on the electric wok and add some cooking oil."
+        },
+        {
+          "segment": [
+            701,
+            733
+          ],
+          "id": 5,
+          "sentence": "Add the scrambled eggs to the wok and stir."
+        },
+        {
+          "segment": [
+            738,
+            844
+          ],
+          "id": 6,
+          "sentence": "Add the tomatoes to the wok, then add 2 teaspoons of salt. Stir for 2 minutes and serve."
+        }
+    ],
+    "notes": [
+      "Likely to have a lot of tools and ingredients on a table for convenience."
+    ]
+  },
+  {
+    "video_id": "P8",
+    "ingredients": [
+      "1 cucumber",
+      "1 egg",
+      "2 teaspoons of salt",
+      "Vinegar",
+      "Minced ginger",
+      "Cooking oil"
+    ],
+    "annotations": [
+      {
+        "segment": [
+          49,
+          130
+        ],
+        "id": 0,
+        "sentence": "Peel the cucumber."
+      },
+      {
+        "segment": [
+          162,
+          222
+        ],
+        "id": 1,
+        "sentence": "Cut the cucumber into pieces and store them in a bowl."
+      },
+      {
+        "segment": [
+          350,
+          406
+        ],
+        "id": 2,
+        "sentence": "Crack an egg into a bowl and scramble it."
+      },
+      {
+        "segment": [
+          530,
+          570
+        ],
+        "id": 3,
+        "sentence": "Season the egg with a teaspoon of salt and mix."
+      },
+      {
+        "segment": [
+          580,
+          658
+        ],
+        "id": 4,
+        "sentence": "Turn on the heat of the wok and add 9 teaspoons of cooking oil."
+      },
+      {
+        "segment": [
+          687,
+          702
+        ],
+        "id": 5,
+        "sentence": "Add minced ginger to the wok and stir."
+      },
+      {
+        "segment": [
+          720,
+          755
+        ],
+        "id": 6,
+        "sentence": "Add the scrambled egg to the wok and stir until cooked."
+      },
+      {
+        "segment": [
+          758,
+          785
+        ],
+        "id": 7,
+        "sentence": "Add the cucumber to the wok and stir."
+      },
+      {
+        "segment": [
+          790,
+          839
+        ],
+        "id": 8,
+        "sentence": "Add a few drops of vinegar to the wok and stir. Then add 2 teaspoons of salt."
+      },
+      {
+        "segment": [
+          846,
+          957
+        ],
+        "id": 9,
+        "sentence": "Stir the cucumber and egg for 2 minutes, then serve."
+      }
+    ],
+    "notes": [
+      "Sometimes accidentally hold a bowl that will not be used or added.",
+      "They then put them back in a few seconds later."
+    ]
+  },
+  {
+    "video_id": "P9",
+    "ingredients": [
+      "2 Green peppers",
+      "Marinated pork",
+      "Garlic",
+      "Ginger",
+      "Cooking oil",
+      "Salt",
+      "MSG",
+      "Vinegar"
+    ],
+    "annotations": [
+      {
+        "segment": [
+          3,
+          325
+        ],
+        "id": 0,
+        "sentence": "Cut the green peppers and remove the seeds. Then wash them, cut them into pieces, and store them in a bowl."
+      },
+      {
+        "segment": [
+          335,
+          358
+        ],
+        "id": 1,
+        "sentence": "Mix the marinated minced pork."
+      },
+      {
+        "segment": [
+          405,
+          453
+        ],
+        "id": 2,
+        "sentence": "Cut the ginger and green onion into small pieces."
+      },
+      {
+        "segment": [
+          505,
+          654
+        ],
+        "id": 3,
+        "sentence": "Turn on the heat, add cooking oil to the wok, then add the spices."
+      },
+      {
+        "segment": [
+          694,
+          832
+        ],
+        "id": 4,
+        "sentence": "Add the green onion and ginger to the wok. Then add the marinated pork and stir."
+      },
+      {
+        "segment": [
+          839,
+          1070
+        ],
+        "id": 5,
+        "sentence": "Add the green pepper to the wok and stir. Then add some salt and vinegar, and stir again. Finally, add MSG to the wok and serve."
+      }
+    ]
+  },
+  {
+    "video_id": "P10",
+    "ingredients": [
+      "1 potato",
+      "1 fish fillet",
+      "Sugar",
+      "Salt",
+      "Chicken powder",
+      "1 flake of garlic",
+      "Soy sauce",
+      "Steaming fish sauce",
+      "Cooking wine",
+      "Vinegar",
+      "Water"
+    ],
+    "annotations": [
+      {
+        "segment": [
+          1,
+          812
+        ],
+        "id": 0,
+        "sentence": "Peel the potato, cut it into small slices, wash it, and then store it in a bowl."
+      },
+      {
+        "segment": [
+          960,
+          1188
+        ],
+        "id": 1,
+        "sentence": "Wash the fish fillet, lightly score it, and place it inside a pan."
+      },
+      {
+        "segment": [
+          1265,
+          1365
+        ],
+        "id": 2,
+        "sentence": "Add water to a steaming pot, put the fish inside, and turn on the heat."
+      },
+      {
+        "segment": [
+          1394,
+          1559
+        ],
+        "id": 3,
+        "sentence": "Add sugar, salt, and chicken powder to a bowl, then add a little water and mix."
+      },
+      {
+        "segment": [
+          1871,
+          1950
+        ],
+        "id": 4,
+        "sentence": "Peel a clove of garlic and cut it into small slices."
+      },
+      {
+        "segment": [
+          2092,
+          2234
+        ],
+        "id": 5,
+        "sentence": "Add the prepared mixture of salt, sugar, chicken powder, and water to the fish. Then add some steamed fish sauce, soy sauce, and cooking wine."
+      },
+      {
+        "segment": [
+          2506,
+          2737
+        ],
+        "id": 6,
+        "sentence": "Turn on the wok, add cooking oil, shredded potato, and vinegar, then stir."
+      },
+      {
+        "segment": [
+          2740,
+          2883
+        ],
+        "id": 7,
+        "sentence": "Add salt, sugar, soy sauce, and chicken powder to the wok. Stir, then add minced garlic, stir again, and serve."
+      }
+    ],
+    "notes": [
+      "Food ingredients stored inside a different container (sprite)"
+    ]
+  },
+  {
+    "video_id": "P11",
+    "ingredients": [
+      "1 pack of garlic scapes",
+      "2 eggs",
+      "Salt",
+      "Cooking oil"
+    ],
+    "annotations": [
+      {
+        "segment": [
+          60,
+          278
+        ],
+        "id": 0,
+        "sentence": "Wash the garlic scapes and cut them into slices, then save them in a bowl."
+      },
+      {
+        "segment": [
+          345,
+          485
+        ],
+        "id": 1,
+        "sentence": "Crack two eggs into a bowl and scramble them. Add one tablespoon of salt and mix."
+      },
+      {
+        "segment": [
+          596,
+          835
+        ],
+        "id": 2,
+        "sentence": "Turn on the electric range, add cooking oil to the wok, add the eggs, and stir. Cook until the eggs harden, then take them out and place them in a bowl."
+      },
+      {
+        "segment": [
+          987,
+          1302
+        ],
+        "id": 3,
+        "sentence": "Turn on the electric range again, add some oil, and add the garlic scapes to the wok. Stir, then add the eggs back in, stir for 1 minute, and serve."
+      }
+    ]
+  },
+  {
+    "video_id": "P12",
+    "ingredients": [
+      "Carrot",
+      "Garlic",
+      "Cooking oil",
+      "Water",
+      "Salt",
+      "Soy sauce"
+    ],
+    "annotations": [
+      {
+        "segment": [
+          0,
+          236
+        ],
+        "id": 0,
+        "sentence": "Cut the carrot into small pieces and store them in a bowl."
+      },
+      {
+        "segment": [
+          279,
+          376
+        ],
+        "id": 1,
+        "sentence": "Peel several cloves of garlic and cut them into slices."
+      },
+      {
+        "segment": [
+          433,
+          653
+        ],
+        "id": 2,
+        "sentence": "Add cooking oil to the wok. Then add the garlic slices and carrots to the wok, and stir."
+      },
+      {
+        "segment": [
+          670,
+          963
+        ],
+        "id": 3,
+        "sentence": "Add 30ml of water to the wok, then stir for 5 minutes."
+      },
+      {
+        "segment": [
+          975,
+          1146
+        ],
+        "id": 4,
+        "sentence": "Add salt and soy sauce to the wok, then stir for 2 minutes. Then serve."
+      }
+    ]
+  }
+]
