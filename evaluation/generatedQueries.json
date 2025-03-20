@@ -1,0 +1,1754 @@
+{
+    "P1": [
+        {
+            "event_type": "step_related",
+            "query": "What's the next step after washing the eggplant and green pepper?",
+            "segment": [
+                70,
+                136
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What am I supposed to do after cutting the eggplant and green pepper into pieces?",
+            "segment": [
+                180,
+                427
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What should I do after peeling and mincing the garlic?",
+            "segment": [
+                464,
+                595
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I accidentally chopped the garlic too small, can I still use it?",
+            "segment": [
+                464,
+                595
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I added too much oil to the wok, what should I do?",
+            "segment": [
+                660,
+                747
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I think I cut the eggplant into too large pieces, how can I fix this?",
+            "segment": [
+                180,
+                427
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Can you repeat what I should do after adding the Sichuan peppercorn and minced garlic to the wok?",
+            "segment": [
+                750,
+                784
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Can you say again what I should do after adding the eggplant, soy sauce, and oyster sauce?",
+            "segment": [
+                790,
+                863
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Can you repeat the last instruction about adding the green pepper?",
+            "segment": [
+                868,
+                882
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "What other ingredients will I need in this process?",
+            "segment": [
+                70,
+                1000
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "How many more steps are left in this recipe?",
+            "segment": [
+                790,
+                863
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "How much of each ingredient should I use for this recipe?",
+            "segment": [
+                70,
+                1000
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Can you describe the current state of the garlic after mincing?",
+            "segment": [
+                464,
+                595
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Am I stirring the eggplant and green pepper correctly?",
+            "segment": [
+                868,
+                882
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Can you describe the current state of the food after adding the water?",
+            "segment": [
+                888,
+                925
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What did I do before adding the Sichuan peppercorn and minced garlic to the wok?",
+            "segment": [
+                750,
+                784
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What was my last step before adding the eggplant, soy sauce, and oyster sauce?",
+            "segment": [
+                790,
+                863
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What did I do before adding the green pepper?",
+            "segment": [
+                868,
+                882
+            ]
+        }
+    ],
+    "P2": [
+        {
+            "event_type": "step_related",
+            "query": "What's the next step after picking the green beans?",
+            "segment": [
+                190,
+                439
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What step am I on right now, after cutting the preserved meat into pieces?",
+            "segment": [
+                1151,
+                1274
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What should I do next after adding soy sauce to the meat for marination?",
+            "segment": [
+                1472,
+                1490
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I accidentally cut the green beans too small, how can I fix this?",
+            "segment": [
+                441,
+                787
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I added too much salt to the meat, what should I do?",
+            "segment": [
+                1369,
+                1440
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I think I burned the meat while stir frying, can this be saved?",
+            "segment": [
+                1876,
+                1936
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Can you say again how to cut the green beans?",
+            "segment": [
+                441,
+                787
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "I didn't catch you, how much soy sauce do I need to add for the marination?",
+            "segment": [
+                1472,
+                1490
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Can you repeat the last step about stir frying the green beans and meat?",
+            "segment": [
+                1999,
+                2138
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "What other ingredients do I need for this recipe?",
+            "segment": [
+                0,
+                0
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "How many steps are still left after adding the green onion and green beans to the wok?",
+            "segment": [
+                1941,
+                1968
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "What should be the final state of the dish?",
+            "segment": [
+                0,
+                0
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Am I chopping the green beans in the right way?",
+            "segment": [
+                441,
+                787
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Is this the correct amount of salt and sugar for the meat?",
+            "segment": [
+                1369,
+                1440
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "How should the green beans and meat look like in the wok?",
+            "segment": [
+                1999,
+                2138
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What's my last step before I add the green onion and green beans to the wok?",
+            "segment": [
+                1941,
+                1968
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What did I do before adding soy sauce to the meat for marination?",
+            "segment": [
+                1472,
+                1490
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What were my last three steps before serving the dish?",
+            "segment": [
+                1999,
+                2138
+            ]
+        }
+    ],
+    "P3": [
+        {
+            "event_type": "step_related",
+            "query": "What's the next step I should do after peeling the potato?",
+            "segment": [
+                121,
+                300
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What step am I on right now after adding oil to the pan?",
+            "segment": [
+                1234,
+                1239
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What should I do next after storing the shredded potato in a bowl?",
+            "segment": [
+                376,
+                815
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I sliced the potato too thin, can it be fixed?",
+            "segment": [
+                376,
+                815
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I think I added too much oil, what should I do?",
+            "segment": [
+                1234,
+                1239
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "The potato is not cooking evenly, how can I fix this?",
+            "segment": [
+                1415,
+                1487
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Can you repeat the instruction on cutting the potato into slices?",
+            "segment": [
+                376,
+                815
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "I didn't catch you. How should I prepare the chili peppers again?",
+            "segment": [
+                913,
+                940
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "What did you say about stirring the shredded potato?",
+            "segment": [
+                1502,
+                1631
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "What other ingredients do we need for this dish?",
+            "segment": [
+                40,
+                67
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "How many steps are left after adding soy sauce to the pan?",
+            "segment": [
+                1489,
+                1500
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "How long should I stir the shredded potato for?",
+            "segment": [
+                1502,
+                1631
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Am I cutting the potato into slices correctly?",
+            "segment": [
+                376,
+                815
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Is the heat at the right level for cooking the shredded potato?",
+            "segment": [
+                1415,
+                1487
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Can you confirm if I've added the right amount of soy sauce?",
+            "segment": [
+                1489,
+                1500
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What was my last step before adding the shredded potato to the pan?",
+            "segment": [
+                1415,
+                1487
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What did I do before washing the chili peppers?",
+            "segment": [
+                913,
+                940
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What did I add last before stirring the shredded potato?",
+            "segment": [
+                1502,
+                1631
+            ]
+        }
+    ],
+    "P4": [
+        {
+            "event_type": "step_related",
+            "query": "What's the next step after cutting the tomatoes into pieces?",
+            "segment": [
+                72,
+                214
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What step am I on right now after adding the scrambled egg to the wok?",
+            "segment": [
+                676,
+                792
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What should I do next after storing the cooked egg in a bowl?",
+            "segment": [
+                855,
+                912
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "The egg is not scrambling properly, how can I fix this?",
+            "segment": [
+                343,
+                410
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I think I added too much salt to the scrambled egg, what should I do?",
+            "segment": [
+                417,
+                457
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "The tomatoes are not getting soft, how can I fix this?",
+            "segment": [
+                1085,
+                1128
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Can you repeat the step about adding salt to the scrambled egg?",
+            "segment": [
+                417,
+                457
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "I didn't catch the instruction about adding oil to the wok, can you please repeat?",
+            "segment": [
+                638,
+                650
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Can you repeat the instructions for adding the egg to the wok and stir for one minute?",
+            "segment": [
+                1222,
+                1265
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "How many steps are still left after adding the green onion and chopped tomatoes to the wok?",
+            "segment": [
+                920,
+                1045
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "What other ingredients do we need after adding salt to the wok?",
+            "segment": [
+                1085,
+                1128
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "What should I be preparing for the next steps after storing the cooked egg in a bowl?",
+            "segment": [
+                855,
+                912
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Have I cut the stalk of green onion into the right size pieces?",
+            "segment": [
+                518,
+                604
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Is the scrambled egg hard enough after stirring in the wok?",
+            "segment": [
+                676,
+                792
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Are the tomatoes soft enough after stirring in the wok?",
+            "segment": [
+                1085,
+                1128
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What did I do before adding the scrambled egg to the wok?",
+            "segment": [
+                676,
+                792
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What was my last step before adding oil to the wok?",
+            "segment": [
+                638,
+                650
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What was the last thing I did before adding the egg to the wok and stirring for one minute?",
+            "segment": [
+                1222,
+                1265
+            ]
+        }
+    ],
+    "P5": [
+        {
+            "event_type": "step_related",
+            "query": "What's the next step after I've cut the tomato into slices?",
+            "segment": [
+                182,
+                260
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What step am I on right now after mincing the green onion?",
+            "segment": [
+                321,
+                351
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What should I do next after adding the scrambled egg?",
+            "segment": [
+                546,
+                600
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "The pieces of tomato aren't all the same size, what should I do?",
+            "segment": [
+                182,
+                260
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I think I added too much oil, how can I fix this?",
+            "segment": [
+                546,
+                600
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I accidentally added the cucumber before the tomato, can this be fixed?",
+            "segment": [
+                286,
+                305
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Can you repeat how to cut the cucumber again?",
+            "segment": [
+                286,
+                305
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "I didn't catch you, how do you want me to prepare the egg?",
+            "segment": [
+                362,
+                424
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "What did you say about adding the sugar?",
+            "segment": [
+                612,
+                698
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "What other ingredients do we need?",
+            "segment": [
+                182,
+                260
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "How many steps are still left?",
+            "segment": [
+                740,
+                866
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "What is the total cooking time?",
+            "segment": [
+                182,
+                866
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Is the tomato cut correctly?",
+            "segment": [
+                182,
+                260
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Am I scrambling the egg correctly?",
+            "segment": [
+                362,
+                424
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Is the color of the stir-fried tomatoes correct?",
+            "segment": [
+                612,
+                698
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What did I do before adding the scrambled egg?",
+            "segment": [
+                362,
+                424
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What was the step before adding the green onion?",
+            "segment": [
+                700,
+                732
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What did I add last before the cucumber slices?",
+            "segment": [
+                740,
+                866
+            ]
+        }
+    ],
+    "P6": [
+        {
+            "event_type": "step_related",
+            "query": "What's the next step I should do after boiling the water?",
+            "segment": [
+                571,
+                625
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What should I do after adding the enoki mushroom to the wok?",
+            "segment": [
+                874,
+                1082
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What should I do next after adding shredded cucumber to the bowl?",
+            "segment": [
+                1319,
+                1342
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "The water is not boiling, how can I fix this?",
+            "segment": [
+                571,
+                625
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I shredded the cucumber too much, what should I do?",
+            "segment": [
+                1319,
+                1342
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "The garlic is not peeling easily, is there a trick to it?",
+            "segment": [
+                1369,
+                1491
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Can you say that again about how to add the enoki mushroom?",
+            "segment": [
+                874,
+                1082
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Can you repeat the last instruction about adding the shredded cucumber?",
+            "segment": [
+                1319,
+                1342
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "What did you say about adding the oil from the wok?",
+            "segment": [
+                1840,
+                1854
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "What other ingredients do we need?",
+            "segment": [
+                0,
+                0
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "How many steps are still left?",
+            "segment": [
+                0,
+                0
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "How many cloves of garlic should I add?",
+            "segment": [
+                1369,
+                1491
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Can you explain the current scene for me?",
+            "segment": [
+                0,
+                0
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "What is the current state of the food?",
+            "segment": [
+                0,
+                0
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Am I chopping the garlic in the right way?",
+            "segment": [
+                1369,
+                1491
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What's my last step?",
+            "segment": [
+                0,
+                0
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What did I do before adding the shredded carrots to the wok?",
+            "segment": [
+                1105,
+                1179
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What did I add last?",
+            "segment": [
+                0,
+                0
+            ]
+        }
+    ],
+    "P7": [
+        {
+            "event_type": "step_related",
+            "query": "What's the next step I should do after scrambling the eggs?",
+            "segment": [
+                192,
+                225
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What steps did I miss before adding the scrambled eggs to the wok?",
+            "segment": [
+                701,
+                733
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "Am I supposed to add anything after the tomatoes?",
+            "segment": [
+                738,
+                844
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "The eggs don't seem to be scrambling properly, what should I do?",
+            "segment": [
+                192,
+                225
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I think I added too much cooking oil, what should I do?",
+            "segment": [
+                548,
+                610
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "The tomatoes are not getting cooked properly in the wok, how can I fix this?",
+            "segment": [
+                738,
+                844
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Can you repeat the steps I should follow after washing the tomatoes?",
+            "segment": [
+                30,
+                118
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Can you say again how to scramble the eggs?",
+            "segment": [
+                192,
+                225
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "I didn't catch you, how much salt should I add to the wok?",
+            "segment": [
+                738,
+                844
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "What other ingredients do we need for this recipe?",
+            "segment": [
+                0,
+                0
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "How many steps are still left after adding the scrambled eggs to the wok?",
+            "segment": [
+                701,
+                733
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "How long should I cook the tomatoes in the wok?",
+            "segment": [
+                738,
+                844
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Can you explain the current scene for me after I added the scrambled eggs to the wok?",
+            "segment": [
+                701,
+                733
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Am I chopping the garlic in the right way?",
+            "segment": [
+                252,
+                416
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Does the scrambled egg look okay?",
+            "segment": [
+                192,
+                225
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What's my last step before adding the scrambled eggs to the wok?",
+            "segment": [
+                701,
+                733
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What did I do before scrambling the eggs?",
+            "segment": [
+                192,
+                225
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What did I add last before the tomatoes?",
+            "segment": [
+                738,
+                844
+            ]
+        }
+    ],
+    "P8": [
+        {
+            "event_type": "step_related",
+            "query": "What should I do after peeling the cucumber?",
+            "segment": [
+                49,
+                130
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What's the next step after cutting the cucumber into pieces?",
+            "segment": [
+                162,
+                222
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What's my next action after scrambling the egg?",
+            "segment": [
+                350,
+                406
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "The cucumber pieces look too big, how should I fix this?",
+            "segment": [
+                162,
+                222
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I added too much salt to the egg, what should I do?",
+            "segment": [
+                530,
+                570
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I think I used too much cooking oil, how can I adjust this?",
+            "segment": [
+                580,
+                658
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Can you repeat the steps after scrambling the egg?",
+            "segment": [
+                350,
+                406
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Can you please restate the instruction about seasoning the egg?",
+            "segment": [
+                530,
+                570
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "What did you say about the amount of cooking oil to use?",
+            "segment": [
+                580,
+                658
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "What other ingredients do I need after the cucumber and egg?",
+            "segment": [
+                162,
+                222
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "How many steps are still left after adding cooking oil?",
+            "segment": [
+                580,
+                658
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "How long do I cook the cucumber and egg together?",
+            "segment": [
+                846,
+                957
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Did I cut the cucumber into appropriate pieces?",
+            "segment": [
+                162,
+                222
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Is the scrambled egg cooked enough?",
+            "segment": [
+                720,
+                755
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Does the final dish look ready to serve?",
+            "segment": [
+                846,
+                957
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What did I do before adding the minced ginger?",
+            "segment": [
+                687,
+                702
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What were the last steps I took before adding the vinegar?",
+            "segment": [
+                790,
+                839
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What did I do before serving the dish?",
+            "segment": [
+                846,
+                957
+            ]
+        }
+    ],
+    "P9": [
+        {
+            "event_type": "step_related",
+            "query": "What's the next step after cutting the green peppers into pieces?",
+            "segment": [
+                320,
+                325
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What should I do after I mix the marinated minced pork?",
+            "segment": [
+                350,
+                358
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What is the next procedure after cutting the ginger and green onion into small pieces?",
+            "segment": [
+                445,
+                453
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I think I added too much oil to the wok, what should I do?",
+            "segment": [
+                605,
+                654
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I accidentally added the pork before the green onion and ginger, can I fix this?",
+            "segment": [
+                810,
+                832
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I forgot to add salt before adding vinegar, how can I correct this?",
+            "segment": [
+                950,
+                1070
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Can you repeat the part about adding spices to the wok?",
+            "segment": [
+                505,
+                654
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "What did you say about adding the green onion, ginger, and pork to the wok?",
+            "segment": [
+                694,
+                832
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Can you repeat the last step about adding the green pepper, salt, vinegar, and MSG?",
+            "segment": [
+                839,
+                1070
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "What other ingredients do I need to add after the green peppers?",
+            "segment": [
+                820,
+                832
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "How many steps are left after adding the green onion and ginger?",
+            "segment": [
+                720,
+                832
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "Are there any ingredients left to add after adding the salt and vinegar?",
+            "segment": [
+                950,
+                1070
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Did I cut the ginger and green onion into small enough pieces?",
+            "segment": [
+                405,
+                453
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Is the amount of oil I added to the wok correct?",
+            "segment": [
+                505,
+                654
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Is the green pepper well mixed with the pork in the wok?",
+            "segment": [
+                839,
+                1070
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What did I do before adding the spices to the wok?",
+            "segment": [
+                505,
+                654
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What was the step before adding the green onion and ginger to the wok?",
+            "segment": [
+                694,
+                832
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What was the step before adding the green pepper to the wok?",
+            "segment": [
+                839,
+                1070
+            ]
+        }
+    ],
+    "P10": [
+        {
+            "event_type": "step_related",
+            "query": "What's the next step I should do after washing the fish fillet?",
+            "segment": [
+                960,
+                1188
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What steps did I miss before adding the prepared mixture to the fish?",
+            "segment": [
+                2092,
+                2234
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What should I do after adding the shredded potato and vinegar to the wok?",
+            "segment": [
+                2506,
+                2737
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "The fish is not cooked evenly, how can I fix this?",
+            "segment": [
+                1265,
+                1365
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I added too much salt to the mixture, what should I do?",
+            "segment": [
+                1394,
+                1559
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I burned the garlic, can this be saved?",
+            "segment": [
+                1871,
+                1950
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Can you repeat the steps for preparing the fish fillet?",
+            "segment": [
+                960,
+                1188
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "What did you say about adding the sauce to the fish?",
+            "segment": [
+                2092,
+                2234
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Please repeat the last instruction about the wok.",
+            "segment": [
+                2740,
+                2883
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "What other ingredients do we need after the fish fillet?",
+            "segment": [
+                960,
+                1188
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "How many steps are still left after adding the sauce to the fish?",
+            "segment": [
+                2092,
+                2234
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "What ingredients have I not yet used?",
+            "segment": [
+                2740,
+                2883
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Am I scoring the fish fillet correctly?",
+            "segment": [
+                960,
+                1188
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Is the mixture for the fish well combined?",
+            "segment": [
+                1394,
+                1559
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Is the shredded potato in the wok cooked enough?",
+            "segment": [
+                2506,
+                2737
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What's my last step before adding the water to the steaming pot?",
+            "segment": [
+                1265,
+                1365
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What did I do before preparing the mixture for the fish?",
+            "segment": [
+                1394,
+                1559
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What are my last three steps before serving the dish?",
+            "segment": [
+                2740,
+                2883
+            ]
+        }
+    ],
+    "P11": [
+        {
+            "event_type": "step_related",
+            "query": "What's the next step I should do after cutting the garlic scapes?",
+            "segment": [
+                60,
+                278
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What step am I on right now?",
+            "segment": [
+                345,
+                485
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What should I do next after cooking the eggs?",
+            "segment": [
+                596,
+                835
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "The egg mixture is too runny, how do I fix it?",
+            "segment": [
+                345,
+                485
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I think I added too much oil, what should I do?",
+            "segment": [
+                987,
+                1302
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I burned the garlic scapes, can this be saved?",
+            "segment": [
+                987,
+                1302
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Can you say that again about the process of scrambling the eggs?",
+            "segment": [
+                345,
+                485
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "What did you say about the steps of adding eggs to the wok and stirring them?",
+            "segment": [
+                596,
+                835
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Please repeat the last instruction about the garlic scapes.",
+            "segment": [
+                987,
+                1302
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "What other ingredients do we need?",
+            "segment": [
+                60,
+                278
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "How many steps are still left for cooking?",
+            "segment": [
+                345,
+                485
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "What is the purpose of adding salt to the scrambled eggs?",
+            "segment": [
+                345,
+                485
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Can you explain the current scene for me?",
+            "segment": [
+                60,
+                278
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "I'm a scrambling the eggs in a right way?",
+            "segment": [
+                345,
+                485
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Is this the right way to stir the eggs and garlic scapes together?",
+            "segment": [
+                987,
+                1302
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What's my last step before scrambling the eggs?",
+            "segment": [
+                345,
+                485
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What did I do before adding the eggs to the wok?",
+            "segment": [
+                596,
+                835
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What did I add last before adding the garlic scapes?",
+            "segment": [
+                987,
+                1302
+            ]
+        }
+    ],
+    "P12": [
+        {
+            "event_type": "step_related",
+            "query": "What's the next step I should do after cutting the carrot into small pieces?",
+            "segment": [
+                0,
+                236
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What steps did I miss while peeling and cutting the garlic?",
+            "segment": [
+                279,
+                376
+            ]
+        },
+        {
+            "event_type": "step_related",
+            "query": "What step am I on right now after adding the garlic slices and carrots to the wok?",
+            "segment": [
+                433,
+                653
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "The carrot pieces are not cooking evenly, how do I fix it?",
+            "segment": [
+                433,
+                653
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "I added too much water to the wok, what should I do?",
+            "segment": [
+                670,
+                963
+            ]
+        },
+        {
+            "event_type": "problem_fixing",
+            "query": "The soy sauce is making the dish too salty, how can I fix this?",
+            "segment": [
+                975,
+                1146
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "Can you say that again about how to cut the garlic?",
+            "segment": [
+                279,
+                376
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "I didn't catch you. How long should I stir after adding the water?",
+            "segment": [
+                670,
+                963
+            ]
+        },
+        {
+            "event_type": "repeat_interaction",
+            "query": "What did you say about the amount of soy sauce to add?",
+            "segment": [
+                975,
+                1146
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "What other ingredients do we need for this recipe?",
+            "segment": [
+                0,
+                236
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "How many steps are still left after adding the salt and soy sauce?",
+            "segment": [
+                975,
+                1146
+            ]
+        },
+        {
+            "event_type": "general_question",
+            "query": "What is the total cooking time for this recipe?",
+            "segment": [
+                0,
+                1146
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Can you explain the current scene for me after adding the water?",
+            "segment": [
+                670,
+                963
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "What is the current state of the food after adding the salt and soy sauce?",
+            "segment": [
+                975,
+                1146
+            ]
+        },
+        {
+            "event_type": "visual_confirmation",
+            "query": "Am I chopping the carrot in a right way?",
+            "segment": [
+                0,
+                236
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What's my last step before adding the water?",
+            "segment": [
+                670,
+                963
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What did I do before adding the salt and soy sauce?",
+            "segment": [
+                975,
+                1146
+            ]
+        },
+        {
+            "event_type": "previous_step_recall",
+            "query": "What did I add last before serving the dish?",
+            "segment": [
+                975,
+                1146
+            ]
+        }
+    ]
+}
